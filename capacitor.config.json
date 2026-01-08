@@ -1,0 +1,6 @@
+{
+  "appId": "com.samwel.beteqinie",
+  "appName": "BeteQinie",
+  "webDir": "build",
+  "bundledWebRuntime": false
+}
