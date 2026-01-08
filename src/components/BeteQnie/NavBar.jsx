@@ -37,13 +37,7 @@ const NavBar = () => {
   ];
 
   return (
-    <div
-      className="fixed w-full z-50 bg-yellow-900 shadow-lg"
-      style={{
-        paddingTop: "env(safe-area-inset-top)",
-        WebkitPaddingTop: "constant(safe-area-inset-top)",
-      }}
-    >
+    <div className="fixed w-full z-50 bg-yellow-900 shadow-lg">
       {/* Desktop Navbar */}
       <div className="flex justify-between items-center h-20 px-4 py-5 md:py-0 text-white">
 
@@ -90,14 +84,8 @@ const NavBar = () => {
 
       {/* Mobile Menu */}
       {nav && (
-        <div
-          className="fixed inset-0 bg-gradient-to-b from-yellow-900 to-yellow-900 text-white flex flex-col items-center justify-start z-40 overflow-y-auto"
-          style={{
-            paddingTop: "env(safe-area-inset-top)",
-            WebkitPaddingTop: "constant(safe-area-inset-top)",
-          }}
-        >
-          <div className="w-full flex justify-end px-4 py-6 pt-4">
+        <div className="fixed inset-0 bg-gradient-to-b from-yellow-900 to-yellow-900 text-white flex flex-col items-center justify-start z-40 overflow-y-auto">
+          <div className="w-full flex justify-end px-4 pt-4">
             <FaTimes
               size={30}
               className="cursor-pointer"
