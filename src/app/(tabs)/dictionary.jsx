@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -12,105 +12,55 @@ import {
   View,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { supabase } from "../../lib/supabaseClient";
+import { useDictionarySearch } from "../../hooks/useDictionarySearch";
+import { useRecentSearches } from "../../hooks/useRecentSearches";
 
 export default function Dictionary() {
-  const [query, setQuery] = useState("");
-  const [selectedLanguage, setSelectedLanguage] = useState("gz");
-  const [languages, setLanguages] = useState([]);
-  const [results, setResults] = useState([]);
-  const [suggestions, setSuggestions] = useState([]);
-  const [sewasewExamples, setSewasewExamples] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const {
+    query,
+    onQueryChange,
+    selectedLanguage,
+    setSelectedLanguage,
+    languages,
+    languageMap,
+    results,
+    suggestions,
+    selectSuggestion,
+    sewasewExamples,
+    loading,
+    error,
+    handleSearch,
+    browseLetters,
+    browseWords,
+    browseLoading,
+    loadBrowseLetters,
+    loadBrowseWords,
+  } = useDictionarySearch();
+  const { recentSearches, addRecentSearch } = useRecentSearches();
+  const [browseOpen, setBrowseOpen] = useState(false);
+  const [selectedLetter, setSelectedLetter] = useState(null);
 
-  useEffect(() => {
-    const fetchLanguages = async () => {
-      const { data, error } = await supabase.from("languages").select("*");
-      if (error) {
-        console.error("Error fetching languages:", error);
-      } else {
-        setLanguages(data);
-      }
-    };
-
-    fetchLanguages();
-  }, []);
-
-  const languageMap = languages.reduce((map, lang) => {
-    map[lang.language_code] = lang.language_name;
-    return map;
-  }, {});
-
-  const fetchSuggestions = async (value) => {
-    if (!value.trim() || !selectedLanguage) {
-      setSuggestions([]);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("words")
-      .select("word")
-      .eq("language_code", selectedLanguage)
-      .ilike("word", `${value}%`)
-      .limit(5);
-
-    if (error) {
-      console.error("Error fetching suggestions:", error);
-    } else {
-      setSuggestions(data.map((item) => item.word));
+  const runSearch = async (searchQuery, searchLanguage) => {
+    const result = await handleSearch(searchQuery, searchLanguage);
+    if (result) {
+      addRecentSearch(
+        result.query,
+        result.language,
+        languageMap[result.language] || result.language
+      );
     }
   };
 
-  const handleSearch = async () => {
-    if (!query.trim() || !selectedLanguage) {
-      setError("Please enter a search term and select a language.");
-      return;
-    }
+  const toggleBrowse = () => {
+    const next = !browseOpen;
+    setBrowseOpen(next);
+    setSelectedLetter(null);
+    if (next) loadBrowseLetters();
+  };
 
-    setLoading(true);
-    setError(null);
-    setSewasewExamples([]);
-    setResults([]);
-    setSuggestions([]);
-
-    try {
-      const { data: translationData, error: translationError } = await supabase.rpc(
-        "get_translations",
-        {
-          search_word: query.trim(),
-          language: selectedLanguage,
-        }
-      );
-
-      if (translationError) {
-        setError("Failed to fetch data. Please try again.");
-        console.error(translationError);
-      } else {
-        setResults(translationData);
-
-        if (selectedLanguage === "gz") {
-          const { data: sewasewData, error: sewasewError } = await supabase
-            .from("sewasew")
-            .select("sewasew_text")
-            .in(
-              "word_id",
-              translationData.map((item) => item.word_id)
-            );
-
-          if (sewasewError) {
-            console.error("Error fetching Sewasew examples:", sewasewError);
-          } else {
-            setSewasewExamples(sewasewData);
-          }
-        }
-      }
-    } catch (err) {
-      setError("An unexpected error occurred.");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+  const handleSelectLetter = (letter) => {
+    setSelectedLetter(letter);
+    loadBrowseWords(letter);
   };
 
   const groupedResults = Object.entries(
@@ -149,10 +99,7 @@ export default function Dictionary() {
         <View style={styles.searchBox}>
           <TextInput
             value={query}
-            onChangeText={(value) => {
-              setQuery(value);
-              fetchSuggestions(value);
-            }}
+            onChangeText={onQueryChange}
             placeholder="Enter a word to search..."
             style={styles.input}
           />
@@ -166,10 +113,7 @@ export default function Dictionary() {
               renderItem={({ item }) => (
                 <Pressable
                   style={styles.suggestionRow}
-                  onPress={() => {
-                    setQuery(item);
-                    setSuggestions([]);
-                  }}
+                  onPress={() => selectSuggestion(item)}
                 >
                   <Text>{item}</Text>
                 </Pressable>
@@ -178,9 +122,83 @@ export default function Dictionary() {
           </View>
         )}
 
-        <Pressable style={styles.searchButton} onPress={handleSearch}>
+        <Pressable style={styles.searchButton} onPress={() => runSearch()}>
           <Text style={styles.searchButtonText}>Search</Text>
         </Pressable>
+
+        <Pressable style={styles.browseToggle} onPress={toggleBrowse}>
+          <Text style={styles.browseToggleText}>
+            {browseOpen ? "Hide Browse A-Z" : "Browse A-Z"}
+          </Text>
+        </Pressable>
+
+        {browseOpen && (
+          <View style={styles.browseCard}>
+            {browseLetters.length === 0 && !browseLoading ? (
+              <Text style={styles.muted}>No words found for this language yet.</Text>
+            ) : (
+              <View style={styles.chipRow}>
+                {browseLetters.map((letter) => (
+                  <Pressable
+                    key={letter}
+                    style={[
+                      styles.chip,
+                      selectedLetter === letter && styles.chipSelected,
+                    ]}
+                    onPress={() => handleSelectLetter(letter)}
+                  >
+                    <Text
+                      style={
+                        selectedLetter === letter ? styles.chipTextSelected : styles.chipText
+                      }
+                    >
+                      {letter}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            {browseLoading && <ActivityIndicator style={styles.spacingTop} />}
+
+            {!browseLoading && selectedLetter && browseWords.length > 0 && (
+              <View style={styles.chipRow}>
+                {browseWords.map((word) => (
+                  <Pressable
+                    key={word}
+                    style={styles.chipMuted}
+                    onPress={() => runSearch(word, selectedLanguage)}
+                  >
+                    <Text style={styles.chipText}>{word}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            {!browseLoading && selectedLetter && browseWords.length === 0 && (
+              <Text style={styles.muted}>No words starting with "{selectedLetter}".</Text>
+            )}
+          </View>
+        )}
+
+        {recentSearches.length > 0 && (
+          <View style={styles.recentWrapper}>
+            <Text style={styles.muted}>Recent searches:</Text>
+            <View style={styles.chipRow}>
+              {recentSearches.map((item, index) => (
+                <Pressable
+                  key={`${item.language}-${item.query}-${index}`}
+                  style={styles.chipMuted}
+                  onPress={() => runSearch(item.query, item.language)}
+                >
+                  <Text style={styles.chipText}>
+                    {item.query} <Text style={styles.muted}>({item.languageLabel})</Text>
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
 
         {loading && <ActivityIndicator style={styles.spacingTop} />}
         {error && <Text style={styles.error}>{error}</Text>}
@@ -205,8 +223,8 @@ export default function Dictionary() {
         {sewasewExamples.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Sewasew:</Text>
-            {sewasewExamples.map((example, index) => (
-              <Text key={index} style={styles.sewasewItem}>
+            {sewasewExamples.map((example) => (
+              <Text key={example.sewasew_id} style={styles.sewasewItem}>
                 • {example.sewasew_text}
               </Text>
             ))}
@@ -280,6 +298,65 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "600",
+  },
+  browseToggle: {
+    width: "100%",
+    maxWidth: 480,
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  browseToggleText: {
+    color: "#854d0e",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  browseCard: {
+    width: "100%",
+    maxWidth: 480,
+    padding: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#d6d3d1",
+    borderRadius: 8,
+    gap: 8,
+  },
+  recentWrapper: {
+    width: "100%",
+    maxWidth: 480,
+    gap: 6,
+  },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  chip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#d6d3d1",
+  },
+  chipSelected: {
+    backgroundColor: "#854d0e",
+    borderColor: "#854d0e",
+  },
+  chipMuted: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "#f5f5f4",
+  },
+  chipText: {
+    color: "#44403c",
+    fontFamily: "NotoSansEthiopic_400Regular",
+  },
+  chipTextSelected: {
+    color: "white",
+    fontFamily: "NotoSansEthiopic_400Regular",
+  },
+  muted: {
+    fontSize: 12,
+    color: "#78716c",
   },
   error: {
     color: "#dc2626",

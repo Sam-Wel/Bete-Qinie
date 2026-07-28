@@ -92,7 +92,9 @@ export default function Game() {
       ),
     ];
 
-    while (distractors.length < 3) {
+    // Bounded so a too-small translation pool can't spin this forever.
+    let attempts = 0;
+    while (distractors.length < 3 && attempts < shuffledTranslations.length * 2) {
       const randomExtra =
         shuffledTranslations[Math.floor(Math.random() * shuffledTranslations.length)];
       if (
@@ -102,6 +104,7 @@ export default function Game() {
       ) {
         distractors.push(randomExtra.words.word);
       }
+      attempts += 1;
     }
 
     const options = shuffle([correctOption, ...distractors.slice(0, 3)]);
