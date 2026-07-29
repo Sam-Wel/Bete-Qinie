@@ -6,6 +6,7 @@ import {
   NotoSansEthiopic_400Regular,
   NotoSansEthiopic_700Bold,
 } from "@expo-google-fonts/noto-sans-ethiopic";
+import { AuthProvider } from "../context/AuthContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -26,9 +27,11 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="admin" />
-    </Stack>
+    <AuthProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="admin" />
+      </Stack>
+    </AuthProvider>
   );
 }

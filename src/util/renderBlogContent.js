@@ -15,3 +15,10 @@ export function toHtmlSource(content) {
 export function stripHtml(html) {
   return (html || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
+
+// TenTap/Tiptap's "empty" value is markup like "<p></p>" -- strip tags to
+// check whether there's any actual text content.
+export function isBlogContentEmpty(html) {
+  if (!html) return true;
+  return html.replace(/<(.|\n)*?>/g, "").trim().length === 0;
+}
