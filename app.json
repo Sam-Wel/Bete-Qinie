@@ -8,9 +8,11 @@
     "scheme": "beteqinie",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.samwel.beteqinie"
     },
     "android": {
+      "package": "com.samwel.beteqinie",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
