@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { RichText, Toolbar, useEditorBridge } from "@10play/tentap-editor";
 import { supabase } from "../lib/supabaseClient";
+import { colors } from "../theme";
 
 const IMAGE_BUCKET = "blog-images";
 
@@ -100,7 +101,7 @@ const styles = StyleSheet.create({
   editorBox: {
     height: 260,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#d6d3d1",
+    borderColor: colors.border,
     borderRadius: 8,
     overflow: "hidden",
   },
@@ -109,13 +110,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 8,
-    backgroundColor: "#f5f5f4",
+    backgroundColor: colors.surfaceMuted,
   },
   imageButtonText: {
-    color: "#44403c",
+    color: colors.textPrimary,
     fontWeight: "600",
   },
   error: {
-    color: "#dc2626",
+    color: colors.danger,
   },
 });

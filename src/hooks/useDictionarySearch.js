@@ -166,62 +166,6 @@ export function useDictionarySearch() {
     }
   };
 
-  // --- Browse by language / alphabet ---
-  const [browseLetters, setBrowseLetters] = useState([]);
-  const [browseWords, setBrowseWords] = useState([]);
-  const [browseLoading, setBrowseLoading] = useState(false);
-
-  const loadBrowseLetters = useCallback(async () => {
-    if (!selectedLanguage) return;
-    setBrowseLoading(true);
-    setBrowseWords([]);
-    try {
-      const { data, error } = await supabase
-        .from("words")
-        .select("word")
-        .eq("language_code", selectedLanguage)
-        .limit(500);
-
-      if (error) {
-        console.error("Error loading browse letters:", error);
-      } else {
-        const letters = [...new Set(data.map((item) => item.word?.[0]).filter(Boolean))].sort();
-        setBrowseLetters(letters);
-      }
-    } catch (err) {
-      console.error("Unexpected error loading browse letters:", err);
-    } finally {
-      setBrowseLoading(false);
-    }
-  }, [selectedLanguage]);
-
-  const loadBrowseWords = useCallback(
-    async (letter) => {
-      if (!selectedLanguage) return;
-      setBrowseLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("words")
-          .select("word")
-          .eq("language_code", selectedLanguage)
-          .ilike("word", `${letter}%`)
-          .order("word")
-          .limit(100);
-
-        if (error) {
-          console.error("Error loading browse words:", error);
-        } else {
-          setBrowseWords([...new Set(data.map((item) => item.word))]);
-        }
-      } catch (err) {
-        console.error("Unexpected error loading browse words:", err);
-      } finally {
-        setBrowseLoading(false);
-      }
-    },
-    [selectedLanguage]
-  );
-
   return {
     query,
     onQueryChange,
@@ -238,10 +182,5 @@ export function useDictionarySearch() {
     error,
     setError,
     handleSearch,
-    browseLetters,
-    browseWords,
-    browseLoading,
-    loadBrowseLetters,
-    loadBrowseWords,
   };
 }

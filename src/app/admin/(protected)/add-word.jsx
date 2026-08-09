@@ -1,15 +1,9 @@
 import { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { StyleSheet, Text } from "react-native";
+import { router } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
+import { ScreenContainer, TextField, Button, ScreenHeader } from "../../../components/ui";
+import { colors, spacing, typography } from "../../../theme";
 
 const FIELDS = ["geez", "tigrinya", "amharic", "english", "sewasew"];
 
@@ -152,85 +146,45 @@ export default function AddWord() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Add New Word</Text>
+    <ScreenContainer scroll keyboardAvoiding contentContainerStyle={styles.container}>
+      <ScreenHeader title="Add New Word" onBack={() => router.back()} />
 
-        {error && <Text style={styles.error}>{error}</Text>}
-        {success && <Text style={styles.success}>{success}</Text>}
+      {error && <Text style={[typography.body, styles.error]}>{error}</Text>}
+      {success && <Text style={[typography.body, styles.success]}>{success}</Text>}
 
-        {FIELDS.map((field) => (
-          <View key={field} style={styles.field}>
-            <Text style={styles.label}>
-              {field.charAt(0).toUpperCase() + field.slice(1)}:
-            </Text>
-            <TextInput
-              value={wordData[field]}
-              onChangeText={(value) => setField(field, value)}
-              placeholder={`Enter ${field}`}
-              style={styles.input}
-            />
-          </View>
-        ))}
+      {FIELDS.map((field) => (
+        <TextField
+          key={field}
+          label={field.charAt(0).toUpperCase() + field.slice(1)}
+          value={wordData[field]}
+          onChangeText={(value) => setField(field, value)}
+          placeholder={`Enter ${field}`}
+        />
+      ))}
 
-        <Pressable style={styles.button} onPress={handleSubmit}>
-          <Text style={styles.buttonText}>Add Word</Text>
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <Button variant="primary" onPress={handleSubmit} style={styles.submitButton}>
+        Add Word
+      </Button>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   container: {
-    padding: 24,
-    gap: 12,
+    gap: spacing.md,
     maxWidth: 520,
     width: "100%",
     alignSelf: "center",
   },
-  title: {
-    fontFamily: "NotoSansEthiopic_700Bold",
-    fontSize: 26,
-    color: "#854d0e",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  field: { gap: 6 },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#57534e",
-  },
-  input: {
-    padding: 12,
-    fontSize: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#d6d3d1",
-    borderRadius: 8,
-  },
-  button: {
-    marginTop: 8,
-    backgroundColor: "#854d0e",
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
+  submitButton: {
+    marginTop: spacing.sm,
   },
   error: {
-    color: "#dc2626",
+    color: colors.danger,
     textAlign: "center",
   },
   success: {
-    color: "#16a34a",
+    color: colors.success,
     textAlign: "center",
   },
 });

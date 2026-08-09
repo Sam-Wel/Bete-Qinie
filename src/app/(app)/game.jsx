@@ -1,14 +1,11 @@
-import { useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { Picker } from "@react-native-picker/picker";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { supabase } from "../../lib/supabaseClient";
+import { useGameSession } from "../../hooks/useGameSession";
+import { ScreenContainer, Card, Button, ScreenHeader, Select } from "../../components/ui";
+import { colors, fontFamily, radii, spacing, typography } from "../../theme";
+
+const GAME_TYPE = "dictionary_quiz";
 
 const SUFFIXES = [
   "ሐ", "ሀ", "ኀ", "ለ", "መ", "ሰ", "ሠ", "ረ", "ቀ", "በ",
@@ -16,11 +13,20 @@ const SUFFIXES = [
   "ጠ", "ጰ", "ጸ", "ፀ", "ፈ", "ፐ",
 ];
 
+const SUFFIX_ITEMS = SUFFIXES.map((letter) => ({ label: letter, value: letter }));
+
+const LANGUAGE_ITEMS = [
+  { label: "Tigrinya", value: "ti" },
+  { label: "Amharic", value: "am" },
+];
+
 function shuffle(array) {
   return [...array].sort(() => Math.random() - 0.5);
 }
 
 export default function Game() {
+  const gameSession = useGameSession(GAME_TYPE);
+
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [languageCode, setLanguageCode] = useState("ti");
@@ -34,14 +40,35 @@ export default function Game() {
   const [finalScore, setFinalScore] = useState(0);
   const [statusMessage, setStatusMessage] = useState(null);
   const [loadingGame, setLoadingGame] = useState(false);
+  const [resumeSession, setResumeSession] = useState(null);
+  const [checkingResume, setCheckingResume] = useState(true);
 
-  const endGame = (finalScoreValue) => {
+  useEffect(() => {
+    let cancelled = false;
+    setCheckingResume(true);
+    gameSession.loadInProgress().then((session) => {
+      if (cancelled) return;
+      setResumeSession(session);
+      setCheckingResume(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [gameSession.loadInProgress]);
+
+  const endGame = (finalScoreValue, totalQuestionsValue) => {
     setFinalScore(finalScoreValue);
     setGameOver(true);
     setGameStarted(false);
     setCurrentChallenge(null);
     setGeezWords([]);
     setTranslations([]);
+    gameSession.save({
+      state: {},
+      score: finalScoreValue,
+      totalQuestions: totalQuestionsValue,
+      status: "completed",
+    });
   };
 
   const loadChallenge = (index, geezWordsList, translationsList) => {
@@ -57,7 +84,7 @@ export default function Game() {
         setCurrentChallengeIndex(nextIndex);
         loadChallenge(nextIndex, geezWordsList, translationsList);
       } else {
-        endGame(score);
+        endGame(score, geezWordsList.length);
       }
       return;
     }
@@ -71,7 +98,7 @@ export default function Game() {
         setCurrentChallengeIndex(nextIndex);
         loadChallenge(nextIndex, geezWordsList, translationsList);
       } else {
-        endGame(score);
+        endGame(score, geezWordsList.length);
       }
       return;
     }
@@ -179,6 +206,68 @@ export default function Game() {
     }
   };
 
+  const handleStartNew = () => {
+    gameSession.clearSession();
+    setResumeSession(null);
+  };
+
+  const handleResume = async () => {
+    const { languageCode: rLang, suffix: rSuffix, geezWordIds, currentChallengeIndex: rIndex, score: rScore } =
+      resumeSession.state || {};
+
+    if (!geezWordIds?.length) {
+      setStatusMessage("Could not resume your previous game. Please start a new one.");
+      setResumeSession(null);
+      return;
+    }
+
+    setLoadingGame(true);
+
+    try {
+      const { data: wordsData, error: wordsError } = await supabase
+        .from("words")
+        .select("word_id, word")
+        .in("word_id", geezWordIds);
+
+      if (wordsError || !wordsData) throw wordsError || new Error("Could not load words");
+
+      const orderedWords = geezWordIds
+        .map((id) => wordsData.find((w) => w.word_id === id))
+        .filter(Boolean);
+
+      const { data: translationsData, error: translationsError } = await supabase
+        .from("translationmappings")
+        .select(
+          `
+          word_id,
+          related_word_id,
+          words!translationmappings_related_word_id_fkey(word, language_code)
+          `
+        )
+        .in("word_id", geezWordIds)
+        .eq("words.language_code", rLang);
+
+      if (translationsError) throw translationsError;
+
+      setLanguageCode(rLang);
+      setSuffix(rSuffix);
+      setGeezWords(orderedWords);
+      setTranslations(translationsData);
+      setCurrentChallengeIndex(rIndex);
+      setScore(rScore || 0);
+      setUserAnswer(null);
+      setGameOver(false);
+      setGameStarted(true);
+      loadChallenge(rIndex, orderedWords, translationsData);
+    } catch (err) {
+      console.error("Error resuming game:", err);
+      setStatusMessage("Could not resume your previous game. Please start a new one.");
+    } finally {
+      setLoadingGame(false);
+      setResumeSession(null);
+    }
+  };
+
   const handleAnswer = (option) => {
     if (userAnswer) return;
 
@@ -193,8 +282,20 @@ export default function Game() {
       if (nextIndex < geezWords.length) {
         setCurrentChallengeIndex(nextIndex);
         loadChallenge(nextIndex, geezWords, translations);
+        gameSession.save({
+          state: {
+            languageCode,
+            suffix,
+            geezWordIds: geezWords.map((w) => w.word_id),
+            currentChallengeIndex: nextIndex,
+            score: newScore,
+          },
+          score: newScore,
+          totalQuestions: geezWords.length,
+          status: "in_progress",
+        });
       } else {
-        endGame(newScore);
+        endGame(newScore, geezWords.length);
       }
     }, 1000);
   };
@@ -212,58 +313,85 @@ export default function Game() {
 
   if (gameOver) {
     return (
-      <View style={styles.container}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Game Over!</Text>
+      <ScreenContainer center>
+        <Card style={styles.card}>
+          <ScreenHeader title="Game Over!" style={{ width: "100%" }} />
           <Text style={styles.score}>Your score: {finalScore}</Text>
-          <Pressable style={styles.startButton} onPress={() => setGameOver(false)}>
-            <Text style={styles.startButtonText}>Play Again</Text>
-          </Pressable>
-        </View>
-      </View>
+          <Button variant="primary" onPress={() => setGameOver(false)} style={styles.fullWidthButton}>
+            Play Again
+          </Button>
+        </Card>
+      </ScreenContainer>
     );
   }
 
   if (!gameStarted) {
     return (
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Dictionary Game</Text>
+      <ScreenContainer scroll center>
+        <Card style={styles.card}>
+          <ScreenHeader title="Dictionary Game" style={{ width: "100%" }} />
           <Text style={styles.subtitle}>
             Test your knowledge of Ge'ez words and their translations.
           </Text>
 
-          <Text style={styles.label}>Select Language:</Text>
-          <View style={styles.pickerWrapper}>
-            <Picker selectedValue={languageCode} onValueChange={setLanguageCode}>
-              <Picker.Item label="Tigrinya" value="ti" />
-              <Picker.Item label="Amharic" value="am" />
-            </Picker>
-          </View>
+          {!checkingResume && resumeSession && (
+            <View style={styles.resumeBox}>
+              <Text style={styles.resumeText}>
+                Continue your previous game? (Score {resumeSession.score},{" "}
+                {(resumeSession.state?.geezWordIds?.length || 0) -
+                  (resumeSession.state?.currentChallengeIndex || 0)}{" "}
+                remaining)
+              </Text>
+              <View style={styles.resumeButtons}>
+                <Button variant="primary" size="sm" onPress={handleResume} disabled={loadingGame}>
+                  Resume
+                </Button>
+                <Button variant="secondary" size="sm" onPress={handleStartNew} disabled={loadingGame}>
+                  Start New
+                </Button>
+              </View>
+            </View>
+          )}
 
-          <Text style={styles.label}>Select Suffix:</Text>
-          <View style={styles.pickerWrapper}>
-            <Picker selectedValue={suffix} onValueChange={setSuffix}>
-              {SUFFIXES.map((letter) => (
-                <Picker.Item key={letter} label={letter} value={letter} />
-              ))}
-            </Picker>
-          </View>
+          <Select
+            label="Select Language:"
+            value={languageCode}
+            onValueChange={setLanguageCode}
+            items={LANGUAGE_ITEMS}
+            style={styles.fullWidthField}
+          />
+
+          <Select
+            label="Select Suffix:"
+            value={suffix}
+            onValueChange={setSuffix}
+            items={SUFFIX_ITEMS}
+            style={styles.fullWidthField}
+          />
 
           {statusMessage && <Text style={styles.error}>{statusMessage}</Text>}
-          {loadingGame && <ActivityIndicator style={styles.spacingTop} />}
+          {loadingGame && <ActivityIndicator style={styles.spacingTop} color={colors.primary} />}
 
-          <Pressable style={styles.startButton} onPress={startGame} disabled={loadingGame}>
-            <Text style={styles.startButtonText}>Start Game</Text>
-          </Pressable>
-        </View>
-      </ScrollView>
+          <Button
+            variant="primary"
+            onPress={startGame}
+            disabled={loadingGame}
+            style={styles.fullWidthButton}
+          >
+            Start Game
+          </Button>
+
+          {!gameSession.isSignedIn && (
+            <Text style={styles.hint}>Sign in to save your progress and scores.</Text>
+          )}
+        </Card>
+      </ScreenContainer>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
+    <ScreenContainer center>
+      <Card style={styles.card}>
         {currentChallenge ? (
           <>
             <Text style={styles.geezWord}>{currentChallenge.geez}</Text>
@@ -275,7 +403,7 @@ export default function Game() {
                   onPress={() => handleAnswer(option)}
                   disabled={!!userAnswer}
                 >
-                  <Text>{option}</Text>
+                  <Text style={typography.body}>{option}</Text>
                 </Pressable>
               ))}
             </View>
@@ -285,103 +413,96 @@ export default function Game() {
             </Text>
           </>
         ) : (
-          <Text>Loading...</Text>
+          <Text style={typography.body}>Loading...</Text>
         )}
-      </View>
-    </View>
+      </Card>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
   card: {
     width: "100%",
     maxWidth: 480,
-    padding: 24,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#d6d3d1",
     alignItems: "center",
-    gap: 10,
+    gap: spacing.sm + 2,
   },
-  title: {
-    fontFamily: "NotoSansEthiopic_700Bold",
-    fontSize: 26,
-    color: "#854d0e",
+  fullWidthButton: {
+    width: "100%",
+    marginTop: spacing.sm,
   },
   subtitle: {
-    fontSize: 14,
-    color: "#57534e",
+    ...typography.caption,
+    color: colors.textSecondary,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
-  label: {
-    alignSelf: "flex-start",
-    fontSize: 14,
-    color: "#57534e",
-  },
-  pickerWrapper: {
+  resumeBox: {
     width: "100%",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#d6d3d1",
-    borderRadius: 8,
+    padding: spacing.md,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.borderGold,
+    backgroundColor: colors.surfaceMuted,
+    gap: spacing.sm,
+  },
+  resumeText: {
+    ...typography.body,
+    color: colors.textPrimary,
+    textAlign: "center",
+  },
+  resumeButtons: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: spacing.sm,
+  },
+  fullWidthField: {
+    width: "100%",
   },
   error: {
-    color: "#dc2626",
+    ...typography.body,
+    color: colors.danger,
+    textAlign: "center",
+  },
+  hint: {
+    ...typography.caption,
+    color: colors.textMuted,
     textAlign: "center",
   },
   spacingTop: {
-    marginTop: 4,
-  },
-  startButton: {
-    marginTop: 8,
-    width: "100%",
-    backgroundColor: "#854d0e",
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  startButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
+    marginTop: spacing.xs,
   },
   geezWord: {
-    fontFamily: "NotoSansEthiopic_700Bold",
+    fontFamily: fontFamily.ethiopicBold,
     fontSize: 32,
-    marginBottom: 8,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
-    gap: 10,
+    gap: spacing.sm + 2,
   },
   option: {
     minWidth: "40%",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#d6d3d1",
-    borderRadius: 8,
+    borderColor: colors.border,
+    borderRadius: radii.sm,
     alignItems: "center",
   },
   optionCorrect: {
-    backgroundColor: "#d4edda",
-    borderColor: "#86efac",
+    backgroundColor: colors.successLight,
+    borderColor: colors.success,
   },
   optionWrong: {
-    backgroundColor: "#f8d7da",
-    borderColor: "#fca5a5",
+    backgroundColor: colors.dangerLight,
+    borderColor: colors.danger,
   },
   score: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#57534e",
+    ...typography.bodySemiBold,
+    color: colors.textSecondary,
   },
 });

@@ -3,7 +3,7 @@ import { Redirect, Stack } from "expo-router";
 import { useAuth } from "../../../context/AuthContext";
 
 export default function ProtectedLayout() {
-  const { user, loading } = useAuth();
+  const { isAdmin, loading } = useAuth();
 
   if (loading) {
     return (
@@ -13,8 +13,8 @@ export default function ProtectedLayout() {
     );
   }
 
-  if (!user) {
-    return <Redirect href="/admin/login" />;
+  if (!isAdmin) {
+    return <Redirect href="/auth/sign-in" />;
   }
 
   return <Stack screenOptions={{ headerShown: false }} />;

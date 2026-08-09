@@ -1,0 +1,11 @@
+{
+  "buildCommand": "npx expo export --platform web",
+  "outputDirectory": "dist",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/blog/:id", "destination": "/blog/%5Bid%5D" },
+    { "source": "/admin/update-blog/:id", "destination": "/admin/update-blog/%5Bid%5D" },
+    { "source": "/admin/update-word/:id", "destination": "/admin/update-word/%5Bid%5D" }
+  ]
+}

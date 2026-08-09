@@ -1,21 +1,13 @@
 import { useRef, useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { Picker } from "@react-native-picker/picker";
+import { StyleSheet, Switch, Text, View } from "react-native";
+import { router } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
 import { BLOG_CONTENT_TYPES } from "../../../util/blogContentTypes";
 import { isBlogContentEmpty } from "../../../util/renderBlogContent";
 import { insertBlogPost } from "../../../util/blogPostWrites";
 import BlogEditor from "../../../components/BlogEditor";
+import { ScreenContainer, TextField, Button, ScreenHeader, Select } from "../../../components/ui";
+import { colors, spacing, typography } from "../../../theme";
 
 export default function AddBlogPost() {
   const [title, setTitle] = useState("");
@@ -61,132 +53,71 @@ export default function AddBlogPost() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Add New Blog Post</Text>
+    <ScreenContainer scroll keyboardAvoiding contentContainerStyle={styles.container}>
+      <ScreenHeader title="Add New Blog Post" onBack={() => router.back()} />
 
-        {message ? (
-          <Text style={message.includes("success") ? styles.success : styles.error}>
-            {message}
-          </Text>
-        ) : null}
+      {message ? (
+        <Text style={[typography.body, message.includes("success") ? styles.success : styles.error]}>
+          {message}
+        </Text>
+      ) : null}
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Title</Text>
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Enter the blog title"
-            style={styles.input}
-          />
-        </View>
+      <TextField label="Title" value={title} onChangeText={setTitle} placeholder="Enter the blog title" />
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Content</Text>
-          <BlogEditor key={editorKey} ref={editorRef} />
-        </View>
+      <View style={styles.field}>
+        <Text style={styles.label}>Content</Text>
+        <BlogEditor key={editorKey} ref={editorRef} />
+      </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Content Type</Text>
-          <View style={styles.pickerWrapper}>
-            <Picker selectedValue={contentType} onValueChange={setContentType}>
-              {BLOG_CONTENT_TYPES.map((type) => (
-                <Picker.Item key={type.value} label={type.label} value={type.value} />
-              ))}
-            </Picker>
-          </View>
-        </View>
+      <Select
+        label="Content Type"
+        value={contentType}
+        onValueChange={setContentType}
+        items={BLOG_CONTENT_TYPES}
+      />
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Written By</Text>
-          <TextInput
-            value={writtenBy}
-            onChangeText={setWrittenBy}
-            placeholder="Author's name"
-            style={styles.input}
-          />
-        </View>
+      <TextField label="Written By" value={writtenBy} onChangeText={setWrittenBy} placeholder="Author's name" />
 
-        <View style={styles.switchRow}>
-          <Switch value={isPublished} onValueChange={setIsPublished} />
-          <Text style={styles.switchLabel}>
-            Publish immediately (off = save as a draft)
-          </Text>
-        </View>
+      <View style={styles.switchRow}>
+        <Switch value={isPublished} onValueChange={setIsPublished} />
+        <Text style={styles.switchLabel}>Publish immediately (off = save as a draft)</Text>
+      </View>
 
-        <Pressable style={styles.button} onPress={handleSubmit} disabled={loading}>
-          <Text style={styles.buttonText}>
-            {loading ? "Saving..." : isPublished ? "Publish Post" : "Save Draft"}
-          </Text>
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <Button variant="primary" onPress={handleSubmit} loading={loading}>
+        {isPublished ? "Publish Post" : "Save Draft"}
+      </Button>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   container: {
-    padding: 24,
-    gap: 14,
+    gap: spacing.md,
     maxWidth: 560,
     width: "100%",
     alignSelf: "center",
   },
-  title: {
-    fontFamily: "NotoSansEthiopic_700Bold",
-    fontSize: 24,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  field: { gap: 6 },
+  field: { gap: spacing.xs },
   label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#57534e",
-  },
-  input: {
-    padding: 12,
-    fontSize: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#d6d3d1",
-    borderRadius: 8,
-  },
-  pickerWrapper: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#d6d3d1",
-    borderRadius: 8,
+    ...typography.label,
+    color: colors.textSecondary,
   },
   switchRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: spacing.sm + 2,
   },
   switchLabel: {
     flex: 1,
-    fontSize: 14,
-    color: "#57534e",
-  },
-  button: {
-    backgroundColor: "#854d0e",
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
+    ...typography.caption,
+    color: colors.textSecondary,
   },
   error: {
-    color: "#dc2626",
+    color: colors.danger,
     textAlign: "center",
   },
   success: {
-    color: "#16a34a",
+    color: colors.success,
     textAlign: "center",
   },
 });

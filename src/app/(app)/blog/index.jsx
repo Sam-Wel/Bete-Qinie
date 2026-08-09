@@ -1,19 +1,17 @@
 import { useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
-import { router } from "expo-router";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { Link } from "expo-router";
 import { useBlogPosts } from "../../../hooks/useBlogPosts";
 import { BLOG_CONTENT_TYPES } from "../../../util/blogContentTypes";
 import { stripHtml, toHtmlSource } from "../../../util/renderBlogContent";
-import { ScreenContainer, Card, TextField, Button, Badge, EmptyState, ScreenHeader, Select } from "../../../components/ui";
+import { ScreenContainer, Card, TextField, Button, EmptyState, ScreenHeader, Select } from "../../../components/ui";
 import { colors, fontFamily, spacing, typography } from "../../../theme";
 
-const PREVIEW_LENGTH = 140;
+const PREVIEW_LENGTH = 180;
 const CONTENT_TYPE_ITEMS = [{ label: "All Content Types", value: "" }, ...BLOG_CONTENT_TYPES];
 
-export default function BlogListEdit() {
+export default function BlogList() {
   const [searchText, setSearchText] = useState("");
-  const [confirmingId, setConfirmingId] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
   const {
     paginatedPosts,
     filteredPosts,
@@ -26,15 +24,7 @@ export default function BlogListEdit() {
     filterContentType,
     handleSearch,
     handleFilterContentType,
-    deletePost,
-  } = useBlogPosts({ includeDrafts: true });
-
-  const handleDelete = async (id) => {
-    setDeletingId(id);
-    await deletePost(id);
-    setDeletingId(null);
-    setConfirmingId(null);
-  };
+  } = useBlogPosts();
 
   if (loading) {
     return (
@@ -47,7 +37,7 @@ export default function BlogListEdit() {
   return (
     <ScreenContainer contentContainerStyle={styles.noPadding}>
       <View style={styles.controls}>
-        <ScreenHeader title="Manage Blog Posts" onBack={() => router.back()} />
+        <ScreenHeader title="ቅኔ አበው" titleEthiopic />
         <TextField
           value={searchText}
           onChangeText={(value) => {
@@ -80,62 +70,42 @@ export default function BlogListEdit() {
         renderItem={({ item: post }) => {
           const preview = stripHtml(toHtmlSource(post.content)).slice(0, PREVIEW_LENGTH);
           return (
-            <Card style={styles.card}>
-              {post.is_published === false && <Badge label="Draft" tone="warning" />}
-              <Text style={styles.cardTitle}>{post.title}</Text>
-              <Text style={styles.cardMeta}>
-                By {post.written_by} | {new Date(post.created_date).toLocaleDateString()}
-              </Text>
-              <Text style={styles.cardPreview} numberOfLines={3}>
-                {preview}
-                {preview.length === PREVIEW_LENGTH ? "…" : ""}
-              </Text>
-
-              <View style={styles.actionsRow}>
-                {confirmingId === post.id ? (
-                  <>
-                    <Button
-                      variant="dangerConfirm"
-                      size="sm"
-                      pill
-                      onPress={() => handleDelete(post.id)}
-                      loading={deletingId === post.id}
-                    >
-                      Confirm delete
-                    </Button>
-                    <Button variant="secondary" size="sm" pill onPress={() => setConfirmingId(null)}>
-                      Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      pill
-                      onPress={() => router.push(`/admin/update-blog/${post.id}`)}
-                    >
-                      Edit
-                    </Button>
-                    <Button variant="danger" size="sm" pill onPress={() => setConfirmingId(post.id)}>
-                      Delete
-                    </Button>
-                  </>
-                )}
-              </View>
-            </Card>
+            <Link href={`/blog/${post.id}`} asChild>
+              <Pressable>
+                <Card style={styles.card}>
+                  <Text style={styles.cardTitle}>{post.title}</Text>
+                  <Text style={styles.cardMeta}>
+                    By {post.written_by} | {new Date(post.created_date).toLocaleDateString()}
+                  </Text>
+                  <Text style={styles.cardPreview} numberOfLines={4}>
+                    {preview}
+                    {preview.length === PREVIEW_LENGTH ? "…" : ""}
+                  </Text>
+                </Card>
+              </Pressable>
+            </Link>
           );
         }}
         ListFooterComponent={
           totalPages > 1 && (
             <View style={styles.pagination}>
-              <Button variant="secondary" size="sm" onPress={prevPage} disabled={page === 1}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onPress={prevPage}
+                disabled={page === 1}
+              >
                 Previous
               </Button>
               <Text style={styles.pageLabel}>
                 Page {page} of {totalPages}
               </Text>
-              <Button variant="secondary" size="sm" onPress={nextPage} disabled={page === totalPages}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onPress={nextPage}
+                disabled={page === totalPages}
+              >
                 Next
               </Button>
             </View>
@@ -169,7 +139,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontFamily: fontFamily.ethiopicBold,
     fontSize: 18,
-    color: colors.textPrimary,
+    color: colors.primary,
   },
   cardMeta: {
     ...typography.caption,
@@ -179,11 +149,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.ethiopicRegular,
     fontSize: 14,
     color: colors.textSecondary,
-  },
-  actionsRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.sm,
   },
   pagination: {
     flexDirection: "row",

@@ -1,16 +1,9 @@
 import { useEffect, useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../../../lib/supabaseClient";
+import { ScreenContainer, TextField, Button, ScreenHeader } from "../../../../components/ui";
+import { colors, spacing, typography } from "../../../../theme";
 
 export default function UpdateWord() {
   const { id } = useLocalSearchParams();
@@ -143,107 +136,45 @@ export default function UpdateWord() {
     languages.find((lang) => lang.language_code === code)?.language_name || code || "Main";
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <ScreenContainer
+      scroll
+      keyboardAvoiding
+      contentContainerStyle={{ gap: spacing.md, maxWidth: 520, width: "100%", alignSelf: "center" }}
     >
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Update Word and Translations</Text>
+      <ScreenHeader title="Update Word and Translations" onBack={() => router.back()} />
 
-        {error && <Text style={styles.error}>{error}</Text>}
+      {error && (
+        <Text style={[typography.body, { color: colors.danger, textAlign: "center" }]}>
+          {error}
+        </Text>
+      )}
 
-        <View style={styles.field}>
-          <Text style={styles.label}>{languageName(mainLanguage)} Word:</Text>
-          <TextInput value={mainWord} onChangeText={setMainWord} style={styles.input} />
+      <TextField
+        label={`${languageName(mainLanguage)} Word`}
+        value={mainWord}
+        onChangeText={setMainWord}
+      />
+
+      {translations.map((translation, index) => (
+        <View key={translation.word_id} style={{ gap: spacing.xs }}>
+          <TextField
+            label={`Translation for ${languageName(translation.target_language)}`}
+            value={translation.translated_word}
+            onChangeText={(value) => handleTranslationChange(index, value)}
+          />
+          <Button
+            variant="danger"
+            size="sm"
+            onPress={() => handleDeleteTranslation(translation.word_id)}
+          >
+            Delete
+          </Button>
         </View>
+      ))}
 
-        {translations.map((translation, index) => (
-          <View key={translation.word_id} style={styles.field}>
-            <Text style={styles.label}>
-              Translation for {languageName(translation.target_language)}:
-            </Text>
-            <View style={styles.row}>
-              <TextInput
-                value={translation.translated_word}
-                onChangeText={(value) => handleTranslationChange(index, value)}
-                style={[styles.input, styles.rowInput]}
-              />
-              <Pressable
-                style={styles.deleteButton}
-                onPress={() => handleDeleteTranslation(translation.word_id)}
-              >
-                <Text style={styles.deleteButtonText}>Delete</Text>
-              </Pressable>
-            </View>
-          </View>
-        ))}
-
-        <Pressable style={styles.button} onPress={handleSubmit}>
-          <Text style={styles.buttonText}>Update</Text>
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <Button variant="primary" onPress={handleSubmit} style={{ marginTop: spacing.sm }}>
+        Update
+      </Button>
+    </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  container: {
-    padding: 24,
-    gap: 16,
-    maxWidth: 520,
-    width: "100%",
-    alignSelf: "center",
-  },
-  title: {
-    fontFamily: "NotoSansEthiopic_700Bold",
-    fontSize: 24,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  field: { gap: 6 },
-  label: {
-    fontSize: 14,
-    color: "#57534e",
-  },
-  input: {
-    padding: 12,
-    fontSize: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#d6d3d1",
-    borderRadius: 8,
-  },
-  row: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-  },
-  rowInput: {
-    flex: 1,
-  },
-  deleteButton: {
-    backgroundColor: "#dc2626",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-  },
-  deleteButtonText: {
-    color: "white",
-    fontWeight: "600",
-  },
-  button: {
-    backgroundColor: "#854d0e",
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  error: {
-    color: "#dc2626",
-    textAlign: "center",
-  },
-});
