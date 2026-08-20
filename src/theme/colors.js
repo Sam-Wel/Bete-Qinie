@@ -1,18 +1,22 @@
 export const colors = {
-  primary: "#a1720c",
-  primaryDark: "#7a5609",
-  primaryLight: "#f3dfa0",
+  primary: "#C0850C",
+  primaryDark: "#8F5F08",
+  primaryLight: "#F6E2AC",
   onPrimary: "#fffaf0",
 
-  background: "#f2e6c8",
-  surface: "#faf3e1",
-  surfaceMuted: "#ecdfbb",
-  border: "#d8c9a3",
-  borderMuted: "#e6dbc0",
-  borderGold: "#b8860b",
+  accent: "#A23B26",
+  accentDark: "#7A2B1B",
+  accentLight: "#F4DCD3",
+
+  background: "#FBF6EA",
+  surface: "#FFFFFF",
+  surfaceMuted: "#F4EEDD",
+  border: "#EBE0C4",
+  borderMuted: "#F1E9D4",
+  borderGold: "#C0850C",
   borderInk: "#8a6d47",
 
-  textPrimary: "#3b2a1a",
+  textPrimary: "#2B2013",
   textSecondary: "#6b5233",
   textMuted: "#9c8760",
 

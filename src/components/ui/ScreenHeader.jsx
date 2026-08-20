@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "./Icon";
 import { colors, spacing, typography } from "../../theme";
 import { OrnamentDivider } from "./OrnamentDivider";
 
@@ -10,7 +10,7 @@ export function ScreenHeader({ title, titleEthiopic = false, onBack, right, styl
         <View style={styles.left}>
           {onBack ? (
             <Pressable onPress={onBack} hitSlop={8} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={20} color={colors.primary} />
+              <Icon name="chevron-back" size={20} color={colors.primary} />
               <Text style={styles.backText}>Back</Text>
             </Pressable>
           ) : null}

@@ -49,7 +49,7 @@ export function KeneMeasureTable({ title, rowGroupLabel, receivingLabel, houseLa
   return (
     <View style={styles.wrapper}>
       <Text style={styles.title}>{title}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator>
+      <ScrollView horizontal showsHorizontalScrollIndicator style={{ width: "100%" }}>
         <View style={[styles.table, { minWidth: CELL_MIN_WIDTH }]}>
           {/* Header row A */}
           <View style={[styles.row, styles.rowBorderBottom]}>

@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Link, router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../../../components/ui/Icon";
 import { useAuth } from "../../../context/AuthContext";
 import { ScreenContainer, Card, Button, ScreenHeader } from "../../../components/ui";
 import { colors, spacing, typography } from "../../../theme";
@@ -36,9 +36,9 @@ export default function AdminDashboard() {
           <Link key={link.href} href={link.href} asChild>
             <Pressable>
               <Card style={styles.linkCard}>
-                <Ionicons name={link.icon} size={22} color={colors.primary} />
+                <Icon name={link.icon} size={22} color={colors.primary} />
                 <Text style={styles.cardText}>{link.label}</Text>
-                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                <Icon name="chevron-forward" size={18} color={colors.textMuted} />
               </Card>
             </Pressable>
           </Link>

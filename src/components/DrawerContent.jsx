@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { DrawerContentScrollView } from "expo-router/drawer";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "./ui/Icon";
 import { router } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 import { OrnamentDivider } from "./ui";
@@ -9,7 +9,7 @@ import { colors, fontFamily, spacing, typography } from "../theme";
 function MenuItem({ icon, label, ethiopic, onPress }) {
   return (
     <Pressable style={styles.item} onPress={onPress}>
-      <Ionicons name={icon} size={20} color={colors.primary} />
+      <Icon name={icon} size={20} color={colors.primary} />
       <Text style={[typography.bodySemiBold, ethiopic && { fontFamily: fontFamily.ethiopicBold }, styles.itemLabel]}>
         {label}
       </Text>

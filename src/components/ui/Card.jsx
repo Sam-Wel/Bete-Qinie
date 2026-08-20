@@ -18,7 +18,7 @@ export function Card({ elevated = false, style, children }) {
   }));
 
   return (
-    <Animated.View style={[styles.base, elevated ? shadows.card : styles.bordered, animatedStyle, style]}>
+    <Animated.View style={[styles.base, elevated ? shadows.raised : shadows.card, animatedStyle, style]}>
       {children}
     </Animated.View>
   );
@@ -27,11 +27,9 @@ export function Card({ elevated = false, style, children }) {
 const styles = StyleSheet.create({
   base: {
     backgroundColor: colors.surface,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
     padding: spacing.lg,
-  },
-  bordered: {
-    borderWidth: 1.5,
-    borderColor: colors.borderGold,
   },
 });

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "./Icon";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { colors, radii, shadows, spacing, typography } from "../../theme";
 
@@ -36,7 +36,7 @@ export function Select({ label, value, onValueChange, items, placeholder = "Sele
         <Text style={[styles.triggerText, !selected && styles.placeholder]} numberOfLines={1}>
           {selected ? selected.label : placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
+        <Icon name="chevron-down" size={18} color={colors.textSecondary} />
       </Pressable>
 
       <Modal visible={open} transparent animationType="none" onRequestClose={closeDropdown}>
@@ -67,7 +67,7 @@ export function Select({ label, value, onValueChange, items, placeholder = "Sele
                     >
                       {item.label}
                     </Text>
-                    {isSelected && <Ionicons name="checkmark" size={16} color={colors.primary} />}
+                    {isSelected && <Icon name="checkmark" size={16} color={colors.primary} />}
                   </Pressable>
                 );
               })}

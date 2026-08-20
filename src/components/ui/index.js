@@ -9,3 +9,4 @@ export { OrnamentFrame } from "./OrnamentFrame";
 export { OrnamentDivider } from "./OrnamentDivider";
 export { CrossMenuIcon } from "./CrossMenuIcon";
 export { Select } from "./Select";
+export { Icon } from "./Icon";

@@ -1,12 +1,12 @@
 import { StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "./Icon";
 import { colors, spacing, typography } from "../../theme";
 
 export function EmptyState({ message, icon }) {
   return (
     <View style={styles.container}>
       {icon ? (
-        <Ionicons name={icon} size={32} color={colors.textMuted} style={styles.icon} />
+        <Icon name={icon} size={32} color={colors.textMuted} style={styles.icon} />
       ) : null}
       <Text style={styles.message}>{message}</Text>
     </View>
