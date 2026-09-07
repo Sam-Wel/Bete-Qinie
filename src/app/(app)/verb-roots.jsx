@@ -9,8 +9,6 @@ export default function VerbRoots() {
   const {
     languageMap,
     endingLetters,
-    lettersLoading,
-    loadEndingLetters,
     selectedLetter,
     endingWords,
     wordsLoading,
@@ -23,10 +21,6 @@ export default function VerbRoots() {
     error,
   } = useGeezEndings();
   const { allItems, saveWord, removeWord, loadItems, isSignedIn } = useStudyList();
-
-  useEffect(() => {
-    loadEndingLetters();
-  }, [loadEndingLetters]);
 
   useEffect(() => {
     if (isSignedIn) loadItems();
@@ -52,23 +46,19 @@ export default function VerbRoots() {
 
       {error && <Text style={styles.error}>{error}</Text>}
 
-      {lettersLoading ? (
-        <ActivityIndicator color={colors.primary} style={styles.spacingTop} />
-      ) : (
-        <View style={styles.chipRow}>
-          {endingLetters.map((letter) => (
-            <Pressable
-              key={letter}
-              style={[styles.chip, selectedLetter === letter && styles.chipSelected]}
-              onPress={() => selectLetter(letter)}
-            >
-              <Text style={selectedLetter === letter ? styles.chipTextSelected : styles.chipText}>
-                {letter}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
+      <View style={styles.chipRow}>
+        {endingLetters.map((letter) => (
+          <Pressable
+            key={letter}
+            style={[styles.chip, selectedLetter === letter && styles.chipSelected]}
+            onPress={() => selectLetter(letter)}
+          >
+            <Text style={selectedLetter === letter ? styles.chipTextSelected : styles.chipText}>
+              {letter}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
       {selectedLetter && (
         <Card style={styles.fullWidth}>

@@ -3,13 +3,21 @@ import { supabase } from "../lib/supabaseClient";
 
 const GEEZ = "gz";
 
+// The 26 classical Ge'ez base (first-order / "geez" vowel) consonant
+// letters, in traditional fidel order -- shown as browse chips instead of
+// whatever last-letter variants happen to occur in the word list, since
+// most of those are 6th/7th-order forms that aren't useful to browse by.
+const GEEZ_BASE_LETTERS = [
+  "ሀ", "ለ", "ሐ", "መ", "ሠ", "ረ", "ሰ", "ቀ", "በ", "ተ",
+  "ኀ", "ነ", "አ", "ከ", "ወ", "ዐ", "ዘ", "የ", "ደ", "ገ",
+  "ጠ", "ጰ", "ጸ", "ፀ", "ፈ", "ፐ",
+];
+
 // Browse Ge'ez words grouped by their LAST letter (word-ending), rather
 // than the traditional first-letter A-Z browse -- useful for finding
 // words that share a verb-root ending pattern.
 export function useGeezEndings() {
   const [languages, setLanguages] = useState([]);
-  const [endingLetters, setEndingLetters] = useState([]);
-  const [lettersLoading, setLettersLoading] = useState(false);
 
   useEffect(() => {
     supabase
@@ -35,31 +43,6 @@ export function useGeezEndings() {
   const [sewasewExamples, setSewasewExamples] = useState([]);
   const [translationsLoading, setTranslationsLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  const loadEndingLetters = useCallback(async () => {
-    setLettersLoading(true);
-    setError(null);
-    try {
-      const { data, error } = await supabase
-        .from("words")
-        .select("word")
-        .eq("language_code", GEEZ)
-        .limit(1000);
-
-      if (error) {
-        console.error("Error loading Ge'ez ending letters:", error);
-        setError("Failed to load letters. Please try again.");
-      } else {
-        const letters = [...new Set(data.map((item) => item.word?.slice(-1)).filter(Boolean))].sort();
-        setEndingLetters(letters);
-      }
-    } catch (err) {
-      console.error("Unexpected error loading Ge'ez ending letters:", err);
-      setError("An unexpected error occurred.");
-    } finally {
-      setLettersLoading(false);
-    }
-  }, []);
 
   const selectLetter = useCallback(async (letter) => {
     setSelectedLetter(letter);
@@ -136,9 +119,7 @@ export function useGeezEndings() {
 
   return {
     languageMap,
-    endingLetters,
-    lettersLoading,
-    loadEndingLetters,
+    endingLetters: GEEZ_BASE_LETTERS,
     selectedLetter,
     endingWords,
     wordsLoading,
