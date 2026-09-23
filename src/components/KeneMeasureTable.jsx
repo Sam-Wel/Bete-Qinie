@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { colors, fontFamily, radii, spacing } from "../theme";
 
-const CELL_MIN_WIDTH = 640;
+const CELL_MIN_WIDTH = 780;
 
 function Cell({ children, flex = 1, bold, header, last, style }) {
   return (
@@ -46,19 +46,26 @@ function QuadRow({ values, borderBottom }) {
 }
 
 export function KeneMeasureTable({ title, rowGroupLabel, receivingLabel, houseLabel, mewqeHeaderLabel, rows }) {
+  // A table with no መደብ side (ልውጥ ሚ በዝሑ) drops those columns rather than printing them empty.
+  const hasMedeb = rows.some((row) => row.medeb);
+
   return (
     <View style={styles.wrapper}>
       <Text style={styles.title}>{title}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator style={{ width: "100%" }}>
-        <View style={[styles.table, { minWidth: CELL_MIN_WIDTH }]}>
+        <View style={[styles.table, { minWidth: hasMedeb ? CELL_MIN_WIDTH : CELL_MIN_WIDTH / 2 }]}>
           {/* Header row A */}
           <View style={[styles.row, styles.rowBorderBottom]}>
-            <Cell flex={1.3} header bold>
-              መደብ
-            </Cell>
-            <Cell flex={4} header bold>
-              ተቀባሊ መደብ
-            </Cell>
+            {hasMedeb ? (
+              <>
+                <Cell flex={1.3} header bold>
+                  መደብ
+                </Cell>
+                <Cell flex={4} header bold>
+                  ተቀባሊ መደብ
+                </Cell>
+              </>
+            ) : null}
             <Cell flex={1.3} header bold>
               {"መውቀዒ ቤት"}
             </Cell>
@@ -67,19 +74,23 @@ export function KeneMeasureTable({ title, rowGroupLabel, receivingLabel, houseLa
             </Cell>
           </View>
 
-          {/* Header row B + C, with column 1 and 3 spanning both */}
+          {/* Header row B + C, with the lead columns spanning both */}
           <View style={[styles.row, styles.rowBorderBottom]}>
-            <Cell flex={1.3} header bold style={styles.rowGroupCell}>
-              {rowGroupLabel}
-            </Cell>
-            <View style={{ flex: 4 }}>
-              <View style={[styles.row, styles.rowBorderBottom]}>
-                <Cell flex={4} header bold last>
-                  {receivingLabel}
+            {hasMedeb ? (
+              <>
+                <Cell flex={1.3} header bold style={styles.rowGroupCell}>
+                  {rowGroupLabel}
                 </Cell>
-              </View>
-              <SubHeaderRow last />
-            </View>
+                <View style={{ flex: 4 }}>
+                  <View style={[styles.row, styles.rowBorderBottom]}>
+                    <Cell flex={4} header bold last>
+                      {receivingLabel}
+                    </Cell>
+                  </View>
+                  <SubHeaderRow last />
+                </View>
+              </>
+            ) : null}
             <Cell flex={1.3} header bold style={styles.rowGroupCell}>
               {mewqeHeaderLabel}
             </Cell>
@@ -96,12 +107,16 @@ export function KeneMeasureTable({ title, rowGroupLabel, receivingLabel, houseLa
           {/* Data rows */}
           {rows.map((row, i) => (
             <View key={i} style={[styles.row, i !== rows.length - 1 && styles.rowBorderBottom]}>
-              <Cell flex={1.3} bold>
-                {row.medeb}
-              </Cell>
-              <View style={{ flex: 4 }}>
-                <QuadRow values={row.tekebali} />
-              </View>
+              {hasMedeb ? (
+                <>
+                  <Cell flex={1.3} bold>
+                    {row.medeb}
+                  </Cell>
+                  <View style={{ flex: 4 }}>
+                    <QuadRow values={row.tekebali} />
+                  </View>
+                </>
+              ) : null}
               <Cell flex={1.3}>{row.mewqe}</Cell>
               <View style={{ flex: 4 }} testID="bet-col">
                 {row.bet.map((entry, j) => (

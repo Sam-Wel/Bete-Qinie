@@ -1,92 +1,63 @@
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { ScreenContainer, ScreenHeader } from "../../components/ui";
-import { KeneMeasureTable } from "../../components/KeneMeasureTable";
+import { MeterChecker } from "../../components/MeterChecker";
+import { MeterTables } from "../../components/MeterTables";
+import { colors, fontFamily, radii, shadows, spacing } from "../../theme";
 
-const gubaeQana = {
-  title: "ጉባኤ ቃና",
-  rowGroupLabel: "ኢታብ ዘጎ",
-  receivingLabel: "ቶማስ",
-  houseLabel: "ሰሐቀ",
-  mewqeHeaderLabel: "ወልደ መጽብሕ",
-  rows: [
-    {
-      medeb: "ወዳቂ 1-3",
-      tekebali: { wedaqi: "አይአቱን", tetay: "3", tenesh: "3", siyaf: "4" },
-      mewqe: "ወዳቂ 5-6",
-      bet: [{ wedaqi: "3", tetay: "3", tenesh: "3", siyaf: "አይአቱን" }],
-    },
-    {
-      medeb: "ተጣይ 2-4",
-      tekebali: { wedaqi: "አይአቱን", tetay: "2-3", tenesh: "2-3", siyaf: "3-4" },
-      mewqe: "ተጣይ 6-7",
-      bet: [{ wedaqi: "2-3", tetay: "2-3", tenesh: "2-3", siyaf: "አይአቱን" }],
-    },
-    {
-      medeb: "ተነሽ 2-4",
-      tekebali: { wedaqi: "አይአቱን", tetay: "2", tenesh: "2", siyaf: "3" },
-      mewqe: "ተነሽ 6-7\n5",
-      bet: [
-        { wedaqi: "2", tetay: "2", tenesh: "2", siyaf: "አይአቱን" },
-        { wedaqi: "3", tetay: "3", tenesh: "3", siyaf: "አይአቱን" },
-      ],
-    },
-    {
-      medeb: "ስያፍ 3-5",
-      tekebali: { wedaqi: "አይአቱን", tetay: "2", tenesh: "2", siyaf: "3" },
-      mewqe: "ስያፍ 7-8\n6",
-      bet: [
-        { wedaqi: "2", tetay: "2", tenesh: "2", siyaf: "አይአቱን" },
-        { wedaqi: "3", tetay: "3", tenesh: "3", siyaf: "አይአቱን" },
-      ],
-    },
-  ],
-};
+const TABS = [
+  { key: "checker", label: "መስፈሪያ" },
+  { key: "tables", label: "ሰንጠረዥ" },
+];
 
-const zeAmlakiye = {
-  title: "ዘአምላኪየ",
-  rowGroupLabel: "በታቢር",
-  receivingLabel: "ወራኝ",
-  houseLabel: "ወልድየ",
-  mewqeHeaderLabel: "ወልድየ",
-  rows: [
-    {
-      medeb: "ተጣይ 3-4",
-      tekebali: { wedaqi: "3\n2", tetay: "6", tenesh: "6", siyaf: "6" },
-      mewqe: "ወዳቂ 3",
-      bet: [{ wedaqi: "3", tetay: "3", tenesh: "3", siyaf: "አይአቱን" }],
-    },
-    {
-      medeb: "ተነሽ 3-4",
-      tekebali: { wedaqi: "3\n2", tetay: "6", tenesh: "6", siyaf: "6" },
-      mewqe: "ተጣይ 4",
-      bet: [{ wedaqi: "2-3", tetay: "2-3", tenesh: "2-3", siyaf: "አይአቱን" }],
-    },
-    {
-      medeb: "ስያፍ 4-5",
-      tekebali: { wedaqi: "3\n2", tetay: "6", tenesh: "6", siyaf: "6" },
-      mewqe: "ተነሽ 3-4",
-      bet: [
-        { wedaqi: "3", tetay: "3", tenesh: "3", siyaf: "አይአቱን" },
-        { wedaqi: "2", tetay: "2", tenesh: "2", siyaf: "አይአቱን" },
-      ],
-    },
-    {
-      medeb: "ወዳቂ",
-      tekebali: { wedaqi: "አይአቱን", tetay: "አይአቱን", tenesh: "አይአቱን", siyaf: "አይአቱን" },
-      mewqe: "ስያፍ 4-5",
-      bet: [
-        { wedaqi: "3", tetay: "3", tenesh: "3", siyaf: "አይአቱን" },
-        { wedaqi: "2", tetay: "2", tenesh: "2", siyaf: "አይአቱን" },
-      ],
-    },
-  ],
-};
+function TabSwitch({ value, onChange }) {
+  return (
+    <View style={styles.tabs}>
+      {TABS.map((tab) => {
+        const active = tab.key === value;
+        return (
+          <Pressable
+            key={tab.key}
+            onPress={() => onChange(tab.key)}
+            style={[styles.tab, active && styles.tabActive]}
+          >
+            <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 export default function Meaqeni() {
+  const [tab, setTab] = useState("checker");
+
   return (
-    <ScreenContainer scroll>
+    <ScreenContainer scroll keyboardAvoiding>
       <ScreenHeader title="መዐቀኒ" titleEthiopic />
-      <KeneMeasureTable {...gubaeQana} />
-      <KeneMeasureTable {...zeAmlakiye} />
+      <TabSwitch value={tab} onChange={setTab} />
+
+      {tab === "checker" ? <MeterChecker /> : <MeterTables />}
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  tabs: {
+    flexDirection: "row",
+    alignSelf: "flex-start",
+    padding: 3,
+    gap: 3,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surfaceMuted,
+    marginBottom: spacing.lg,
+  },
+  tab: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.pill,
+  },
+  tabActive: { backgroundColor: colors.surface, ...shadows.card },
+  tabText: { fontFamily: fontFamily.ethiopicRegular, fontSize: 14, color: colors.textSecondary },
+  tabTextActive: { fontFamily: fontFamily.ethiopicBold, color: colors.primary },
+});
