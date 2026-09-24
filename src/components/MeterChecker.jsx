@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { OrnamentDivider } from "./ui/OrnamentDivider";
@@ -21,6 +21,8 @@ import {
 
 const SPRING = { damping: 15, stiffness: 300 };
 const EMPTY = { type: null, count: null, text: "", skipped: false };
+const CELL_WIDTH = 132;
+const CELL_GAP = spacing.sm;
 
 const buildState = (meter) =>
   meter.lines.map((def) => ({
@@ -109,39 +111,48 @@ function Toggle({ hint, options, activeKey, onSelect }) {
   );
 }
 
-function LineStrip({ index, slots, state, readyOf, active, onSelect }) {
-  return (
-    <View style={styles.strip}>
-      <Text style={styles.stripLabel}>ቤት {ORDINALS[index]}</Text>
-      <View style={styles.stripSlots}>
-        {slots.map((slot) => {
-          const value = state.slots[slot.key];
-          const isActive = active.line === index && active.slot === slot.key;
-          const filled = Boolean(value.type) && value.count != null && !value.skipped;
-          const broken = filled && !readyOf(index, slot);
+// One cell per segment, read across as the line reads. The words are typed in the cell;
+// the pill beneath opens the measure picker and then shows what was chosen.
+function SlotCell({ slot, value, active, broken, onFocus, onMeasure, onChangeText }) {
+  const filled = Boolean(value.type) && value.count != null && !value.skipped;
+  const measure = value.skipped ? "የለም" : filled ? `${TYPE_LABEL[value.type]} ${value.count}` : "ልኬት ይምረጡ";
 
-          return (
-            <Pressable
-              key={slot.key}
-              onPress={() => onSelect(index, slot.key)}
-              style={[
-                styles.stripChip,
-                filled && !broken && styles.stripChipSettled,
-                value.skipped && styles.stripChipSkipped,
-                broken && styles.stripChipBroken,
-                isActive && styles.stripChipActive,
-              ]}
-            >
-              <Text style={styles.stripChipLabel} numberOfLines={1}>
-                {slot.short}
-              </Text>
-              <Text style={[styles.stripChipValue, broken && styles.stripChipValueBroken]} numberOfLines={1}>
-                {value.skipped ? "የለም" : filled ? `${TYPE_LABEL[value.type]} ${value.count}` : "—"}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+  return (
+    <View style={[styles.cell, active && styles.cellActive]}>
+      <Text style={styles.cellLabel} numberOfLines={1}>
+        {slot.short}
+      </Text>
+
+      <TextInput
+        value={value.text}
+        onChangeText={onChangeText}
+        onFocus={onFocus}
+        placeholder="ቃላቱን ይጻፉ"
+        placeholderTextColor={colors.textMuted}
+        style={styles.cellInput}
+        multiline
+      />
+
+      <Pressable
+        onPress={onMeasure}
+        style={[
+          styles.measure,
+          filled && !broken && styles.measureFilled,
+          broken && styles.measureBroken,
+          !filled && !value.skipped && styles.measureEmpty,
+        ]}
+      >
+        <Text
+          style={[
+            styles.measureText,
+            filled && !broken && styles.measureTextFilled,
+            broken && styles.measureTextBroken,
+          ]}
+          numberOfLines={1}
+        >
+          {measure}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -152,10 +163,20 @@ export function MeterChecker() {
 
   const [state, setState] = useState(() => buildState(METERS[0]));
   const [active, setActive] = useState({ line: 0, slot: "s0" });
+  const [measuring, setMeasuring] = useState(null);
+  const scrollers = useRef({});
 
   const slotsByLine = meter.lines.map(buildLineSlots);
   const sequence = slotsByLine.flatMap((slots, line) => slots.map((slot) => ({ line, slot: slot.key })));
   const showsTableNames = meterTables(meter).length > 1;
+
+  // Advancing can land on a cell that is scrolled off the side, so bring it into view.
+  useEffect(() => {
+    const index = slotsByLine[active.line]?.findIndex((s) => s.key === active.slot) ?? -1;
+    const scroller = scrollers.current[active.line];
+    if (!scroller || index < 0) return;
+    scroller.scrollTo({ x: Math.max(0, index * (CELL_WIDTH + CELL_GAP) - 24), animated: true });
+  }, [active.line, active.slot, meterId]);
 
   const optionsOf = (lineIndex, slot) => slotOptions(meter.lines[lineIndex], slot, state[lineIndex]);
 
@@ -170,12 +191,6 @@ export function MeterChecker() {
     return !state[lineIndex].slots[slot.key].type || readyOf(lineIndex, slot);
   };
 
-  const activeSlot = slotsByLine[active.line].find((slot) => slot.key === active.slot) ?? slotsByLine[active.line][0];
-  const activePart = meter.lines[active.line].parts[activeSlot.part];
-  const activeConfig = state[active.line].parts[activeSlot.part];
-  const activeValue = state[active.line].slots[activeSlot.key];
-  const activeOptions = optionsOf(active.line, activeSlot);
-
   const patchSlot = (lineIndex, slotKey, next) =>
     setState((prev) =>
       prev.map((line, i) =>
@@ -184,48 +199,57 @@ export function MeterChecker() {
     );
 
   // Re-measuring a pair invalidates whatever was picked inside it, so clear both slots.
-  const patchPart = (next) =>
+  const patchPart = (lineIndex, partIndex, next) =>
     setState((prev) =>
       prev.map((line, i) => {
-        if (i !== active.line) return line;
+        if (i !== lineIndex) return line;
         const cleared = Object.fromEntries(
           slotsByLine[i]
-            .filter((slot) => slot.part === activeSlot.part)
+            .filter((slot) => slot.part === partIndex)
             .map((slot) => [slot.key, { ...line.slots[slot.key], type: null, count: null }])
         );
         return {
           ...line,
-          parts: line.parts.map((part, p) => (p === activeSlot.part ? { ...part, ...next } : part)),
+          parts: line.parts.map((part, p) => (p === partIndex ? { ...part, ...next } : part)),
           slots: { ...line.slots, ...cleared },
         };
       })
     );
 
-  const advance = () => {
-    const at = sequence.findIndex((s) => s.line === active.line && s.slot === active.slot);
+  const advanceFrom = (lineIndex, slotKey) => {
+    const at = sequence.findIndex((s) => s.line === lineIndex && s.slot === slotKey);
     const next = sequence[at + 1];
     if (next) setActive(next);
   };
 
-  const pick = (type, count) => {
-    patchSlot(active.line, activeSlot.key, { type, count, skipped: false });
-    advance();
+  const pick = (lineIndex, slotKey, type, count) => {
+    patchSlot(lineIndex, slotKey, { type, count, skipped: false });
+    setMeasuring(null);
+    advanceFrom(lineIndex, slotKey);
   };
 
-  const skip = () => {
-    patchSlot(active.line, activeSlot.key, { type: null, count: null, skipped: !activeValue.skipped });
-    if (!activeValue.skipped) advance();
+  const skip = (lineIndex, slotKey, wasSkipped) => {
+    patchSlot(lineIndex, slotKey, { type: null, count: null, skipped: !wasSkipped });
+    setMeasuring(null);
+    if (!wasSkipped) advanceFrom(lineIndex, slotKey);
+  };
+
+  const openMeasure = (lineIndex, slotKey) => {
+    setActive({ line: lineIndex, slot: slotKey });
+    setMeasuring({ line: lineIndex, slot: slotKey });
   };
 
   const switchMeter = (next) => {
     setMeterId(next.id);
     setState(buildState(next));
     setActive({ line: 0, slot: "s0" });
+    setMeasuring(null);
   };
 
   const reset = () => {
     setState(buildState(meter));
     setActive({ line: 0, slot: "s0" });
+    setMeasuring(null);
   };
 
   // Progress counts only the slots a poem must have; ሐረግ is never part of the target.
@@ -238,6 +262,22 @@ export function MeterChecker() {
   const touched = state.some((line) =>
     Object.values(line.slots).some((value) => value.skipped || value.type || value.text)
   );
+
+  const sheet = measuring
+    ? (() => {
+        const slots = slotsByLine[measuring.line];
+        const slot = slots.find((s) => s.key === measuring.slot);
+        if (!slot) return null;
+        return {
+          slot,
+          value: state[measuring.line].slots[slot.key],
+          part: meter.lines[measuring.line].parts[slot.part],
+          config: state[measuring.line].parts[slot.part],
+          options: optionsOf(measuring.line, slot),
+          leadLabel: slots.find((s) => s.key === slot.leadKey)?.label,
+        };
+      })()
+    : null;
 
   return (
     <View style={styles.wrapper}>
@@ -258,84 +298,50 @@ export function MeterChecker() {
 
       <View style={styles.meterHeader}>
         <Text style={styles.meterSubtitle}>
-          {meter.lines.length} lines · {sequence.length} segments
-          {optionalCount ? ` · ${optionalCount} optional` : ""} · every pair picks its own row
+          Type each segment in its cell, then tap ልኬት to measure it.
+          {optionalCount ? ` ${optionalCount} optional.` : ""}
         </Text>
         <Text style={styles.progress}>
           {settledCount}/{required.length}
         </Text>
       </View>
 
-      {slotsByLine.map((slots, index) => (
-        <LineStrip
-          key={index}
-          index={index}
-          slots={slots}
-          state={state[index]}
-          readyOf={readyOf}
-          active={active}
-          onSelect={(l, s) => setActive({ line: l, slot: s })}
-        />
-      ))}
+      {slotsByLine.map((slots, lineIndex) => (
+        <View key={lineIndex} style={styles.lineBlock}>
+          <View style={styles.lineHeader}>
+            <Text style={styles.lineLabel}>ቤት {ORDINALS[lineIndex]}</Text>
+            <View style={styles.lineRule} />
+          </View>
 
-      <View style={styles.picker}>
-        <View style={styles.pickerHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.pickerTitle}>{activeSlot.label}</Text>
-            <Text style={styles.pickerCaption}>{activeSlot.caption}</Text>
-          </View>
-          <View style={{ alignItems: "flex-end" }}>
-            <Text style={styles.pickerLine}>ቤት {ORDINALS[active.line]}</Text>
-            {showsTableNames && activePart.kind !== "hareg" ? (
-              <Text style={styles.pickerTable}>{partTable(activePart, activeConfig).name}</Text>
-            ) : null}
-          </View>
+          <ScrollView
+            ref={(node) => {
+              scrollers.current[lineIndex] = node;
+            }}
+            horizontal
+            showsHorizontalScrollIndicator
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.lineRow}
+          >
+            {slots.map((slot) => {
+              const value = state[lineIndex].slots[slot.key];
+              const filled = Boolean(value.type) && value.count != null && !value.skipped;
+
+              return (
+                <SlotCell
+                  key={slot.key}
+                  slot={slot}
+                  value={value}
+                  active={active.line === lineIndex && active.slot === slot.key}
+                  broken={filled && !readyOf(lineIndex, slot)}
+                  onFocus={() => setActive({ line: lineIndex, slot: slot.key })}
+                  onMeasure={() => openMeasure(lineIndex, slot.key)}
+                  onChangeText={(text) => patchSlot(lineIndex, slot.key, { text })}
+                />
+              );
+            })}
+          </ScrollView>
         </View>
-
-        {activePart.kind === "medeb" && activePart.sourceChoice ? (
-          <Toggle
-            hint="ይለኩ በ"
-            options={MEASURE_SOURCES}
-            activeKey={partSource(activePart, activeConfig)}
-            onSelect={(source) => patchPart({ source })}
-          />
-        ) : null}
-
-        {activePart.kind === "mewqe" && activePart.tables.length > 1 ? (
-          <Toggle
-            hint="ይለኩ በ"
-            options={activePart.tables.map((table, i) => ({ key: i, label: table.name }))}
-            activeKey={activeConfig.table}
-            onSelect={(table) => patchPart({ table })}
-          />
-        ) : null}
-
-        {activeOptions ? (
-          <Animated.View entering={FadeIn.duration(180)}>
-            <TextInput
-              value={activeValue.text}
-              onChangeText={(text) => patchSlot(active.line, activeSlot.key, { text })}
-              placeholder="ቃላቱን ይጻፉ"
-              placeholderTextColor={colors.textMuted}
-              style={styles.wordInput}
-            />
-            <OptionMatrix
-              options={activeOptions}
-              value={activeValue}
-              optional={Boolean(activeSlot.optional)}
-              onPick={pick}
-              onSkip={skip}
-            />
-          </Animated.View>
-        ) : (
-          <View style={styles.waiting}>
-            <Text style={styles.waitingText}>
-              Set {slotsByLine[active.line].find((s) => s.key === activeSlot.leadKey)?.label} first — it decides what
-              can go here.
-            </Text>
-          </View>
-        )}
-      </View>
+      ))}
 
       {complete ? (
         <Animated.View entering={FadeIn.duration(320)} style={styles.finale}>
@@ -373,6 +379,72 @@ export function MeterChecker() {
           <Text style={styles.resetText}>እንደገና ጀምር</Text>
         </Pressable>
       ) : null}
+
+      <Modal
+        visible={Boolean(sheet)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMeasuring(null)}
+      >
+        <Pressable style={styles.backdrop} onPress={() => setMeasuring(null)}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            {sheet ? (
+              <>
+                <View style={styles.sheetHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.sheetTitle}>{sheet.slot.label}</Text>
+                    <Text style={styles.sheetCaption}>
+                      ቤት {ORDINALS[measuring.line]}
+                      {showsTableNames && sheet.part.kind !== "hareg"
+                        ? ` · ${partTable(sheet.part, sheet.config).name}`
+                        : ""}
+                    </Text>
+                  </View>
+                  <Pressable onPress={() => setMeasuring(null)} hitSlop={10} style={styles.sheetClose}>
+                    <Text style={styles.sheetCloseText}>✕</Text>
+                  </Pressable>
+                </View>
+
+                {sheet.value.text ? <Text style={styles.sheetWords}>{sheet.value.text}</Text> : null}
+
+                <OrnamentDivider style={{ marginBottom: spacing.xs }} />
+
+                {sheet.part.kind === "medeb" && sheet.part.sourceChoice ? (
+                  <Toggle
+                    hint="ይለኩ በ"
+                    options={MEASURE_SOURCES}
+                    activeKey={partSource(sheet.part, sheet.config)}
+                    onSelect={(source) => patchPart(measuring.line, sheet.slot.part, { source })}
+                  />
+                ) : null}
+
+                {sheet.part.kind === "mewqe" && sheet.part.tables.length > 1 ? (
+                  <Toggle
+                    hint="ይለኩ በ"
+                    options={sheet.part.tables.map((table, i) => ({ key: i, label: table.name }))}
+                    activeKey={sheet.config.table}
+                    onSelect={(table) => patchPart(measuring.line, sheet.slot.part, { table })}
+                  />
+                ) : null}
+
+                {sheet.options ? (
+                  <OptionMatrix
+                    options={sheet.options}
+                    value={sheet.value}
+                    optional={Boolean(sheet.slot.optional)}
+                    onPick={(type, count) => pick(measuring.line, sheet.slot.key, type, count)}
+                    onSkip={() => skip(measuring.line, sheet.slot.key, sheet.value.skipped)}
+                  />
+                ) : (
+                  <Text style={styles.waitingText}>
+                    Measure {sheet.leadLabel} first — it decides what can go here.
+                  </Text>
+                )}
+              </>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -397,43 +469,76 @@ const styles = StyleSheet.create({
   meterSubtitle: { ...typography.caption, color: colors.textSecondary, flex: 1 },
   progress: { ...typography.label, color: colors.textMuted },
 
-  strip: { gap: spacing.xs },
-  stripLabel: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, color: colors.textMuted, letterSpacing: 0.5 },
-  stripSlots: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  stripChip: {
-    flexGrow: 1,
-    flexBasis: 74,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: 3,
-    borderRadius: radii.sm,
+  lineBlock: { gap: spacing.sm },
+  lineHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  lineLabel: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, color: colors.textMuted, letterSpacing: 0.5 },
+  lineRule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
+  lineRow: { flexDirection: "row", gap: CELL_GAP, paddingVertical: 2, paddingRight: spacing.sm },
+
+  cell: {
+    width: CELL_WIDTH,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    alignItems: "center",
-    gap: 2,
+    padding: spacing.sm,
+    gap: spacing.xs,
   },
-  stripChipSettled: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
-  stripChipSkipped: { borderColor: colors.borderMuted, backgroundColor: colors.surfaceMuted },
-  stripChipBroken: { borderColor: colors.danger, backgroundColor: colors.dangerLight },
-  stripChipActive: { borderColor: colors.accent, borderWidth: 2, ...shadows.card },
-  stripChipLabel: { fontFamily: fontFamily.ethiopicRegular, fontSize: 10, color: colors.textMuted },
-  stripChipValue: { fontFamily: fontFamily.ethiopicBold, fontSize: 12, color: colors.textPrimary },
-  stripChipValueBroken: { color: colors.dangerDark },
+  cellActive: { borderColor: colors.accent, borderWidth: 2, ...shadows.raised },
+  cellLabel: {
+    fontFamily: fontFamily.ethiopicBold,
+    fontSize: 11,
+    color: colors.textMuted,
+    letterSpacing: 0.3,
+  },
+  cellInput: {
+    fontFamily: fontFamily.ethiopicRegular,
+    fontSize: 16,
+    color: colors.textPrimary,
+    minHeight: 52,
+    textAlignVertical: "top",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderMuted,
+    paddingBottom: spacing.xs,
+  },
+  measure: {
+    paddingVertical: 5,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: "center",
+  },
+  measureEmpty: { borderWidth: 1, borderStyle: "dashed", borderColor: colors.borderGold, backgroundColor: "transparent" },
+  measureFilled: { backgroundColor: colors.primaryLight },
+  measureBroken: { backgroundColor: colors.dangerLight },
+  measureText: { fontFamily: fontFamily.ethiopicRegular, fontSize: 12, color: colors.primaryDark },
+  measureTextFilled: { fontFamily: fontFamily.ethiopicBold, color: colors.primaryDark },
+  measureTextBroken: { fontFamily: fontFamily.ethiopicBold, color: colors.dangerDark },
 
-  picker: {
-    backgroundColor: colors.surface,
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(43, 32, 19, 0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.lg,
+  },
+  sheet: {
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: colors.background,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.primaryLight,
+    borderColor: colors.borderGold,
     padding: spacing.lg,
     gap: spacing.sm,
-    ...shadows.raised,
+    ...shadows.modal,
   },
-  pickerHeader: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
-  pickerTitle: { fontFamily: fontFamily.ethiopicBold, fontSize: 18, color: colors.textPrimary },
-  pickerCaption: { ...typography.caption, color: colors.textMuted },
-  pickerLine: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, color: colors.primary },
-  pickerTable: { fontFamily: fontFamily.ethiopicRegular, fontSize: 11, color: colors.textMuted },
+  sheetHeader: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
+  sheetTitle: { fontFamily: fontFamily.ethiopicBold, fontSize: 18, color: colors.textPrimary },
+  sheetCaption: { ...typography.caption, color: colors.textMuted },
+  sheetClose: { padding: spacing.xs },
+  sheetCloseText: { fontSize: 16, color: colors.textSecondary },
+  sheetWords: { fontFamily: fontFamily.ethiopicRegular, fontSize: 17, color: colors.primaryDark },
 
   toggleRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: spacing.xs },
   toggleHint: { fontFamily: fontFamily.ethiopicRegular, fontSize: 12, color: colors.textMuted, marginRight: 2 },
@@ -448,16 +553,6 @@ const styles = StyleSheet.create({
   toggleChipActive: { borderColor: colors.accent, backgroundColor: colors.accentLight },
   toggleText: { fontFamily: fontFamily.ethiopicRegular, fontSize: 13, color: colors.textSecondary },
   toggleTextActive: { fontFamily: fontFamily.ethiopicBold, color: colors.accentDark },
-
-  wordInput: {
-    fontFamily: fontFamily.ethiopicRegular,
-    fontSize: 18,
-    color: colors.textPrimary,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderMuted,
-    marginBottom: spacing.sm,
-  },
 
   matrix: { gap: spacing.xs },
   matrixRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: 38 },
@@ -485,8 +580,7 @@ const styles = StyleSheet.create({
   chipTextMuted: { fontFamily: fontFamily.ethiopicRegular, color: colors.textSecondary },
   chipTextSelected: { color: colors.onPrimary },
 
-  waiting: { paddingVertical: spacing.lg, alignItems: "center" },
-  waitingText: { ...typography.caption, color: colors.textMuted, fontStyle: "italic", textAlign: "center" },
+  waitingText: { ...typography.caption, color: colors.textMuted, fontStyle: "italic" },
 
   finale: { gap: spacing.sm, paddingVertical: spacing.md, alignItems: "center" },
   finaleTitle: { fontFamily: fontFamily.ethiopicBold, fontSize: 20, color: colors.primary },
