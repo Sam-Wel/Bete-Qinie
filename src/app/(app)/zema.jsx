@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { PanResponder, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import * as DocumentPicker from "expo-document-picker";
 import { Button, Card, Icon, ScreenContainer, ScreenHeader } from "../../components/ui";
@@ -17,6 +17,31 @@ const AUDIO_EXTENSIONS = [
   ".flac", ".webm", ".mp4", ".aiff", ".aif", ".caf", ".wma", ".amr", ".3gp",
 ];
 const WEB_TYPES = ["audio/*", "audio/mpeg", "audio/mp4", "audio/x-m4a", "audio/aac", ...AUDIO_EXTENSIONS];
+
+// A blob URL carries the file's own mime type, and browsers pick their decoder from it.
+// macOS labels AAC-in-MP4 as audio/x-m4a, which Chrome does not recognise and refuses
+// before reading a byte — so the type is restated from the extension.
+const MIME_BY_EXTENSION = {
+  mp3: "audio/mpeg",
+  m4a: "audio/mp4",
+  m4b: "audio/mp4",
+  mp4: "audio/mp4",
+  aac: "audio/aac",
+  wav: "audio/wav",
+  wave: "audio/wav",
+  ogg: "audio/ogg",
+  oga: "audio/ogg",
+  opus: "audio/ogg",
+  flac: "audio/flac",
+  webm: "audio/webm",
+};
+
+function playableUri(file, name) {
+  const extension = (name ?? "").split(".").pop()?.toLowerCase();
+  const type = MIME_BY_EXTENSION[extension] ?? file.type;
+  const blob = type && type !== file.type ? new Blob([file], { type }) : file;
+  return { uri: URL.createObjectURL(blob), type: type || "unknown" };
+}
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00.0";
@@ -64,7 +89,9 @@ export default function Zema() {
   const [barWidth, setBarWidth] = useState(0);
   const [error, setError] = useState(null);
   const [slow, setSlow] = useState(false);
+  const [dragging, setDragging] = useState(null);
   const seeking = useRef(false);
+  const objectUrl = useRef(null);
 
   const player = useAudioPlayer(track?.uri ?? null, { updateInterval: POLL_MS });
   const status = useAudioPlayerStatus(player);
@@ -74,6 +101,9 @@ export default function Zema() {
   const end = endRaw == null ? duration : Math.min(endRaw, duration);
   const start = Math.min(Math.max(0, startRaw), Math.max(0, end - MIN_SPAN));
   const ready = duration > 0;
+  // The player reports a real decode failure; the timeout only covers a silent stall.
+  const loadError =
+    status?.error ?? (track && !ready && slow ? "Still no audio after 8 seconds." : null);
 
   // Turn the loop over at the B edge. seekTo is async, so guard against stacking seeks.
   useEffect(() => {
@@ -107,10 +137,15 @@ export default function Zema() {
       if (result.canceled || !result.assets?.length) return;
 
       const asset = result.assets[0];
-      // On web the File object gives a clean blob URL; elsewhere the cached uri is fine.
-      const uri = Platform.OS === "web" && asset.file ? URL.createObjectURL(asset.file) : asset.uri;
+      const web = Platform.OS === "web" && asset.file ? playableUri(asset.file, asset.name) : null;
+      if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
+      objectUrl.current = web?.uri ?? null;
 
-      setTrack({ uri, name: asset.name, mimeType: asset.mimeType });
+      setTrack({
+        uri: web?.uri ?? asset.uri,
+        name: asset.name,
+        mimeType: web?.type ?? asset.mimeType ?? "unknown",
+      });
       setStartRaw(0);
       setEndRaw(null);
       setSpeed(1);
@@ -134,6 +169,52 @@ export default function Zema() {
     setSpeed(rate);
     player.setPlaybackRate(rate);
   };
+
+  // A drag reads the geometry captured when the grab began, so the responders can be built
+  // once without going stale as the edges move.
+  const [geometry] = useState(() => ({ start: 0, end: 0, duration: 0, barWidth: 0 }));
+  useEffect(() => {
+    Object.assign(geometry, { start, end, duration, barWidth });
+  });
+
+  const handles = useMemo(() => {
+    const make = (edge) => {
+      let grab = null;
+
+      return PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderTerminationRequest: () => false,
+        onPanResponderGrant: () => {
+          const { start: s, end: e, duration: d, barWidth: w } = geometry;
+          if (!d || !w) return;
+          grab = {
+            from: edge === "start" ? s : e,
+            min: edge === "start" ? 0 : s + MIN_SPAN,
+            max: edge === "start" ? e - MIN_SPAN : d,
+            perPixel: d / w,
+          };
+          setDragging(edge);
+        },
+        onPanResponderMove: (_, gesture) => {
+          if (!grab) return;
+          const next = Math.min(Math.max(grab.from + gesture.dx * grab.perPixel, grab.min), grab.max);
+          if (edge === "start") setStartRaw(next);
+          else setEndRaw(next);
+        },
+        onPanResponderRelease: () => {
+          grab = null;
+          setDragging(null);
+        },
+        onPanResponderTerminate: () => {
+          grab = null;
+          setDragging(null);
+        },
+      });
+    };
+
+    return { start: make("start"), end: make("end") };
+  }, [geometry]);
 
   const nudgeStart = (delta) => setStartRaw(Math.min(Math.max(0, start + delta), end - MIN_SPAN));
   const nudgeEnd = (delta) => setEndRaw(Math.min(Math.max(start + MIN_SPAN, end + delta), duration));
@@ -180,14 +261,28 @@ export default function Zema() {
               <Text style={styles.clockTotal}> / {formatTime(duration)}</Text>
             </Text>
 
-            <Pressable
-              onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
-              onPress={(e) => barWidth > 0 && seek((e.nativeEvent.locationX / barWidth) * duration)}
-              style={styles.bar}
-            >
-              <View style={[styles.region, { left: pct(start), width: pct(end - start) }]} />
-              <View style={[styles.playhead, { left: pct(position) }]} />
-            </Pressable>
+            <View style={styles.barWrap} onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}>
+              <Pressable
+                onPress={(e) => barWidth > 0 && seek((e.nativeEvent.locationX / barWidth) * duration)}
+                style={styles.bar}
+              >
+                <View style={[styles.region, { left: pct(start), width: pct(end - start) }]} />
+                <View style={[styles.playhead, { left: pct(position) }]} />
+              </Pressable>
+
+              <View
+                {...handles.start.panHandlers}
+                style={[styles.handle, { left: pct(start) }, dragging === "start" && styles.handleOn]}
+              >
+                <View style={[styles.grip, dragging === "start" && styles.gripOn]} />
+              </View>
+              <View
+                {...handles.end.panHandlers}
+                style={[styles.handle, { left: pct(end) }, dragging === "end" && styles.handleOn]}
+              >
+                <View style={[styles.grip, dragging === "end" && styles.gripOn]} />
+              </View>
+            </View>
 
             <View style={styles.transport}>
               <Pressable onPress={() => seek(start)} disabled={!ready} style={styles.secondaryButton}>
@@ -206,12 +301,11 @@ export default function Zema() {
               </Pressable>
             </View>
 
-            {!ready && !slow ? <Text style={styles.loading}>Loading audio…</Text> : null}
-            {!ready && slow ? (
+            {!ready && !loadError ? <Text style={styles.loading}>Loading audio…</Text> : null}
+            {loadError ? (
               <View style={styles.failed}>
-                <Text style={styles.failedText}>
-                  This browser could not decode {track.mimeType || "that file"}. Try an mp3, m4a or wav.
-                </Text>
+                <Text style={styles.failedText}>{loadError}</Text>
+                <Text style={styles.loading}>Read as {track.mimeType}</Text>
                 <Pressable onPress={() => pick(true)} hitSlop={8}>
                   <Text style={styles.allFiles}>ሌላ ፋይል ይምረጡ</Text>
                 </Pressable>
@@ -283,8 +377,9 @@ const styles = StyleSheet.create({
   clock: { fontFamily: fontFamily.latinBold, fontSize: 30, color: colors.textPrimary, textAlign: "center" },
   clockTotal: { fontFamily: fontFamily.latinRegular, fontSize: 16, color: colors.textMuted },
 
+  barWrap: { justifyContent: "center" },
   bar: {
-    height: 44,
+    height: 56,
     borderRadius: radii.sm,
     backgroundColor: colors.surfaceMuted,
     borderWidth: StyleSheet.hairlineWidth,
@@ -294,6 +389,26 @@ const styles = StyleSheet.create({
   },
   region: { position: "absolute", top: 0, bottom: 0, backgroundColor: colors.primaryLight },
   playhead: { position: "absolute", top: 0, bottom: 0, width: 2, backgroundColor: colors.accent },
+  handle: {
+    position: "absolute",
+    top: -6,
+    bottom: -6,
+    width: 34,
+    marginLeft: -17,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  handleOn: { zIndex: 2 },
+  grip: {
+    width: 12,
+    height: "100%",
+    borderRadius: radii.sm,
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.onPrimary,
+    ...shadows.card,
+  },
+  gripOn: { backgroundColor: colors.accent, width: 16 },
 
   transport: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   playButton: {
