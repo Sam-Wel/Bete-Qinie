@@ -18,6 +18,7 @@ export default function AppLayout() {
       <Drawer.Screen name="index" options={{ title: "Dictionary" }} />
       <Drawer.Screen name="verb-roots" options={{ title: "ግሲ" }} />
       <Drawer.Screen name="meaqeni" options={{ title: "መዐቀኒ" }} />
+      <Drawer.Screen name="zema" options={{ title: "ዜማ" }} />
       <Drawer.Screen name="review" options={{ title: "ክለሳ" }} />
       <Drawer.Screen name="game" options={{ title: "Game" }} />
       <Drawer.Screen name="blog" options={{ title: "ቅኔ አበው" }} />

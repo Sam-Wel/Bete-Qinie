@@ -38,6 +38,7 @@ export function DrawerContent(props) {
       <MenuItem icon="book-outline" label="Dictionary" onPress={() => go("/")} />
       <MenuItem icon="list-outline" label="ግሲ" ethiopic onPress={() => go("/verb-roots")} />
       <MenuItem icon="grid-outline" label="መዐቀኒ" ethiopic onPress={() => go("/meaqeni")} />
+      <MenuItem icon="musical-notes-outline" label="ዜማ" ethiopic onPress={() => go("/zema")} />
       <MenuItem icon="school-outline" label="ክለሳ" ethiopic onPress={() => go("/review")} />
       <MenuItem icon="game-controller-outline" label="Game" onPress={() => go("/game")} />
       <MenuItem icon="newspaper-outline" label="ቅኔ አበው" ethiopic onPress={() => go("/blog")} />
