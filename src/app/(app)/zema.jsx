@@ -165,9 +165,11 @@ export default function Zema() {
 
   const toggle = () => (status?.playing ? player.pause() : player.play());
 
+  // Without "high" the player sets preservesPitch to false, which drops the singer's pitch
+  // along with the tempo. The melody has to stay where it is to be worth studying.
   const changeSpeed = (rate) => {
     setSpeed(rate);
-    player.setPlaybackRate(rate);
+    player.setPlaybackRate(rate, "high");
   };
 
   // A drag reads the geometry captured when the grab began, so the responders can be built
