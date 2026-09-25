@@ -10,6 +10,14 @@ const POLL_MS = 50;
 const MIN_SPAN = 0.3;
 const SPEEDS = [0.5, 0.75, 1];
 
+// m4a and friends often arrive with an odd mime type or none at all, so the web picker is
+// given extensions alongside the wildcard — otherwise the file dialog greys them out.
+const AUDIO_EXTENSIONS = [
+  ".mp3", ".m4a", ".m4b", ".aac", ".wav", ".wave", ".ogg", ".oga", ".opus",
+  ".flac", ".webm", ".mp4", ".aiff", ".aif", ".caf", ".wma", ".amr", ".3gp",
+];
+const WEB_TYPES = ["audio/*", "audio/mpeg", "audio/mp4", "audio/x-m4a", "audio/aac", ...AUDIO_EXTENSIONS];
+
 function formatTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00.0";
   const whole = Math.floor(seconds);
@@ -55,6 +63,7 @@ export default function Zema() {
   const [speed, setSpeed] = useState(1);
   const [barWidth, setBarWidth] = useState(0);
   const [error, setError] = useState(null);
+  const [slow, setSlow] = useState(false);
   const seeking = useRef(false);
 
   const player = useAudioPlayer(track?.uri ?? null, { updateInterval: POLL_MS });
@@ -77,11 +86,20 @@ export default function Zema() {
     });
   }, [position, end, start, looping, ready, status?.playing, player]);
 
-  const pick = async () => {
+  // A file the browser cannot decode never reports a duration, so say so rather than
+  // leaving "Loading audio…" up forever.
+  useEffect(() => {
+    if (!track || ready) return;
+    const timer = setTimeout(() => setSlow(true), 8000);
+    return () => clearTimeout(timer);
+  }, [track, ready]);
+
+  const pick = async (allowAll = false) => {
     setError(null);
+    setSlow(false);
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: "audio/*",
+        type: allowAll ? "*/*" : Platform.OS === "web" ? WEB_TYPES : "audio/*",
         copyToCacheDirectory: true,
         base64: false,
         multiple: false,
@@ -92,7 +110,7 @@ export default function Zema() {
       // On web the File object gives a clean blob URL; elsewhere the cached uri is fine.
       const uri = Platform.OS === "web" && asset.file ? URL.createObjectURL(asset.file) : asset.uri;
 
-      setTrack({ uri, name: asset.name });
+      setTrack({ uri, name: asset.name, mimeType: asset.mimeType });
       setStartRaw(0);
       setEndRaw(null);
       setSpeed(1);
@@ -138,7 +156,11 @@ export default function Zema() {
             Load an audio file, then mark a start and an end to hear just that part over and over. Widen or shorten the
             range as you go — the file itself is never changed.
           </Text>
-          <Button onPress={pick}>ድምፅ ይምረጡ</Button>
+          <Button onPress={() => pick(false)}>ድምፅ ይምረጡ</Button>
+          <Text style={styles.formats}>mp3 · m4a · wav · aac · ogg · flac</Text>
+          <Pressable onPress={() => pick(true)} hitSlop={8}>
+            <Text style={styles.allFiles}>ፋይሉ ካልታየ — ሁሉንም ፋይል ያሳዩ</Text>
+          </Pressable>
           {error ? <Text style={styles.error}>{error}</Text> : null}
         </Card>
       ) : (
@@ -148,7 +170,7 @@ export default function Zema() {
               <Text style={styles.trackName} numberOfLines={1}>
                 {track.name}
               </Text>
-              <Pressable onPress={pick} hitSlop={8}>
+              <Pressable onPress={() => pick(false)} hitSlop={8}>
                 <Text style={styles.change}>ይቀይሩ</Text>
               </Pressable>
             </View>
@@ -184,7 +206,17 @@ export default function Zema() {
               </Pressable>
             </View>
 
-            {!ready ? <Text style={styles.loading}>Loading audio…</Text> : null}
+            {!ready && !slow ? <Text style={styles.loading}>Loading audio…</Text> : null}
+            {!ready && slow ? (
+              <View style={styles.failed}>
+                <Text style={styles.failedText}>
+                  This browser could not decode {track.mimeType || "that file"}. Try an mp3, m4a or wav.
+                </Text>
+                <Pressable onPress={() => pick(true)} hitSlop={8}>
+                  <Text style={styles.allFiles}>ሌላ ፋይል ይምረጡ</Text>
+                </Pressable>
+              </View>
+            ) : null}
           </Card>
 
           <Card style={styles.rangeCard}>
@@ -238,6 +270,10 @@ const styles = StyleSheet.create({
   introTitle: { fontFamily: fontFamily.ethiopicBold, fontSize: 20, color: colors.primary },
   introBody: { ...typography.caption, color: colors.textSecondary, textAlign: "center", lineHeight: 19 },
   error: { ...typography.caption, color: colors.dangerDark },
+  formats: { ...typography.caption, color: colors.textMuted },
+  allFiles: { ...typography.caption, color: colors.primary, fontFamily: fontFamily.ethiopicRegular },
+  failed: { gap: spacing.xs, alignItems: "center" },
+  failedText: { ...typography.caption, color: colors.dangerDark, textAlign: "center" },
 
   player: { gap: spacing.md, marginBottom: spacing.lg },
   trackRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
