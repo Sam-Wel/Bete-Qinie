@@ -171,16 +171,31 @@ const LEWUT_TABLE = {
 const HAREG_OPENING = { wedaqi: [3, 4, 5], tetay: [4, 5], tenesh: [4, 5], siyaf: [4, 5] };
 const HAREG_CLOSING = { wedaqi: [3], tetay: null, tenesh: null, siyaf: null };
 
+// Everything an admin can edit lives in these two registries. The meter definitions below
+// only name the pieces, so a stored override can replace one without touching structure.
+export const DEFAULT_TABLES = {
+  qana: QANA_TABLE,
+  manderderya: MANDERDERYA_TABLE,
+  lewut: LEWUT_TABLE,
+};
+
+export const DEFAULT_HAREG = {
+  opening: { id: "opening", name: "ሐረግ — መክፈቻ", options: HAREG_OPENING },
+  closing: { id: "closing", name: "ሐረግ — መዝጊያ", options: HAREG_CLOSING },
+};
+
 // A line is an ordered list of parts. A `medeb` pair fills መደብ → ተቀባሊ መደብ and may offer
 // the ይለኩ በ choice; a `mewqe` pair fills መውቀዒ ቤት → ቤት and may offer a choice of which
-// table measures it; a `hareg` part is a single optional slot.
-const medebPair = (extra = {}) => ({ kind: "medeb", tables: [QANA_TABLE], sourceChoice: true, ...extra });
-const mewqePair = (extra = {}) => ({ kind: "mewqe", tables: [QANA_TABLE], ...extra });
-const haregPart = (options) => ({ kind: "hareg", options });
+// table measures it; a `hareg` part is a single optional slot. Parts name their tables by
+// id so a stored override can be swapped in without changing any of this structure.
+const medebPair = (extra = {}) => ({ kind: "medeb", tableIds: ["qana"], sourceChoice: true, ...extra });
+const mewqePair = (extra = {}) => ({ kind: "mewqe", tableIds: ["qana"], ...extra });
+const haregPart = (haregId) => ({ kind: "hareg", haregId });
 
-export const METERS = [
+export const METER_DEFS = [
   {
     id: "geez",
+    contentType: "ግዕዝ",
     title: "ግእዝ ጉባኤ ቃና",
     lines: [
       { parts: [medebPair({ sourceChoice: false }), mewqePair()] },
@@ -189,42 +204,62 @@ export const METERS = [
   },
   {
     id: "ezl",
+    contentType: "እዝል",
     title: "ዕዝል ጉባኤ ቃና",
     lines: [
-      { parts: [medebPair(), haregPart(HAREG_OPENING), mewqePair()] },
-      { parts: [medebPair(), haregPart(HAREG_CLOSING), mewqePair()] },
+      { parts: [medebPair(), haregPart("opening"), mewqePair()] },
+      { parts: [medebPair(), haregPart("closing"), mewqePair()] },
     ],
   },
   {
     id: "zeamlakiye",
+    contentType: "ዘአምላኪየ",
     title: "ዘአምላኪየ",
     lines: [
       { parts: [medebPair(), mewqePair()] },
       {
         parts: [
-          medebPair({ tables: [MANDERDERYA_TABLE], sourceChoice: false }),
-          mewqePair({ tables: [MANDERDERYA_TABLE] }),
+          medebPair({ tableIds: ["manderderya"], sourceChoice: false }),
+          mewqePair({ tableIds: ["manderderya"] }),
         ],
       },
-      { parts: [medebPair(), haregPart(HAREG_CLOSING), mewqePair()] },
+      { parts: [medebPair(), haregPart("closing"), mewqePair()] },
     ],
   },
   {
     id: "mibezhu",
+    contentType: "ሚበዝሑ",
     title: "ሚ በዝሑ",
     lines: [
       {
-        parts: [
-          medebPair(),
-          medebPair(),
-          mewqePair({ tables: [QANA_TABLE, MANDERDERYA_TABLE, LEWUT_TABLE] }),
-        ],
+        parts: [medebPair(), medebPair(), mewqePair({ tableIds: ["qana", "manderderya", "lewut"] })],
       },
-      { parts: [medebPair(), mewqePair({ tables: [QANA_TABLE, LEWUT_TABLE] })] },
+      { parts: [medebPair(), mewqePair({ tableIds: ["qana", "lewut"] })] },
       { parts: [medebPair(), medebPair(), mewqePair()] },
     ],
   },
 ];
+
+// Swaps the named tables and ሐረግ sets into the structure above. Anything missing from an
+// override falls back to the bundled default, so a partial or failed load still works.
+export function resolveMeters(tables = DEFAULT_TABLES, hareg = DEFAULT_HAREG) {
+  const tableOf = (id) => tables[id] ?? DEFAULT_TABLES[id];
+  const haregOf = (id) => (hareg[id] ?? DEFAULT_HAREG[id])?.options ?? null;
+
+  return METER_DEFS.map((meter) => ({
+    ...meter,
+    lines: meter.lines.map((line) => ({
+      ...line,
+      parts: line.parts.map((part) =>
+        part.kind === "hareg"
+          ? { ...part, options: haregOf(part.haregId) }
+          : { ...part, tables: part.tableIds.map(tableOf).filter(Boolean) }
+      ),
+    })),
+  }));
+}
+
+export const METERS = resolveMeters();
 
 const PAIR_LABELS = {
   medeb: { lead: { label: "መደብ", short: "መደብ" }, follow: { label: "ተቀባሊ መደብ", short: "ተቀባሊ" } },

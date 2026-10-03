@@ -25,27 +25,39 @@ async function fetchProfile(userId) {
 export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [initialising, setInitialising] = useState(true);
+  const [profilePending, setProfilePending] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
+    const loadProfile = async (userId) => {
+      if (!userId) {
+        setProfile(null);
+        setProfilePending(false);
+        return;
+      }
+      setProfilePending(true);
+      const nextProfile = await fetchProfile(userId);
+      if (cancelled) return;
+      setProfile(nextProfile);
+      setProfilePending(false);
+    };
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (cancelled) return;
       setSession(session);
-      const nextProfile = await fetchProfile(session?.user?.id);
+      await loadProfile(session?.user?.id);
       if (cancelled) return;
-      setProfile(nextProfile);
-      setLoading(false);
+      setInitialising(false);
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) return;
       setSession(session);
-      fetchProfile(session?.user?.id).then((nextProfile) => {
-        if (!cancelled) setProfile(nextProfile);
-      });
+      loadProfile(session?.user?.id);
     });
 
     return () => {
@@ -53,6 +65,10 @@ export const AuthProvider = ({ children }) => {
       subscription.unsubscribe();
     };
   }, []);
+
+  // A signed-in user whose profile is still in flight is not "not an admin" yet — saying
+  // so would bounce them to sign-in while they are already signed in.
+  const loading = initialising || profilePending;
 
   const signOut = () => supabase.auth.signOut();
 

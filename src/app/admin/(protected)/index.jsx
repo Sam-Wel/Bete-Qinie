@@ -10,6 +10,7 @@ const LINKS = [
   { label: "Add Dictionary Word", href: "/admin/add-word", icon: "book-outline" },
   { label: "Manage Dictionary", href: "/admin/dictionary-edit", icon: "create-outline" },
   { label: "Manage Blog Posts", href: "/admin/blog-list-edit", icon: "newspaper-outline" },
+  { label: "Manage መዐቀኒ Tables", href: "/admin/meters", icon: "grid-outline" },
 ];
 
 export default function AdminDashboard() {

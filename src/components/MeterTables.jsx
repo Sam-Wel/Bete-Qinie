@@ -2,7 +2,8 @@ import { StyleSheet, Text, View } from "react-native";
 import { KeneMeasureTable } from "./KeneMeasureTable";
 import { OrnamentDivider } from "./ui/OrnamentDivider";
 import { colors, fontFamily, radii, spacing, typography } from "../theme";
-import { LINE_TYPES, METERS, ORDINALS, buildMeasureTable, haregRows, meterTables } from "../lib/keneMeters";
+import { LINE_TYPES, ORDINALS, buildMeasureTable, haregRows, meterTables } from "../lib/keneMeters";
+import { useKeneMeters } from "../hooks/useKeneMeters";
 
 const countSlots = (line) => line.parts.reduce((n, part) => n + (part.kind === "hareg" ? 1 : 2), 0);
 
@@ -38,9 +39,11 @@ function HaregTable({ rows }) {
 }
 
 export function MeterTables() {
+  const { meters } = useKeneMeters();
+
   return (
     <View>
-      {METERS.map((meter, index) => {
+      {meters.map((meter, index) => {
         const tables = meterTables(meter);
         const hareg = haregRows(meter);
 
