@@ -174,15 +174,128 @@ function SideEditor({ title, caption, entries, ceiling, onChange }) {
   );
 }
 
+// Kept separate so `draft` is never null inside it. When the save callback lived in the
+// parent, the React Compiler hoisted its dependency check — draft.id, draft.kind — to the
+// top of every render, which threw before a table had been opened.
+function DraftEditor({ draft, setDraft, overridden, userId, refresh, onFinished }) {
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState(null);
+
+  const issues = useMemo(() => validate(draft.payload), [draft]);
+  const ceiling = useMemo(() => countCeiling(draft.payload), [draft]);
+
+  const save = async () => {
+    if (issues.length) return;
+    setBusy(true);
+    setNotice(null);
+
+    const { error: saveError } = await supabase.from("kene_measures").upsert({
+      id: draft.id,
+      kind: draft.kind,
+      name: draft.name,
+      payload: draft.payload,
+      updated_at: new Date().toISOString(),
+      updated_by: userId ?? null,
+    });
+
+    setBusy(false);
+    if (saveError) {
+      setNotice({ tone: "error", text: saveError.message });
+      return;
+    }
+    await refresh();
+    onFinished({ tone: "ok", text: `${draft.name} ተቀምጧል።` });
+  };
+
+  const resetToDefault = async () => {
+    setBusy(true);
+    const { error: delError } = await supabase.from("kene_measures").delete().eq("id", draft.id);
+    setBusy(false);
+    if (delError) {
+      setNotice({ tone: "error", text: delError.message });
+      return;
+    }
+    await refresh();
+    onFinished({ tone: "ok", text: `${draft.name} ወደ ነባሩ ተመልሷል።` });
+  };
+
+  return (
+    <ScreenContainer scroll>
+      <ScreenHeader title={draft.name} titleEthiopic onBack={() => onFinished(null)} />
+
+      {draft.kind === "table" ? (
+        <>
+          <Card style={styles.previewCard}>
+            <Text style={styles.previewTitle}>ቅድመ እይታ</Text>
+            <KeneMeasureTable {...buildMeasureTable({ ...draft.payload, id: draft.id, name: draft.name })} />
+          </Card>
+
+          <SideEditor
+            title="መደብ → ተቀባሊ መደብ"
+            caption="Each row is one lead measure and what it allows beside it."
+            entries={draft.payload.medeb}
+            ceiling={ceiling}
+            onChange={(medeb) => setDraft({ ...draft, payload: { ...draft.payload, medeb } })}
+          />
+          <SideEditor
+            title="መውቀዒ ቤት → ቤት"
+            caption="Measured independently of the መደብ side."
+            entries={draft.payload.mewqe}
+            ceiling={ceiling}
+            onChange={(mewqe) => setDraft({ ...draft, payload: { ...draft.payload, mewqe } })}
+          />
+        </>
+      ) : (
+        <Card style={styles.entry}>
+          <Text style={styles.entryTitle}>ሐረግ</Text>
+          <Text style={styles.sideCaption}>Allowed syllable counts per type. ሐረግ is always optional.</Text>
+          {LINE_TYPES.map((type) => (
+            <CountRow
+              key={type.key}
+              label={type.label}
+              nullable
+              ceiling={ceiling}
+              values={draft.payload.options?.[type.key] ?? null}
+              onChange={(values) =>
+                setDraft({ ...draft, payload: { options: { ...draft.payload.options, [type.key]: values } } })
+              }
+            />
+          ))}
+        </Card>
+      )}
+
+      {issues.length ? (
+        <Card style={styles.issues}>
+          <Text style={styles.issuesTitle}>Fix before saving</Text>
+          {issues.map((issue) => (
+            <Text key={issue} style={styles.issueText}>
+              • {issue}
+            </Text>
+          ))}
+        </Card>
+      ) : null}
+
+      {notice ? <Text style={notice.tone === "error" ? styles.error : styles.ok}>{notice.text}</Text> : null}
+
+      <View style={styles.actions}>
+        <Button onPress={save} disabled={busy || issues.length > 0}>
+          ያስቀምጡ
+        </Button>
+        {overridden.includes(draft.id) ? (
+          <Button variant="danger" onPress={resetToDefault} disabled={busy}>
+            ወደ ነባሩ ይመለስ
+          </Button>
+        ) : null}
+      </View>
+    </ScreenContainer>
+  );
+}
+
 export default function MetersAdmin() {
   const { user } = useAuth();
   const { tables, hareg, overridden, loading, error, refresh } = useKeneMeters();
   const [draft, setDraft] = useState(null);
-  const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
-
-  const issues = useMemo(() => (draft ? validate(draft.payload) : []), [draft]);
-  const ceiling = useMemo(() => (draft ? countCeiling(draft.payload) : 8), [draft]);
 
   const open = (kind, id, source) => {
     setNotice(null);
@@ -197,43 +310,9 @@ export default function MetersAdmin() {
     });
   };
 
-  const close = () => setDraft(null);
-
-  const save = async () => {
-    if (issues.length) return;
-    setBusy(true);
-    setNotice(null);
-
-    const { error: saveError } = await supabase.from("kene_measures").upsert({
-      id: draft.id,
-      kind: draft.kind,
-      name: draft.name,
-      payload: draft.payload,
-      updated_at: new Date().toISOString(),
-      updated_by: user?.id ?? null,
-    });
-
-    setBusy(false);
-    if (saveError) {
-      setNotice({ tone: "error", text: saveError.message });
-      return;
-    }
-    await refresh();
-    setNotice({ tone: "ok", text: `${draft.name} ተቀምጧል።` });
-    close();
-  };
-
-  const resetToDefault = async () => {
-    setBusy(true);
-    const { error: delError } = await supabase.from("kene_measures").delete().eq("id", draft.id);
-    setBusy(false);
-    if (delError) {
-      setNotice({ tone: "error", text: delError.message });
-      return;
-    }
-    await refresh();
-    setNotice({ tone: "ok", text: `${draft.name} ወደ ነባሩ ተመልሷል።` });
-    close();
+  const finish = (result) => {
+    setDraft(null);
+    setNotice(result);
   };
 
   if (loading) {
@@ -246,89 +325,20 @@ export default function MetersAdmin() {
 
   if (draft) {
     return (
-      <ScreenContainer scroll>
-        <ScreenHeader title={draft.name} titleEthiopic onBack={close} />
-
-        {draft.kind === "table" ? (
-          <>
-            <Card style={styles.previewCard}>
-              <Text style={styles.previewTitle}>ቅድመ እይታ</Text>
-              <KeneMeasureTable {...buildMeasureTable({ ...draft.payload, id: draft.id, name: draft.name })} />
-            </Card>
-
-            <SideEditor
-              title="መደብ → ተቀባሊ መደብ"
-              caption="Each row is one lead measure and what it allows beside it."
-              entries={draft.payload.medeb}
-              ceiling={ceiling}
-              onChange={(medeb) => setDraft({ ...draft, payload: { ...draft.payload, medeb } })}
-            />
-            <SideEditor
-              title="መውቀዒ ቤት → ቤት"
-              caption="Measured independently of the መደብ side."
-              entries={draft.payload.mewqe}
-              ceiling={ceiling}
-              onChange={(mewqe) => setDraft({ ...draft, payload: { ...draft.payload, mewqe } })}
-            />
-          </>
-        ) : (
-          <Card style={styles.entry}>
-            <Text style={styles.entryTitle}>ሐረግ</Text>
-            <Text style={styles.sideCaption}>Allowed syllable counts per type. ሐረግ is always optional.</Text>
-            {LINE_TYPES.map((type) => (
-              <CountRow
-                key={type.key}
-                label={type.label}
-                nullable
-                ceiling={ceiling}
-                values={draft.payload.options?.[type.key] ?? null}
-                onChange={(values) =>
-                  setDraft({
-                    ...draft,
-                    payload: { options: { ...draft.payload.options, [type.key]: values } },
-                  })
-                }
-              />
-            ))}
-          </Card>
-        )}
-
-        {issues.length ? (
-          <Card style={styles.issues}>
-            <Text style={styles.issuesTitle}>Fix before saving</Text>
-            {issues.map((issue) => (
-              <Text key={issue} style={styles.issueText}>
-                • {issue}
-              </Text>
-            ))}
-          </Card>
-        ) : null}
-
-        {notice ? (
-          <Text style={notice.tone === "error" ? styles.error : styles.ok}>{notice.text}</Text>
-        ) : null}
-
-        <View style={styles.actions}>
-          <Button onPress={save} disabled={busy || issues.length > 0}>
-            ያስቀምጡ
-          </Button>
-          {overridden.includes(draft.id) ? (
-            <Button variant="danger" onPress={resetToDefault} disabled={busy}>
-              ወደ ነባሩ ይመለስ
-            </Button>
-          ) : null}
-        </View>
-      </ScreenContainer>
+      <DraftEditor
+        draft={draft}
+        setDraft={setDraft}
+        overridden={overridden}
+        userId={user?.id}
+        refresh={refresh}
+        onFinished={finish}
+      />
     );
   }
 
   return (
     <ScreenContainer scroll>
-      <ScreenHeader
-        title="መዐቀኒ ሰንጠረዥ"
-        titleEthiopic
-        onBack={() => router.replace("/admin")}
-      />
+      <ScreenHeader title="መዐቀኒ ሰንጠረዥ" titleEthiopic onBack={() => router.replace("/admin")} />
 
       <Text style={styles.lead}>
         These rules drive both the ሰንጠረዥ tab and the መስፈሪያ checker, so an edit here changes what the checker
@@ -344,9 +354,7 @@ export default function MetersAdmin() {
           <Card style={styles.row}>
             <View style={{ flex: 1 }}>
               <Text style={styles.rowTitle}>{table.name}</Text>
-              <Text style={styles.rowNote}>
-                {table.medeb?.length ? "መደብ + መውቀዒ ቤት" : "መውቀዒ ቤት only"}
-              </Text>
+              <Text style={styles.rowNote}>{table.medeb?.length ? "መደብ + መውቀዒ ቤት" : "መውቀዒ ቤት only"}</Text>
             </View>
             {overridden.includes(table.id) ? <Text style={styles.badge}>ተስተካክሏል</Text> : null}
           </Card>
