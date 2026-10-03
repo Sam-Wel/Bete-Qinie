@@ -1,11 +1,9 @@
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { Redirect, Stack, router } from "expo-router";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { Redirect, Stack } from "expo-router";
 import { useAuth } from "../../../context/AuthContext";
-import { Button, Card, ScreenContainer } from "../../../components/ui";
-import { colors, spacing, typography } from "../../../theme";
 
 export default function ProtectedLayout() {
-  const { isAdmin, loading, user, profile } = useAuth();
+  const { isAdmin, loading, user } = useAuth();
 
   if (loading) {
     return (
@@ -15,33 +13,15 @@ export default function ProtectedLayout() {
     );
   }
 
-  // Only a visitor with no session belongs on the sign-in screen. Sending a signed-in
-  // user there just looks like the login failed.
+  // A layout route is expected to render a navigator. Rendering a screen here instead
+  // leaves the router with a child route it cannot resolve, so both refusals redirect
+  // to a route that owns its own screen.
   if (!user) return <Redirect href="/auth/sign-in" />;
-
-  if (!isAdmin) {
-    return (
-      <ScreenContainer center>
-        <Card style={styles.card}>
-          <Text style={styles.title}>Admin only</Text>
-          <Text style={styles.body}>
-            You are signed in as {user.email}, but this account is not an admin
-            {profile ? "" : " — and no profile row was found for it"}.
-          </Text>
-          <Button variant="secondary" onPress={() => router.replace("/")}>
-            Back to the app
-          </Button>
-        </Card>
-      </ScreenContainer>
-    );
-  }
+  if (!isAdmin) return <Redirect href="/admin/no-access" />;
 
   return <Stack screenOptions={{ headerShown: false }} />;
 }
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  card: { gap: spacing.md, alignItems: "center" },
-  title: { ...typography.h2, color: colors.textPrimary },
-  body: { ...typography.caption, color: colors.textSecondary, textAlign: "center", lineHeight: 19 },
 });
