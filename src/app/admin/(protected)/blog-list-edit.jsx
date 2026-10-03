@@ -81,7 +81,14 @@ export default function BlogListEdit() {
           const preview = stripHtml(toHtmlSource(post.content)).slice(0, PREVIEW_LENGTH);
           return (
             <Card style={styles.card}>
-              {post.is_published === false && <Badge label="Draft" tone="warning" />}
+              <View style={styles.badges}>
+                {post.is_public ? (
+                  <Badge label="Public" tone="primary" />
+                ) : (
+                  <Badge label="Private" tone="muted" />
+                )}
+                {post.is_published === false && <Badge label="Draft" tone="warning" />}
+              </View>
               <Text style={styles.cardTitle}>{post.title}</Text>
               <Text style={styles.cardMeta}>
                 By {post.written_by} | {new Date(post.created_date).toLocaleDateString()}
@@ -147,6 +154,7 @@ export default function BlogListEdit() {
 }
 
 const styles = StyleSheet.create({
+  badges: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   noPadding: { padding: 0 },
   controls: {
     padding: spacing.lg,

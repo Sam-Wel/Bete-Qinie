@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Switch, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../../../lib/supabaseClient";
+import { useAuth } from "../../../../context/AuthContext";
 import { BLOG_CONTENT_TYPES } from "../../../../util/blogContentTypes";
 import { isBlogContentEmpty } from "../../../../util/renderBlogContent";
 import { updateBlogPost } from "../../../../util/blogPostWrites";
@@ -17,7 +18,9 @@ export default function UpdateBlogPost() {
   const [initialContent, setInitialContent] = useState(null);
   const [contentType, setContentType] = useState("");
   const [writtenBy, setWrittenBy] = useState("");
+  const { user } = useAuth();
   const [isPublished, setIsPublished] = useState(true);
+  const [isPublic, setIsPublic] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [originalPost, setOriginalPost] = useState(null);
@@ -40,6 +43,7 @@ export default function UpdateBlogPost() {
         setContentType(data.content_type);
         setWrittenBy(data.written_by);
         setIsPublished(data.is_published ?? true);
+        setIsPublic(data.is_public ?? false);
         setOriginalPost(data);
       }
     };
@@ -65,6 +69,8 @@ export default function UpdateBlogPost() {
       content_type: contentType,
       written_by: writtenBy,
       is_published: isPublished,
+      is_public: isPublic,
+      user_id: isPublic ? null : user?.id ?? null,
     });
 
     if (error) {
@@ -116,6 +122,18 @@ export default function UpdateBlogPost() {
       <TextField label="Written By" value={writtenBy} onChangeText={setWrittenBy} />
 
       <View style={styles.switchRow}>
+        <Switch value={isPublic} onValueChange={setIsPublic} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.switchLabel}>Public example</Text>
+          <Text style={styles.switchNote}>
+            {isPublic
+              ? "Shown in ቅኔ አበው to everyone, signed in or not. No owner."
+              : "Private to your account only."}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.switchRow}>
         <Switch value={isPublished} onValueChange={setIsPublished} />
         <Text style={styles.switchLabel}>Published (off = unpublish / save as a draft)</Text>
       </View>
@@ -139,6 +157,7 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.textSecondary,
   },
+  switchNote: { ...typography.caption, color: colors.textMuted },
   switchRow: {
     flexDirection: "row",
     alignItems: "center",
