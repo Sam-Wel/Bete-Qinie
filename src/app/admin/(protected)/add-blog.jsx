@@ -1,12 +1,11 @@
 import { useRef, useState } from "react";
 import { StyleSheet, Switch, Text, View } from "react-native";
-import { router } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
 import { BLOG_CONTENT_TYPES } from "../../../util/blogContentTypes";
 import { isBlogContentEmpty } from "../../../util/renderBlogContent";
 import { insertBlogPost } from "../../../util/blogPostWrites";
 import BlogEditor from "../../../components/BlogEditor";
-import { ScreenContainer, TextField, Button, ScreenHeader, Select } from "../../../components/ui";
+import { ScreenContainer, TextField, Button, AdminHeader, Select } from "../../../components/ui";
 import { colors, spacing, typography } from "../../../theme";
 
 export default function AddBlogPost() {
@@ -54,7 +53,7 @@ export default function AddBlogPost() {
 
   return (
     <ScreenContainer scroll keyboardAvoiding contentContainerStyle={styles.container}>
-      <ScreenHeader title="Add New Blog Post" onBack={() => router.back()} />
+      <AdminHeader title="Add a post" />
 
       {message ? (
         <Text style={[typography.body, message.includes("success") ? styles.success : styles.error]}>

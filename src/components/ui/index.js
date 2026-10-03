@@ -5,6 +5,7 @@ export { TextField } from "./TextField";
 export { EmptyState } from "./EmptyState";
 export { Badge } from "./Badge";
 export { ScreenHeader } from "./ScreenHeader";
+export { AdminHeader } from "./AdminHeader";
 export { OrnamentFrame } from "./OrnamentFrame";
 export { OrnamentDivider } from "./OrnamentDivider";
 export { CrossMenuIcon } from "./CrossMenuIcon";

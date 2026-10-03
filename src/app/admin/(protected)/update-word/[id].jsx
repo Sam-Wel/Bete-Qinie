@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../../../lib/supabaseClient";
-import { ScreenContainer, TextField, Button, ScreenHeader } from "../../../../components/ui";
+import { ScreenContainer, TextField, Button, AdminHeader } from "../../../../components/ui";
 import { colors, spacing, typography } from "../../../../theme";
 
 export default function UpdateWord() {
@@ -141,7 +141,7 @@ export default function UpdateWord() {
       keyboardAvoiding
       contentContainerStyle={{ gap: spacing.md, maxWidth: 520, width: "100%", alignSelf: "center" }}
     >
-      <ScreenHeader title="Update Word and Translations" onBack={() => router.back()} />
+      <AdminHeader title="Edit word" fallback="/admin/dictionary-edit" />
 
       {error && (
         <Text style={[typography.body, { color: colors.danger, textAlign: "center" }]}>

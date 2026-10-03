@@ -1,11 +1,12 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, router } from "expo-router";
 import { Button } from "../../components/ui";
+import { AdminTopBar } from "../../components/AdminTopBar";
 import { colors, spacing, typography } from "../../theme";
 
 export default function AdminLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ headerShown: true, header: () => <AdminTopBar /> }}>
       <Stack.Screen name="(protected)" />
       <Stack.Screen name="no-access" />
     </Stack>

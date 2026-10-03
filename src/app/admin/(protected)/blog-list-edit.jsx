@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { useBlogPosts } from "../../../hooks/useBlogPosts";
 import { BLOG_CONTENT_TYPES } from "../../../util/blogContentTypes";
 import { stripHtml, toHtmlSource } from "../../../util/renderBlogContent";
-import { ScreenContainer, Card, TextField, Button, Badge, EmptyState, ScreenHeader, Select } from "../../../components/ui";
+import { ScreenContainer, Card, TextField, Button, Badge, EmptyState, AdminHeader, Select } from "../../../components/ui";
 import { colors, fontFamily, spacing, typography } from "../../../theme";
 
 const PREVIEW_LENGTH = 140;
@@ -47,7 +47,7 @@ export default function BlogListEdit() {
   return (
     <ScreenContainer contentContainerStyle={styles.noPadding}>
       <View style={styles.controls}>
-        <ScreenHeader title="Manage Blog Posts" onBack={() => router.back()} />
+        <AdminHeader />
         <TextField
           value={searchText}
           onChangeText={(value) => {

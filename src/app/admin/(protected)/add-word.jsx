@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { StyleSheet, Text } from "react-native";
-import { router } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
-import { ScreenContainer, TextField, Button, ScreenHeader } from "../../../components/ui";
+import { ScreenContainer, TextField, Button, AdminHeader } from "../../../components/ui";
 import { colors, spacing, typography } from "../../../theme";
 
 const FIELDS = ["geez", "tigrinya", "amharic", "english", "sewasew"];
@@ -147,7 +146,7 @@ export default function AddWord() {
 
   return (
     <ScreenContainer scroll keyboardAvoiding contentContainerStyle={styles.container}>
-      <ScreenHeader title="Add New Word" onBack={() => router.back()} />
+      <AdminHeader title="Add a word" />
 
       {error && <Text style={[typography.body, styles.error]}>{error}</Text>}
       {success && <Text style={[typography.body, styles.success]}>{success}</Text>}

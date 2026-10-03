@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
-import { router } from "expo-router";
-import { Button, Card, ScreenContainer, ScreenHeader } from "../../../components/ui";
+import { AdminHeader, Button, Card, ScreenContainer } from "../../../components/ui";
 import { KeneMeasureTable } from "../../../components/KeneMeasureTable";
 import { useAuth } from "../../../context/AuthContext";
 import { useKeneMeters } from "../../../hooks/useKeneMeters";
@@ -221,7 +220,7 @@ function DraftEditor({ draft, setDraft, overridden, userId, refresh, onFinished 
 
   return (
     <ScreenContainer scroll>
-      <ScreenHeader title={draft.name} titleEthiopic onBack={() => onFinished(null)} />
+      <AdminHeader title={draft.name} titleEthiopic onBack={() => onFinished(null)} />
 
       {draft.kind === "table" ? (
         <>
@@ -338,7 +337,7 @@ export default function MetersAdmin() {
 
   return (
     <ScreenContainer scroll>
-      <ScreenHeader title="መዐቀኒ ሰንጠረዥ" titleEthiopic onBack={() => router.replace("/admin")} />
+      <AdminHeader title="መዐቀኒ ሰንጠረዥ" titleEthiopic />
 
       <Text style={styles.lead}>
         These rules drive both the ሰንጠረዥ tab and the መስፈሪያ checker, so an edit here changes what the checker

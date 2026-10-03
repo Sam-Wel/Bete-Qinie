@@ -7,7 +7,7 @@ import { isBlogContentEmpty } from "../../../../util/renderBlogContent";
 import { updateBlogPost } from "../../../../util/blogPostWrites";
 import { snapshotBlogPostRevision } from "../../../../util/blogPostRevisions";
 import BlogEditor from "../../../../components/BlogEditor";
-import { ScreenContainer, TextField, Button, ScreenHeader, Select } from "../../../../components/ui";
+import { ScreenContainer, TextField, Button, AdminHeader, Select } from "../../../../components/ui";
 import { colors, spacing, typography } from "../../../../theme";
 
 export default function UpdateBlogPost() {
@@ -91,7 +91,7 @@ export default function UpdateBlogPost() {
 
   return (
     <ScreenContainer scroll keyboardAvoiding contentContainerStyle={styles.container}>
-      <ScreenHeader title="Update Blog Post" onBack={() => router.back()} />
+      <AdminHeader title="Edit post" fallback="/admin/blog-list-edit" />
 
       {message ? (
         <Text style={[typography.body, message.includes("success") ? styles.success : styles.error]}>

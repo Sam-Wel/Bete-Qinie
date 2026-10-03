@@ -3,7 +3,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "
 import { router } from "expo-router";
 import { useDictionarySearch } from "../../../hooks/useDictionarySearch";
 import { supabase } from "../../../lib/supabaseClient";
-import { ScreenContainer, Card, TextField, Button, EmptyState, ScreenHeader, Select } from "../../../components/ui";
+import { ScreenContainer, Card, TextField, Button, EmptyState, AdminHeader, Select } from "../../../components/ui";
 import { colors, fontFamily, radii, spacing, typography } from "../../../theme";
 
 const SEWASEW_SAVE_DEBOUNCE_MS = 600;
@@ -76,7 +76,7 @@ export default function DictionaryEdit() {
 
   return (
     <ScreenContainer scroll keyboardAvoiding contentContainerStyle={styles.container}>
-      <ScreenHeader title="Edit Dictionary" onBack={() => router.back()} />
+      <AdminHeader title="Dictionary" />
 
       <Select
         value={selectedLanguage}
