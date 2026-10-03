@@ -18,8 +18,12 @@ export default function NoAccess() {
             ? `You are signed in as ${user.email}, but this account is not an admin.`
             : "This area is for admins."}
         </Text>
-        {user && !profile ? (
-          <Text style={styles.detail}>No profile row was found for this account.</Text>
+        {user ? (
+          <Text style={styles.detail}>
+            {profile
+              ? `profiles.role reads ${JSON.stringify(profile.role)} — it must be exactly "admin".`
+              : "No profile row was found for this account."}
+          </Text>
         ) : null}
         <Button variant="secondary" onPress={() => router.replace("/")}>
           Back to the app
