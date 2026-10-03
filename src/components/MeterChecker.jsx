@@ -21,6 +21,7 @@ import {
 import { useKeneMeters } from "../hooks/useKeneMeters";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabaseClient";
+import { clearDraft, draftFits, hasContent, loadDraft, saveDraft } from "../lib/meaqeniDraft";
 
 const SPRING = { damping: 15, stiffness: 300 };
 const EMPTY = { type: null, count: null, text: "", skipped: false };
@@ -173,12 +174,43 @@ export function MeterChecker() {
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(null);
+  const [hydrated, setHydrated] = useState(false);
+  const [restored, setRestored] = useState(false);
   const scrollers = useRef({});
   const { user, profile } = useAuth();
 
   const slotsByLine = meter.lines.map(buildLineSlots);
   const sequence = slotsByLine.flatMap((slots, line) => slots.map((slot) => ({ line, slot: slot.key })));
   const showsTableNames = meterTables(meter).length > 1;
+
+  // Work in progress outlives leaving the page, so a half-measured ቅኔ is not lost to a
+  // stray tap on the menu.
+  useEffect(() => {
+    let active = true;
+
+    loadDraft().then((draft) => {
+      if (!active) return;
+      const target = METERS.find((m) => m.id === draft?.meterId);
+
+      if (target && hasContent(draft) && draftFits(draft, target.lines.map(buildLineSlots))) {
+        setMeterId(draft.meterId);
+        setState(draft.state);
+        setTitle(draft.title ?? "");
+        setRestored(true);
+      }
+      setHydrated(true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const timer = setTimeout(() => saveDraft({ meterId, state, title }), 400);
+    return () => clearTimeout(timer);
+  }, [hydrated, meterId, state, title]);
 
   // Advancing can land on a cell that is scrolled off the side, so bring it into view.
   useEffect(() => {
@@ -256,6 +288,7 @@ export function MeterChecker() {
     setMeasuring(null);
     setTitle("");
     setSaved(null);
+    setRestored(false);
   };
 
   const reset = () => {
@@ -264,6 +297,8 @@ export function MeterChecker() {
     setMeasuring(null);
     setTitle("");
     setSaved(null);
+    setRestored(false);
+    clearDraft();
   };
 
   // Progress counts only the slots a poem must have; ሐረግ is never part of the target.
@@ -303,7 +338,13 @@ export function MeterChecker() {
     ]);
 
     setSaving(false);
-    setSaved(saveError ? { tone: "error", text: saveError.message } : { tone: "ok", text: "ተቀምጧል።" });
+    if (saveError) {
+      setSaved({ tone: "error", text: saveError.message });
+      return;
+    }
+    setSaved({ tone: "ok", text: "ተቀምጧል።" });
+    setRestored(false);
+    clearDraft();
   };
 
   const touched = state.some((line) =>
@@ -352,6 +393,8 @@ export function MeterChecker() {
           {settledCount}/{required.length}
         </Text>
       </View>
+
+      {restored ? <Text style={styles.restored}>ያልተጠናቀቀ ስራዎ ተመልሷል።</Text> : null}
 
       {slotsByLine.map((slots, lineIndex) => (
         <View key={lineIndex} style={styles.lineBlock}>
@@ -691,6 +734,16 @@ const styles = StyleSheet.create({
   saveHint: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: "center" },
   saveOk: { ...typography.caption, color: colors.success, marginTop: spacing.xs },
   saveError: { ...typography.caption, color: colors.dangerDark, marginTop: spacing.xs },
+
+  restored: {
+    ...typography.caption,
+    fontFamily: fontFamily.ethiopicRegular,
+    color: colors.primaryDark,
+    backgroundColor: colors.primaryLight,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+  },
 
   resetButton: { alignSelf: "center", paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
   resetText: { fontFamily: fontFamily.ethiopicRegular, fontSize: 14, color: colors.textSecondary },
