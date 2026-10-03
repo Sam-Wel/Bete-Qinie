@@ -22,3 +22,38 @@ export function isBlogContentEmpty(html) {
   if (!html) return true;
   return html.replace(/<(.|\n)*?>/g, "").trim().length === 0;
 }
+
+// ቅኔ is written one verse per line, but a preview built with stripHtml collapses all
+// whitespace and runs them together. Ethiopic ends a verse with ። , so split on that —
+// falling back to real line breaks for anything that does not use it.
+const ETHIOPIC_FULL_STOP = "።";
+
+export function toVerseLines(content) {
+  if (!content) return [];
+
+  const text = HTML_TAG_PATTERN.test(content)
+    ? content
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/(p|div|li|h[1-6])>/gi, "\n")
+        .replace(/<[^>]*>/g, "")
+    : content;
+
+  const lines = [];
+  let current = "";
+
+  for (const character of text) {
+    if (character === "\n") {
+      if (current.trim()) lines.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += character;
+    if (character === ETHIOPIC_FULL_STOP) {
+      lines.push(current.trim());
+      current = "";
+    }
+  }
+  if (current.trim()) lines.push(current.trim());
+
+  return lines;
+}

@@ -3,11 +3,12 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "
 import { Link } from "expo-router";
 import { useBlogPosts } from "../../../hooks/useBlogPosts";
 import { BLOG_CONTENT_TYPES } from "../../../util/blogContentTypes";
-import { stripHtml, toHtmlSource } from "../../../util/renderBlogContent";
+import { toVerseLines } from "../../../util/renderBlogContent";
 import { ScreenContainer, Card, TextField, Button, EmptyState, ScreenHeader, Select } from "../../../components/ui";
 import { colors, fontFamily, spacing, typography } from "../../../theme";
 
-const PREVIEW_LENGTH = 180;
+// A ቅኔ is short; four verses is enough to recognise one in a list.
+const PREVIEW_LINES = 4;
 const CONTENT_TYPE_ITEMS = [{ label: "All Content Types", value: "" }, ...BLOG_CONTENT_TYPES];
 
 export default function BlogList() {
@@ -68,19 +69,24 @@ export default function BlogList() {
           )
         }
         renderItem={({ item: post }) => {
-          const preview = stripHtml(toHtmlSource(post.content)).slice(0, PREVIEW_LENGTH);
+          const lines = toVerseLines(post.content);
+          const shown = lines.slice(0, PREVIEW_LINES);
+
           return (
             <Link href={`/blog/${post.id}`} asChild>
               <Pressable>
                 <Card style={styles.card}>
                   <Text style={styles.cardTitle}>{post.title}</Text>
-                  <Text style={styles.cardMeta}>
-                    By {post.written_by} | {new Date(post.created_date).toLocaleDateString()}
-                  </Text>
-                  <Text style={styles.cardPreview} numberOfLines={4}>
-                    {preview}
-                    {preview.length === PREVIEW_LENGTH ? "…" : ""}
-                  </Text>
+                  {post.written_by ? <Text style={styles.cardMeta}>{post.written_by}</Text> : null}
+
+                  <View style={styles.verses}>
+                    {shown.map((line, index) => (
+                      <Text key={index} style={styles.verse} numberOfLines={1}>
+                        {line}
+                      </Text>
+                    ))}
+                    {lines.length > shown.length ? <Text style={styles.more}>…</Text> : null}
+                  </View>
                 </Card>
               </Pressable>
             </Link>
@@ -145,6 +151,14 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textMuted,
   },
+  verses: { gap: 2 },
+  verse: {
+    fontFamily: fontFamily.ethiopicRegular,
+    fontSize: 15,
+    lineHeight: 23,
+    color: colors.textSecondary,
+  },
+  more: { ...typography.caption, color: colors.textMuted },
   cardPreview: {
     fontFamily: fontFamily.ethiopicRegular,
     fontSize: 14,
