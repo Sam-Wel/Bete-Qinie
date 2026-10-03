@@ -18,6 +18,9 @@ import {
   partTable,
   slotOptions,
 } from "../lib/keneMeters";
+import { useKeneMeters } from "../hooks/useKeneMeters";
+import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabaseClient";
 
 const SPRING = { damping: 15, stiffness: 300 };
 const EMPTY = { type: null, count: null, text: "", skipped: false };
@@ -158,13 +161,20 @@ function SlotCell({ slot, value, active, broken, onFocus, onMeasure, onChangeTex
 }
 
 export function MeterChecker() {
+  const { meters } = useKeneMeters();
   const [meterId, setMeterId] = useState(METERS[0].id);
-  const meter = METERS.find((m) => m.id === meterId);
+  // Saved edits only change what the tables contain, never the slot layout, so state
+  // built from the bundled defaults stays valid once an override arrives.
+  const meter = meters.find((m) => m.id === meterId) ?? meters[0];
 
   const [state, setState] = useState(() => buildState(METERS[0]));
   const [active, setActive] = useState({ line: 0, slot: "s0" });
   const [measuring, setMeasuring] = useState(null);
+  const [title, setTitle] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(null);
   const scrollers = useRef({});
+  const { user, profile } = useAuth();
 
   const slotsByLine = meter.lines.map(buildLineSlots);
   const sequence = slotsByLine.flatMap((slots, line) => slots.map((slot) => ({ line, slot: slot.key })));
@@ -244,12 +254,16 @@ export function MeterChecker() {
     setState(buildState(next));
     setActive({ line: 0, slot: "s0" });
     setMeasuring(null);
+    setTitle("");
+    setSaved(null);
   };
 
   const reset = () => {
     setState(buildState(meter));
     setActive({ line: 0, slot: "s0" });
     setMeasuring(null);
+    setTitle("");
+    setSaved(null);
   };
 
   // Progress counts only the slots a poem must have; ሐረግ is never part of the target.
@@ -259,6 +273,39 @@ export function MeterChecker() {
   ).length;
   const complete = settledCount === required.length;
   const optionalCount = sequence.length - required.length;
+  // The words as written, one line per ቤት, skipping segments left empty.
+  const poemText = () =>
+    slotsByLine
+      .map((slots, i) =>
+        slots
+          .map((slot) => state[i].slots[slot.key].text.trim())
+          .filter(Boolean)
+          .join(" ")
+      )
+      .filter(Boolean)
+      .join("\n");
+
+  const savePoem = async () => {
+    setSaving(true);
+    setSaved(null);
+
+    const { error: saveError } = await supabase.from("blog_posts").insert([
+      {
+        title: title.trim(),
+        content: poemText(),
+        content_type: meter.contentType ?? meter.title,
+        written_by: profile?.display_name ?? user?.email ?? "",
+        created_date: new Date().toISOString(),
+        is_published: true,
+        is_public: false,
+        user_id: user?.id,
+      },
+    ]);
+
+    setSaving(false);
+    setSaved(saveError ? { tone: "error", text: saveError.message } : { tone: "ok", text: "ተቀምጧል።" });
+  };
+
   const touched = state.some((line) =>
     Object.values(line.slots).some((value) => value.skipped || value.type || value.text)
   );
@@ -282,7 +329,7 @@ export function MeterChecker() {
   return (
     <View style={styles.wrapper}>
       <View style={styles.meterTabs}>
-        {METERS.map((option) => {
+        {meters.map((option) => {
           const on = option.id === meterId;
           return (
             <Pressable
@@ -371,6 +418,37 @@ export function MeterChecker() {
             );
           })}
           <OrnamentDivider style={{ marginTop: spacing.md }} />
+
+          {user ? (
+            <View style={styles.save}>
+              <TextInput
+                value={title}
+                onChangeText={setTitle}
+                placeholder="ርእስ"
+                placeholderTextColor={colors.textMuted}
+                style={styles.saveTitle}
+              />
+              <Pressable
+                onPress={savePoem}
+                disabled={saving || !title.trim() || !poemText()}
+                style={[
+                  styles.saveButton,
+                  (saving || !title.trim() || !poemText()) && styles.saveButtonOff,
+                ]}
+              >
+                <Text style={styles.saveButtonText}>{saving ? "..." : "ያስቀምጡ"}</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Text style={styles.saveHint}>ቅኔውን ለማስቀመጥ ይግቡ።</Text>
+          )}
+
+          {!poemText() && user ? (
+            <Text style={styles.saveHint}>Type the words into the cells to save this one.</Text>
+          ) : null}
+          {saved ? (
+            <Text style={saved.tone === "error" ? styles.saveError : styles.saveOk}>{saved.text}</Text>
+          ) : null}
         </Animated.View>
       ) : null}
 
@@ -588,6 +666,31 @@ const styles = StyleSheet.create({
   finaleLine: { alignItems: "center", gap: 2, marginTop: spacing.sm },
   finaleWords: { fontFamily: fontFamily.ethiopicRegular, fontSize: 18, color: colors.textPrimary, textAlign: "center" },
   finalePattern: { ...typography.caption, color: colors.textMuted },
+
+  save: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.md, width: "100%" },
+  saveTitle: {
+    flex: 1,
+    fontFamily: fontFamily.ethiopicRegular,
+    fontSize: 15,
+    color: colors.textPrimary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.sm,
+    backgroundColor: colors.surface,
+  },
+  saveButton: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.sm,
+    backgroundColor: colors.primary,
+  },
+  saveButtonOff: { opacity: 0.45 },
+  saveButtonText: { fontFamily: fontFamily.ethiopicBold, fontSize: 14, color: colors.onPrimary },
+  saveHint: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: "center" },
+  saveOk: { ...typography.caption, color: colors.success, marginTop: spacing.xs },
+  saveError: { ...typography.caption, color: colors.dangerDark, marginTop: spacing.xs },
 
   resetButton: { alignSelf: "center", paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
   resetText: { fontFamily: fontFamily.ethiopicRegular, fontSize: 14, color: colors.textSecondary },
