@@ -10,9 +10,11 @@
 -- to the version compiled into the app, so an empty table behaves exactly as
 -- before and a bad row can be fixed by deleting it.
 --
---   kind = 'table'  -> payload { examples, medeb, mewqe }   ids: qana, ezl, manderderya,
---                                                             manderderya_short, lewut
---   kind = 'hareg'  -> payload { options }                  ids: opening, closing
+--   kind = 'table'  -> payload { examples, medeb, mewqe }
+--   kind = 'hareg'  -> payload { options }
+--
+-- The ids are the keys of DEFAULT_TABLES and DEFAULT_HAREG in
+-- src/lib/keneMeters.js. A row with any other id is ignored.
 --
 -- Reference content like words/conjugations: readable by anyone, writable only
 -- by admins, matching the profiles.role convention used elsewhere.

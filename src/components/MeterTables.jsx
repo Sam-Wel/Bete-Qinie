@@ -7,11 +7,11 @@ import { useKeneMeters } from "../hooks/useKeneMeters";
 
 const countSlots = (line) => line.parts.reduce((n, part) => n + (part.kind === "hareg" ? 1 : 2), 0);
 
-function HaregTable({ rows }) {
+function HaregTable({ rows, title, note }) {
   return (
     <View style={styles.hareg}>
-      <Text style={styles.haregTitle}>ሐረግ</Text>
-      <Text style={styles.haregNote}>Optional in every line.</Text>
+      <Text style={styles.haregTitle}>{title}</Text>
+      <Text style={styles.haregNote}>{note}</Text>
 
       <View style={styles.haregGrid}>
         <View style={styles.haregRow}>
@@ -23,9 +23,12 @@ function HaregTable({ rows }) {
           ))}
         </View>
 
-        {rows.map((row) => (
-          <View key={row.index} style={[styles.haregRow, styles.haregRowBorder]}>
-            <Text style={[styles.haregCell, styles.haregHead]}>ቤት {ORDINALS[row.index]}</Text>
+        {rows.map((row, i) => (
+          <View key={i} style={[styles.haregRow, styles.haregRowBorder]}>
+            <Text style={[styles.haregCell, styles.haregHead]}>
+              ቤት {ORDINALS[row.index]}
+              {row.required ? `\n${row.label}` : ""}
+            </Text>
             {LINE_TYPES.map((type) => (
               <Text key={type.key} style={styles.haregCell}>
                 {row.cells[type.key]}
@@ -45,7 +48,9 @@ export function MeterTables() {
     <View>
       {meters.map((meter, index) => {
         const tables = meterTables(meter);
-        const hareg = haregRows(meter);
+        const singles = haregRows(meter);
+        const hareg = singles.filter((row) => !row.required);
+        const named = singles.filter((row) => row.required);
 
         return (
           <View key={meter.id} style={styles.section}>
@@ -59,7 +64,14 @@ export function MeterTables() {
               <KeneMeasureTable key={table.id} {...buildMeasureTable(table)} />
             ))}
 
-            {hareg.length ? <HaregTable rows={hareg} /> : null}
+            {hareg.length ? <HaregTable rows={hareg} title="ሐረግ" note="Optional in every line." /> : null}
+            {named.length ? (
+              <HaregTable
+                rows={named}
+                title={[...new Set(named.map((row) => row.label))].join(" · ")}
+                note="Measured on their own, not in a pair."
+              />
+            ) : null}
           </View>
         );
       })}

@@ -353,7 +353,7 @@ export default function MetersAdmin() {
           <Card style={styles.row}>
             <View style={{ flex: 1 }}>
               <Text style={styles.rowTitle}>{table.name}</Text>
-              <Text style={styles.rowNote}>{table.medeb?.length ? "መደብ + መውቀዒ ቤት" : "መውቀዒ ቤት only"}</Text>
+              <Text style={styles.rowNote}>{!table.medeb?.length ? "መውቀዒ ቤት only" : table.mewqe?.length ? "መደብ + መውቀዒ ቤት" : "መደብ only"}</Text>
             </View>
             {overridden.includes(table.id) ? <Text style={styles.badge}>ተስተካክሏል</Text> : null}
           </Card>

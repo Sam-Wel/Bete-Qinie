@@ -46,14 +46,16 @@ function QuadRow({ values, borderBottom }) {
 }
 
 export function KeneMeasureTable({ title, rowGroupLabel, receivingLabel, houseLabel, mewqeHeaderLabel, rows }) {
-  // A table with no መደብ side (ልውጥ ሚ በዝሑ) drops those columns rather than printing them empty.
+  // A table with one side only (ልውጥ ሚ በዝሑ has no መደብ, ዋዜማ መክፈቻ no መውቀዒ ቤት) drops the
+  // other side's columns rather than printing them empty.
   const hasMedeb = rows.some((row) => row.medeb);
+  const hasMewqe = rows.some((row) => row.mewqe) || !hasMedeb;
 
   return (
     <View style={styles.wrapper}>
       <Text style={styles.title}>{title}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator style={{ width: "100%" }}>
-        <View style={[styles.table, { minWidth: hasMedeb ? CELL_MIN_WIDTH : CELL_MIN_WIDTH / 2 }]}>
+        <View style={[styles.table, { minWidth: hasMedeb && hasMewqe ? CELL_MIN_WIDTH : CELL_MIN_WIDTH / 2 }]}>
           {/* Header row A */}
           <View style={[styles.row, styles.rowBorderBottom]}>
             {hasMedeb ? (
@@ -61,17 +63,21 @@ export function KeneMeasureTable({ title, rowGroupLabel, receivingLabel, houseLa
                 <Cell flex={1.3} header bold>
                   መደብ
                 </Cell>
-                <Cell flex={4} header bold>
+                <Cell flex={4} header bold last={!hasMewqe}>
                   ተቀባሊ መደብ
                 </Cell>
               </>
             ) : null}
-            <Cell flex={1.3} header bold>
-              {"መውቀዒ ቤት"}
-            </Cell>
-            <Cell flex={4} header bold last>
-              ቤት
-            </Cell>
+            {hasMewqe ? (
+              <>
+                <Cell flex={1.3} header bold>
+                  {"መውቀዒ ቤት"}
+                </Cell>
+                <Cell flex={4} header bold last>
+                  ቤት
+                </Cell>
+              </>
+            ) : null}
           </View>
 
           {/* Header row B + C, with the lead columns spanning both */}
@@ -91,17 +97,21 @@ export function KeneMeasureTable({ title, rowGroupLabel, receivingLabel, houseLa
                 </View>
               </>
             ) : null}
-            <Cell flex={1.3} header bold style={styles.rowGroupCell}>
-              {mewqeHeaderLabel}
-            </Cell>
-            <View style={{ flex: 4 }}>
-              <View style={[styles.row, styles.rowBorderBottom]}>
-                <Cell flex={4} header bold last>
-                  {houseLabel}
+            {hasMewqe ? (
+              <>
+                <Cell flex={1.3} header bold style={styles.rowGroupCell}>
+                  {mewqeHeaderLabel}
                 </Cell>
-              </View>
-              <SubHeaderRow last />
-            </View>
+                <View style={{ flex: 4 }}>
+                  <View style={[styles.row, styles.rowBorderBottom]}>
+                    <Cell flex={4} header bold last>
+                      {houseLabel}
+                    </Cell>
+                  </View>
+                  <SubHeaderRow last />
+                </View>
+              </>
+            ) : null}
           </View>
 
           {/* Data rows */}
@@ -117,12 +127,16 @@ export function KeneMeasureTable({ title, rowGroupLabel, receivingLabel, houseLa
                   </View>
                 </>
               ) : null}
-              <Cell flex={1.3}>{row.mewqe}</Cell>
-              <View style={{ flex: 4 }} testID="bet-col">
-                {row.bet.map((entry, j) => (
-                  <QuadRow key={j} values={entry} borderBottom={j !== row.bet.length - 1} />
-                ))}
-              </View>
+              {hasMewqe ? (
+                <>
+                  <Cell flex={1.3}>{row.mewqe}</Cell>
+                  <View style={{ flex: 4 }} testID="bet-col">
+                    {row.bet.map((entry, j) => (
+                      <QuadRow key={j} values={entry} borderBottom={j !== row.bet.length - 1} />
+                    ))}
+                  </View>
+                </>
+              ) : null}
             </View>
           ))}
         </View>

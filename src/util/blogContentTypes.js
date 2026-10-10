@@ -9,6 +9,7 @@ export const BLOG_CONTENT_TYPES = [
   { value: "ዋዜማ", label: "ዋዜማ" },
   { value: "ሥላሴ", label: "ሥላሴ" },
   { value: "ዘይእዜ", label: "ዘይእዜ" },
+  { value: "ሣህልከ", label: "ሣህልከ" },
   { value: "መወድስ", label: "መወድስ" },
   { value: "አጭር-መወድስ", label: "አጭር መወድስ" },
   { value: "ክብር-ይእቲ-ግዕዝ", label: "ክብር ይእቲ - ግዕዝ" },

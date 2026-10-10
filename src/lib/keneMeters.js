@@ -9,7 +9,7 @@ export const TYPE_KEYS = LINE_TYPES.map((t) => t.key);
 export const TYPE_LABEL = Object.fromEntries(LINE_TYPES.map((t) => [t.key, t.label]));
 
 export const NOT_ALLOWED = "አይአቱን";
-export const ORDINALS = ["፩", "፪", "፫", "፬", "፭", "፮"];
+export const ORDINALS = ["፩", "፪", "፫", "፬", "፭", "፮", "፯", "፰", "፱", "፲", "፲፩", "፲፪"];
 
 export const MEASURE_SOURCES = [
   { key: "medeb", label: "መደብ" },
@@ -170,6 +170,108 @@ const EZL_MEDEB = [
   },
 ];
 
+// ---- sheets for the longer forms ----
+//
+// The longer ቅኔ reuse ጉባኤ ቃና, ማንደርደርያ and ልውጥ for most of their lines, and add a handful
+// of pairs of their own. Most have one side only. A follow with no type allowed at all
+// means the lead stands on its own and nothing is measured beside it.
+const all = (counts) => ({ wedaqi: counts, tetay: counts, tenesh: counts, siyaf: counts });
+const ALONE = { wedaqi: null, tetay: null, tenesh: null, siyaf: null };
+const row = (type, counts, follow) => ({ type, branches: counts ? [{ counts, follow }] : [] });
+
+// The መደብ counts of each ጉባኤ ቃና, for sheets that open the way it does.
+const GEEZ_LEAD = { wedaqi: [1, 2, 3], tetay: [2, 3, 4], tenesh: [2, 3, 4], siyaf: [3, 4, 5] };
+const EZL_LEAD = { wedaqi: [1, 2, 3, 5, 6], tetay: [2, 3, 4, 6, 7], tenesh: [2, 3, 4, 6, 7], siyaf: [3, 4, 5, 7, 8] };
+const leading = (lead, follow, skip = []) =>
+  TYPE_KEYS.map((type) => row(type, skip.includes(type) ? null : lead[type], follow));
+
+// ዋዜማ opens on a ጉባኤ ቃና መደብ that is never ወዳቂ, resting on 4 or 5.
+const WAZEMA_OPEN = leading(EZL_LEAD, all([4, 5]), ["wedaqi"]);
+
+// ሥላሴ opens on the ግዕዝ መደብ only, never ወዳቂ, resting on 4 or 5 — or on 6 with ተናባቢ.
+const SILLASE_OPEN = leading(GEEZ_LEAD, all([4, 5, 6]), ["wedaqi"]);
+
+// ኃይለ ቃል takes the high counts and rests the way ልውጥ does.
+const HAYLE_QAL = [
+  row("wedaqi", [5, 6], all([5])),
+  row("tetay", [6, 7], all([4, 5])),
+  row("tenesh", [6, 7], all([4])),
+  row("siyaf", [7, 8], all([4])),
+];
+
+// The ኃይለ ቃል that is ሥላሴ's fourth line may also open on the ግዕዝ counts, resting on 5.
+const HAYLE_QAL_FOURTH = HAYLE_QAL.map((entry) => ({
+  ...entry,
+  branches: [...entry.branches, { counts: GEEZ_LEAD[entry.type], follow: all([5]) }],
+}));
+
+// መጽፍያ ቤት closes either on one whole segment — 6 with ተናባቢ, or a ወዳቂ of 4 or 5 — or on
+// a ግዕዝ መደብ with a ተጣይ or ተነሽ beside it. ሥላሴ lets the whole segment be ስያፍ as well.
+const metsfiya = (wholeSiyaf) => [
+  {
+    type: "wedaqi",
+    branches: [
+      { counts: [4, 5], follow: ALONE },
+      { counts: [1, 2, 3], follow: { wedaqi: null, tetay: [3], tenesh: [3], siyaf: null } },
+    ],
+  },
+  {
+    type: "tetay",
+    branches: [
+      { counts: [6], follow: ALONE },
+      { counts: [2, 3, 4], follow: { wedaqi: null, tetay: [2, 3], tenesh: [2, 3], siyaf: null } },
+    ],
+  },
+  {
+    type: "tenesh",
+    branches: [
+      { counts: [6], follow: ALONE },
+      { counts: [2, 3, 4], follow: { wedaqi: null, tetay: [2], tenesh: [2], siyaf: null } },
+    ],
+  },
+  {
+    type: "siyaf",
+    branches: [
+      ...(wholeSiyaf ? [{ counts: [6], follow: ALONE }] : []),
+      { counts: [3, 4, 5], follow: { wedaqi: null, tetay: [2], tenesh: [2], siyaf: null } },
+    ],
+  },
+];
+
+// ዘይእዜ opens on a ጉባኤ ቃና መደብ resting on 5.
+const ZEYEZE_OPEN = leading(EZL_LEAD, all([5]));
+
+// መወድስ's second line may close on one whole segment of 4 to 6 with ተናባቢ.
+const MEWEDES_WHOLE = TYPE_KEYS.map((type) => row(type, [4, 5, 6], ALONE));
+
+// ለዓለሙ breaks on ሂ, ኒ or ሰ, which is always ወዳቂ; unbroken, it opens the way ልውጥ does and
+// rests on 4 to 6.
+const LEALEMU = leading({ wedaqi: [3, 4, 5, 6] }, all([4, 5]), ["tetay", "tenesh", "siyaf"]);
+const LEALEMU_LEWUT = leading(EZL_LEAD, all([4, 5, 6]));
+
+// The ማንደርደርያ that ends ግዕዝ ዕጣነ ሞገር: the usual መውቀዒ ቤት, but every ቤት is 4.
+const MANDERDERYA_BET4 = MANDERDERYA_MEWQE.map((entry) => ({
+  type: entry.type,
+  branches: [{ counts: entry.branches.flatMap((b) => b.counts).sort((a, b) => a - b), follow: all([4]) }],
+}));
+
+const NO_EXAMPLES = { rowGroup: "", receiving: "", mewqe: "", house: "" };
+const sheet = (id, name, sides) => ({ id, name, examples: NO_EXAMPLES, medeb: [], mewqe: [], ...sides });
+
+const LONG_FORM_TABLES = [
+  sheet("wazema_open", "ዋዜማ መክፈቻ", { medeb: WAZEMA_OPEN }),
+  sheet("sillase_open", "ሥላሴ መክፈቻ", { medeb: SILLASE_OPEN }),
+  sheet("hayle_qal", "ኃይለ ቃል", { mewqe: HAYLE_QAL }),
+  sheet("hayle_qal_fourth", "ኃይለ ቃል — ፬ ቤት", { mewqe: HAYLE_QAL_FOURTH }),
+  sheet("metsfiya", "መጽፍያ ቤት", { mewqe: metsfiya(false) }),
+  sheet("metsfiya_sillase", "መጽፍያ ቤት — ሥላሴ", { mewqe: metsfiya(true) }),
+  sheet("zeyeze_open", "ዘይእዜ መክፈቻ", { medeb: ZEYEZE_OPEN }),
+  sheet("mewedes_whole", "መወድስ — ፪ ቤት በተናባቢ", { mewqe: MEWEDES_WHOLE }),
+  sheet("lealemu", "ለዓለሙ", { medeb: LEALEMU }),
+  sheet("lealemu_lewut", "ለዓለሙ — ልውጥ", { medeb: LEALEMU_LEWUT }),
+  sheet("manderderya_bet4", "ማንደርደርያ — ቤት ፬", { mewqe: MANDERDERYA_BET4 }),
+];
+
 // `examples` are the sample poems printed in the second header row of each sheet — they
 // illustrate the table rather than naming any part of it, so a table without them is fine.
 const QANA_TABLE = {
@@ -225,11 +327,17 @@ export const DEFAULT_TABLES = {
   manderderya: MANDERDERYA_TABLE,
   manderderya_short: MANDERDERYA_SHORT_TABLE,
   lewut: LEWUT_TABLE,
+  ...Object.fromEntries(LONG_FORM_TABLES.map((table) => [table.id, table])),
 };
 
 export const DEFAULT_HAREG = {
   opening: { id: "opening", name: "ሐረግ — መክፈቻ", options: HAREG_OPENING },
   closing: { id: "closing", name: "ሐረግ — መዝጊያ", options: HAREG_CLOSING },
+  // Segments measured on their own rather than in a pair. They are stored like ሐረግ, but a
+  // line that names one must have it.
+  melali: { id: "melali", name: "መልዓሊ", options: { wedaqi: [4], tetay: [4], tenesh: [4], siyaf: null } },
+  rest6: { id: "rest6", name: "መዕረፊ — ፮", options: all([6]) },
+  bet45: { id: "bet45", name: "መውቀዒ ቤት — ፬ ወይም ፭", options: all([4, 5]) },
 };
 
 // A line is an ordered list of parts. A `medeb` pair fills መደብ → ተቀባሊ መደብ and may offer
@@ -242,6 +350,34 @@ export const DEFAULT_HAREG = {
 const medebPair = (extra = {}) => ({ kind: "medeb", tableIds: ["qana"], sourceChoice: true, ...extra });
 const mewqePair = (extra = {}) => ({ kind: "mewqe", tableIds: ["qana"], ...extra });
 const haregPart = (haregId) => ({ kind: "hareg", haregId });
+const singlePart = (haregId, label) => ({ kind: "hareg", haregId, label, required: true });
+
+// Lines that recur across the longer forms.
+const qanaLine = () => ({ parts: [medebPair(), mewqePair()] });
+const lewutPair = () => medebPair({ tableIds: ["lewut"], sourceChoice: false });
+const hayleQal = (tableIds) => mewqePair({ tableIds, names: ["ኃይለ ቃል", "ተቀባሊ"] });
+const manderderyaParts = (extra = {}) => [
+  medebPair({ tableIds: ["manderderya", "manderderya_short"], sourceChoice: false, ...extra }),
+  mewqePair({ tableIds: ["manderderya"] }),
+];
+const manderderyaLine = () => ({ parts: manderderyaParts() });
+// After a ኃይለ ቃል the ማንደርደርያ may come without a መደብ of its own.
+const hayleQalLine = () => ({
+  parts: [hayleQal(["lewut", "zeyeze_open"]), ...manderderyaParts({ optional: true })],
+});
+const metsfiyaLine = (tableId) => ({ parts: [medebPair(), mewqePair({ tableIds: [tableId] })] });
+const closingLine = () => ({ parts: [singlePart("melali", "መልዓሊ"), mewqePair({ tableIds: ["manderderya"] })] });
+const haregLine = (haregId) => ({ parts: [medebPair(), haregPart(haregId), mewqePair()] });
+
+const WAZEMA_FIRST = () => ({
+  parts: [medebPair({ tableIds: ["wazema_open"], sourceChoice: false }), medebPair(), mewqePair()],
+});
+const ZEYEZE_FIRST = () => ({
+  parts: [medebPair({ tableIds: ["zeyeze_open", "lewut"], sourceChoice: false }), medebPair(), mewqePair()],
+});
+const ZEYEZE_THIRD = () => ({ parts: [medebPair(), mewqePair({ tableIds: ["lewut"] })] });
+const LEWUT_BOTH = () => ({ parts: [lewutPair(), mewqePair({ tableIds: ["lewut"] })] });
+
 const EZL_WHEN_LEWUT = { swap: { whenTableId: "lewut", tableId: "ezl" } };
 
 export const METER_DEFS = [
@@ -306,6 +442,147 @@ export const METER_DEFS = [
       { parts: [medebPair(), medebPair(), mewqePair()] },
     ],
   },
+  {
+    id: "wazema",
+    contentType: "ዋዜማ",
+    title: "ዋዜማ",
+    lines: [WAZEMA_FIRST(), manderderyaLine(), qanaLine(), metsfiyaLine("metsfiya"), closingLine()],
+  },
+  {
+    id: "wazema_short",
+    contentType: "ዋዜማ",
+    title: "ሓጺር ዋዜማ",
+    lines: [manderderyaLine(), qanaLine()],
+  },
+  {
+    id: "wazema_meskot",
+    contentType: "ዋዜማ",
+    title: "መስኮት ዋዜማ",
+    lines: [WAZEMA_FIRST(), metsfiyaLine("metsfiya"), closingLine()],
+  },
+  {
+    id: "sillase",
+    contentType: "ሥላሴ",
+    title: "ሥላሴ",
+    lines: [
+      {
+        parts: [
+          medebPair({ tableIds: ["sillase_open"], sourceChoice: false }),
+          hayleQal(["hayle_qal"]),
+          medebPair(),
+          haregPart("closing"),
+          mewqePair(),
+        ],
+      },
+      manderderyaLine(),
+      haregLine("closing"),
+      { parts: [hayleQal(["hayle_qal_fourth"])] },
+      metsfiyaLine("metsfiya_sillase"),
+      closingLine(),
+    ],
+  },
+  {
+    id: "zeyeze",
+    contentType: "ዘይእዜ",
+    title: "ዘይእዜ",
+    lines: [
+      ZEYEZE_FIRST(),
+      hayleQalLine(),
+      ZEYEZE_THIRD(),
+      { parts: [medebPair(), singlePart("rest6", "መዕረፊ")] },
+      qanaLine(),
+    ],
+  },
+  {
+    id: "sahlike",
+    contentType: "ሣህልከ",
+    title: "ሣህልከ",
+    lines: [ZEYEZE_FIRST(), hayleQalLine(), ZEYEZE_THIRD()],
+  },
+  {
+    id: "mewedes",
+    contentType: "መወድስ",
+    title: "መወድስ",
+    lines: [
+      {
+        parts: [
+          medebPair(),
+          singlePart("rest6", "መዕረፊ"),
+          medebPair(),
+          mewqePair({ tableIds: ["qana", "lewut"] }),
+        ],
+      },
+      { parts: [medebPair(), mewqePair({ tableIds: ["qana", "mewedes_whole"] })] },
+      hayleQalLine(),
+      { parts: [hayleQal(["lewut"]), medebPair(), mewqePair({ tableIds: ["qana", "lewut"] })] },
+      // Unbroken, ለዓለሙ may end on its own rest, so the መውቀዒ ቤት after it can be left out.
+      {
+        parts: [
+          medebPair({ tableIds: ["lealemu", "lealemu_lewut"], sourceChoice: false }),
+          mewqePair({ optional: true }),
+        ],
+      },
+      LEWUT_BOTH(),
+      qanaLine(),
+      LEWUT_BOTH(),
+    ],
+  },
+  {
+    id: "mewedes_short",
+    contentType: "አጭር-መወድስ",
+    title: "ሓጺር መወድስ",
+    lines: [{ parts: [medebPair({ sourceChoice: false }), mewqePair()] }, manderderyaLine()],
+  },
+  {
+    id: "kibr_geez",
+    contentType: "ክብር-ይእቲ-ግዕዝ",
+    title: "ግዕዝ ክብር ይእቲ",
+    lines: [ZEYEZE_THIRD(), qanaLine(), qanaLine(), ZEYEZE_THIRD()],
+  },
+  {
+    id: "kibr_ezl",
+    contentType: "ክብር-ይእቲ-ዕዝል",
+    title: "ዕዝል ክብር ይእቲ",
+    lines: [haregLine("opening"), qanaLine(), qanaLine(), haregLine("opening")],
+  },
+  {
+    id: "etane_geez",
+    contentType: "ዕጣነ-ሞገር-ግዕዝ",
+    title: "ግዕዝ ዕጣነ ሞገር",
+    lines: [
+      { parts: [medebPair(), medebPair(), haregPart("opening"), mewqePair({ tableIds: ["lewut"] })] },
+      qanaLine(),
+      qanaLine(),
+      manderderyaLine(),
+      // አሠረ ንጉሥ
+      { parts: [medebPair(), haregPart("opening"), mewqePair({ tableIds: ["lewut"] })] },
+      haregLine("opening"),
+      {
+        parts: [
+          medebPair({ tableIds: ["manderderya", "manderderya_short"], sourceChoice: false }),
+          mewqePair({ tableIds: ["manderderya_bet4"] }),
+        ],
+      },
+    ],
+  },
+  {
+    id: "etane_ezl",
+    contentType: "ዕጣነ-ሞገር-ዕዝል",
+    title: "ዕዝል ዕጣነ ሞገር",
+    lines: [
+      qanaLine(),
+      { parts: [medebPair(), singlePart("bet45", "መውቀዒ ቤት")] },
+      { parts: [lewutPair(), mewqePair()] },
+      { parts: [lewutPair()] },
+      haregLine("closing"),
+      manderderyaLine(),
+      // አሠረ ንጉሥ
+      haregLine("opening"),
+      haregLine("closing"),
+      metsfiyaLine("metsfiya_sillase"),
+      closingLine(),
+    ],
+  },
 ];
 
 // Swaps the named tables and ሐረግ sets into the structure above. Anything missing from an
@@ -367,13 +644,18 @@ export function buildLineSlots(lineDef) {
         part: partIndex,
         kind: "hareg",
         role: "single",
-        label: "ሐረግ",
-        short: "ሐረግ",
-        caption: "Optional — may be left out",
-        optional: true,
+        label: part.label ?? "ሐረግ",
+        short: part.label ?? "ሐረግ",
+        caption: part.required ? "Measured on its own" : "Optional — may be left out",
+        optional: !part.required,
       });
       return;
     }
+
+    // A pair may carry its own names (ኃይለ ቃል), and an optional pair is left out by
+    // leaving its lead empty — the follow then has nothing to answer to.
+    const named = (index, fallback) =>
+      part.names ? { label: part.names[index], short: part.names[index] } : fallback;
 
     const leadKey = `s${slots.length}`;
     slots.push({
@@ -381,8 +663,9 @@ export function buildLineSlots(lineDef) {
       part: partIndex,
       kind: part.kind,
       role: "lead",
-      caption: PAIR_CAPTIONS[part.kind].lead,
-      ...PAIR_LABELS[part.kind].lead,
+      caption: part.optional ? "Optional — the pair may be left out" : PAIR_CAPTIONS[part.kind].lead,
+      ...named(0, PAIR_LABELS[part.kind].lead),
+      ...(part.optional ? { optional: true } : {}),
     });
     slots.push({
       key: `s${slots.length}`,
@@ -391,7 +674,8 @@ export function buildLineSlots(lineDef) {
       role: "follow",
       leadKey,
       caption: PAIR_CAPTIONS[part.kind].follow,
-      ...PAIR_LABELS[part.kind].follow,
+      ...named(1, PAIR_LABELS[part.kind].follow),
+      ...(part.optional ? { optionalPair: true } : {}),
     });
   });
 
@@ -448,12 +732,27 @@ export function slotOptions(lineDef, slot, lineState) {
   if (part.kind === "hareg") return part.options;
 
   const { table, source } = partMeasure(lineDef, slot.part, lineState);
-  const side = part.kind === "medeb" && source === "medeb" ? table.medeb : table.mewqe;
+  // A one-sided sheet measures whichever pair names it.
+  const [wanted, other] =
+    part.kind === "medeb" && source === "medeb" ? [table.medeb, table.mewqe] : [table.mewqe, table.medeb];
+  const side = wanted?.length ? wanted : other;
 
   if (slot.role === "lead") return leadOptions(side);
 
   const lead = lineState.slots[slot.leadKey];
   return followOptions(side, lead.type, lead.count);
+}
+
+// A follow is not part of the line when its pair was left out, or when the lead chosen
+// stands on its own.
+export function slotNeeded(lineDef, slot, lineState) {
+  if (slot.role !== "follow") return true;
+
+  const lead = lineState.slots[slot.leadKey];
+  if (lead?.skipped || (slot.optionalPair && !lead?.type)) return false;
+
+  const options = slotOptions(lineDef, slot, lineState);
+  return !(options && TYPE_KEYS.every((key) => !options[key]?.length));
 }
 
 export function isAllowed(options, type, count) {
@@ -547,11 +846,20 @@ export function meterTables(meter) {
   return [...seen.values()];
 }
 
+// Every segment measured on its own: ሐረግ, which may be left out, and the named ones a
+// line must have.
 export function haregRows(meter) {
   const rows = [];
   meter.lines.forEach((line, index) => {
-    const part = line.parts.find((p) => p.kind === "hareg");
-    if (part) rows.push({ index, cells: followCells(part.options) });
+    for (const part of line.parts) {
+      if (part.kind !== "hareg" || !part.options) continue;
+      rows.push({
+        index,
+        label: part.label ?? "ሐረግ",
+        required: Boolean(part.required),
+        cells: followCells(part.options),
+      });
+    }
   });
   return rows;
 }

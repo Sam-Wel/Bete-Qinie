@@ -15,6 +15,7 @@ import {
   isAllowed,
   meterTables,
   partMeasure,
+  slotNeeded,
   slotOptions,
 } from "../lib/keneMeters";
 import { useKeneMeters } from "../hooks/useKeneMeters";
@@ -59,7 +60,7 @@ function Chip({ label, selected, muted, onPress }) {
 }
 
 // Each cell is a complete, legal answer — one tap sets both the type and the count.
-function OptionMatrix({ options, value, optional, onPick, onSkip }) {
+function OptionMatrix({ options, value, optional, skipLabel, onPick, onSkip }) {
   return (
     <View style={styles.matrix}>
       {LINE_TYPES.map((type) => {
@@ -87,7 +88,7 @@ function OptionMatrix({ options, value, optional, onPick, onSkip }) {
 
       {optional ? (
         <View style={styles.skipRow}>
-          <Chip label="ሐረግ የለም" muted selected={value.skipped} onPress={onSkip} />
+          <Chip label={skipLabel} muted selected={value.skipped} onPress={onSkip} />
         </View>
       ) : null}
     </View>
@@ -116,9 +117,15 @@ function Toggle({ hint, options, activeKey, onSelect }) {
 
 // One cell per segment, read across as the line reads. The words are typed in the cell;
 // the pill beneath opens the measure picker and then shows what was chosen.
-function SlotCell({ slot, value, active, broken, onFocus, onMeasure, onChangeText }) {
-  const filled = Boolean(value.type) && value.count != null && !value.skipped;
-  const measure = value.skipped ? "የለም" : filled ? `${TYPE_LABEL[value.type]} ${value.count}` : "ልኬት ይምረጡ";
+function SlotCell({ slot, value, active, broken, unused, onFocus, onMeasure, onChangeText }) {
+  const filled = !unused && Boolean(value.type) && value.count != null && !value.skipped;
+  const measure = unused
+    ? "—"
+    : value.skipped
+      ? "የለም"
+      : filled
+        ? `${TYPE_LABEL[value.type]} ${value.count}`
+        : "ልኬት ይምረጡ";
 
   return (
     <View style={[styles.cell, active && styles.cellActive]}>
@@ -142,7 +149,7 @@ function SlotCell({ slot, value, active, broken, onFocus, onMeasure, onChangeTex
           styles.measure,
           filled && !broken && styles.measureFilled,
           broken && styles.measureBroken,
-          !filled && !value.skipped && styles.measureEmpty,
+          !filled && !value.skipped && !unused && styles.measureEmpty,
         ]}
       >
         <Text
@@ -226,8 +233,12 @@ export function MeterChecker() {
     return isAllowed(optionsOf(lineIndex, slot), value.type, value.count);
   };
 
+  const neededOf = (lineIndex, slot) => slotNeeded(meter.lines[lineIndex], slot, state[lineIndex]);
+
   // An optional slot is settled whether or not it gets used; only a filled one must be legal.
+  // A follow with nothing to answer to is settled by not being there.
   const settledOf = (lineIndex, slot) => {
+    if (!neededOf(lineIndex, slot)) return true;
     if (!slot.optional) return readyOf(lineIndex, slot);
     return !state[lineIndex].slots[slot.key].type || readyOf(lineIndex, slot);
   };
@@ -369,6 +380,7 @@ export function MeterChecker() {
               ? null
               : partMeasure(meter.lines[measuring.line], slot.part, state[measuring.line]),
           options: optionsOf(measuring.line, slot),
+          needed: neededOf(measuring.line, slot),
           leadLabel: slots.find((s) => s.key === slot.leadKey)?.label,
         };
       })()
@@ -421,7 +433,8 @@ export function MeterChecker() {
           >
             {slots.map((slot) => {
               const value = state[lineIndex].slots[slot.key];
-              const filled = Boolean(value.type) && value.count != null && !value.skipped;
+              const unused = !neededOf(lineIndex, slot);
+              const filled = !unused && Boolean(value.type) && value.count != null && !value.skipped;
 
               return (
                 <SlotCell
@@ -429,6 +442,7 @@ export function MeterChecker() {
                   slot={slot}
                   value={value}
                   active={active.line === lineIndex && active.slot === slot.key}
+                  unused={unused}
                   broken={filled && !readyOf(lineIndex, slot)}
                   onFocus={() => setActive({ line: lineIndex, slot: slot.key })}
                   onMeasure={() => openMeasure(lineIndex, slot.key)}
@@ -447,7 +461,7 @@ export function MeterChecker() {
           <Text style={styles.finaleSubtitle}>All lines fit {meter.title}.</Text>
 
           {slotsByLine.map((slots, index) => {
-            const used = slots.filter((slot) => state[index].slots[slot.key].type);
+            const used = slots.filter((slot) => state[index].slots[slot.key].type && neededOf(index, slot));
             return (
               <View key={index} style={styles.finaleLine}>
                 <Text style={styles.finaleWords}>
@@ -553,11 +567,16 @@ export function MeterChecker() {
                   />
                 ) : null}
 
-                {sheet.options ? (
+                {!sheet.needed ? (
+                  <Text style={styles.waitingText}>
+                    Nothing is measured here — the {sheet.leadLabel} stands on its own or was left out.
+                  </Text>
+                ) : sheet.options ? (
                   <OptionMatrix
                     options={sheet.options}
                     value={sheet.value}
                     optional={Boolean(sheet.slot.optional)}
+                    skipLabel={sheet.slot.kind === "hareg" ? "ሐረግ የለም" : "የለም"}
                     onPick={(type, count) => pick(measuring.line, sheet.slot.key, type, count)}
                     onSkip={() => skip(measuring.line, sheet.slot.key, sheet.value.skipped)}
                   />
