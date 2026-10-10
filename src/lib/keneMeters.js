@@ -142,6 +142,28 @@ const LEWUT_MEWQE = [
   },
 ];
 
+// ዕዝል ጉባኤ ቃና — its መደብ takes the low counts and the high ones in a single span, so it has
+// no ይለኩ በ choice. Each type skips one count (ወዳቂ 4, ተጣይ 5, ተነሽ 5, ስያፍ 6), and the
+// ተቀባሊ መደብ is the same as ግዕዝ ጉባኤ ቃና whichever count is taken.
+const EZL_MEDEB = [
+  {
+    type: "wedaqi",
+    branches: [{ counts: [1, 2, 3, 5, 6], follow: { wedaqi: null, tetay: [3], tenesh: [3], siyaf: [4] } }],
+  },
+  {
+    type: "tetay",
+    branches: [{ counts: [2, 3, 4, 6, 7], follow: { wedaqi: null, tetay: [2, 3], tenesh: [2, 3], siyaf: [3, 4] } }],
+  },
+  {
+    type: "tenesh",
+    branches: [{ counts: [2, 3, 4, 6, 7], follow: { wedaqi: null, tetay: [2], tenesh: [2], siyaf: [3] } }],
+  },
+  {
+    type: "siyaf",
+    branches: [{ counts: [3, 4, 5, 7, 8], follow: { wedaqi: null, tetay: [2], tenesh: [2], siyaf: [3] } }],
+  },
+];
+
 // `examples` are the sample poems printed in the second header row of each sheet — they
 // illustrate the table rather than naming any part of it, so a table without them is fine.
 const QANA_TABLE = {
@@ -149,6 +171,16 @@ const QANA_TABLE = {
   name: "ጉባኤ ቃና",
   examples: { rowGroup: "ኢታብ ዘጎ", receiving: "ቶማስ", mewqe: "ወልደ መጽብሕ", house: "ሰሐቀ" },
   medeb: QANA_MEDEB,
+  mewqe: QANA_MEWQE,
+};
+
+// The መውቀዒ ቤት side is ጉባኤ ቃና's, repeated here so the ዕዝል sheet prints whole and can be
+// edited without changing ግዕዝ.
+const EZL_TABLE = {
+  id: "ezl",
+  name: "ዕዝል ጉባኤ ቃና",
+  examples: { rowGroup: "", receiving: "", mewqe: "", house: "" },
+  medeb: EZL_MEDEB,
   mewqe: QANA_MEWQE,
 };
 
@@ -175,6 +207,7 @@ const HAREG_CLOSING = { wedaqi: [3], tetay: null, tenesh: null, siyaf: null };
 // only name the pieces, so a stored override can replace one without touching structure.
 export const DEFAULT_TABLES = {
   qana: QANA_TABLE,
+  ezl: EZL_TABLE,
   manderderya: MANDERDERYA_TABLE,
   lewut: LEWUT_TABLE,
 };
@@ -207,8 +240,20 @@ export const METER_DEFS = [
     contentType: "እዝል",
     title: "ዕዝል ጉባኤ ቃና",
     lines: [
-      { parts: [medebPair(), haregPart("opening"), mewqePair()] },
-      { parts: [medebPair(), haregPart("closing"), mewqePair()] },
+      {
+        parts: [
+          medebPair({ tableIds: ["ezl"], sourceChoice: false }),
+          haregPart("opening"),
+          mewqePair({ tableIds: ["ezl"] }),
+        ],
+      },
+      {
+        parts: [
+          medebPair({ tableIds: ["ezl"], sourceChoice: false }),
+          haregPart("closing"),
+          mewqePair({ tableIds: ["ezl"] }),
+        ],
+      },
     ],
   },
   {

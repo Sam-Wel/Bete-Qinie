@@ -10,7 +10,7 @@
 -- to the version compiled into the app, so an empty table behaves exactly as
 -- before and a bad row can be fixed by deleting it.
 --
---   kind = 'table'  -> payload { examples, medeb, mewqe }   ids: qana, manderderya, lewut
+--   kind = 'table'  -> payload { examples, medeb, mewqe }   ids: qana, ezl, manderderya, lewut
 --   kind = 'hareg'  -> payload { options }                  ids: opening, closing
 --
 -- Reference content like words/conjugations: readable by anyone, writable only
