@@ -124,8 +124,9 @@ const MANDERDERYA_MEWQE = [
 ];
 
 // ልውጥ ሚ በዝሑ — an alternative measure for the መውቀዒ ቤት pair of ሚ በዝሑ's first two lines.
-// It has no መደብ side. Each lead type excludes one count from its span, and unlike every
-// other ቤት column here, ስያፍ is allowed alongside the rest.
+// It has no መደብ side. Its lead takes the ዕዝል ጉባኤ ቃና መደብ counts, so each type skips one
+// count in its span, and unlike every other ቤት column here, ስያፍ is allowed alongside the
+// rest. A line measured this way also takes its መደብ from the ዕዝል sheet — see `swap`.
 const LEWUT_MEWQE = [
   {
     type: "wedaqi",
@@ -134,7 +135,7 @@ const LEWUT_MEWQE = [
   {
     type: "tetay",
     branches: [
-      { counts: [2, 3, 4, 5, 6, 7], follow: { wedaqi: [4, 5], tetay: [4, 5], tenesh: [4, 5], siyaf: [4, 5] } },
+      { counts: [2, 3, 4, 6, 7], follow: { wedaqi: [4, 5], tetay: [4, 5], tenesh: [4, 5], siyaf: [4, 5] } },
     ],
   },
   {
@@ -235,9 +236,13 @@ export const DEFAULT_HAREG = {
 // the ይለኩ በ choice; a `mewqe` pair fills መውቀዒ ቤት → ቤት and may offer a choice of which
 // table measures it; a `hareg` part is a single optional slot. Parts name their tables by
 // id so a stored override can be swapped in without changing any of this structure.
+//
+// A `swap` on a መደብ pair hands it to another sheet while the line's መውቀዒ ቤት is on a given
+// one. That sheet's መደብ side then measures the pair outright, with no ይለኩ በ choice.
 const medebPair = (extra = {}) => ({ kind: "medeb", tableIds: ["qana"], sourceChoice: true, ...extra });
 const mewqePair = (extra = {}) => ({ kind: "mewqe", tableIds: ["qana"], ...extra });
 const haregPart = (haregId) => ({ kind: "hareg", haregId });
+const EZL_WHEN_LEWUT = { swap: { whenTableId: "lewut", tableId: "ezl" } };
 
 export const METER_DEFS = [
   {
@@ -291,9 +296,13 @@ export const METER_DEFS = [
     title: "ሚ በዝሑ",
     lines: [
       {
-        parts: [medebPair(), medebPair(), mewqePair({ tableIds: ["qana", "manderderya", "lewut"] })],
+        parts: [
+          medebPair(EZL_WHEN_LEWUT),
+          medebPair(EZL_WHEN_LEWUT),
+          mewqePair({ tableIds: ["qana", "manderderya", "lewut"] }),
+        ],
       },
-      { parts: [medebPair(), mewqePair({ tableIds: ["qana", "lewut"] })] },
+      { parts: [medebPair(EZL_WHEN_LEWUT), mewqePair({ tableIds: ["qana", "lewut"] })] },
       { parts: [medebPair(), medebPair(), mewqePair()] },
     ],
   },
@@ -312,7 +321,11 @@ export function resolveMeters(tables = DEFAULT_TABLES, hareg = DEFAULT_HAREG) {
       parts: line.parts.map((part) =>
         part.kind === "hareg"
           ? { ...part, options: haregOf(part.haregId) }
-          : { ...part, tables: part.tableIds.map(tableOf).filter(Boolean) }
+          : {
+              ...part,
+              tables: part.tableIds.map(tableOf).filter(Boolean),
+              ...(part.swap ? { swap: { ...part.swap, table: tableOf(part.swap.tableId) } } : {}),
+            }
       ),
     })),
   }));
@@ -393,6 +406,22 @@ export function partTable(part, config) {
   return part.tables[config?.table ?? 0] ?? part.tables[0];
 }
 
+// Which sheet and side measure a pair right now. `fixed` means the line's መውቀዒ ቤት has
+// handed this መደብ to another sheet, so there is nothing for the reader to choose.
+export function partMeasure(lineDef, partIndex, lineState) {
+  const part = lineDef.parts[partIndex];
+  const config = lineState.parts[partIndex];
+
+  const swapped =
+    part.swap?.table &&
+    lineDef.parts.some(
+      (other, i) => other.kind === "mewqe" && partTable(other, lineState.parts[i])?.id === part.swap.whenTableId
+    );
+  if (swapped) return { table: part.swap.table, source: "medeb", fixed: true };
+
+  return { table: partTable(part, config), source: partSource(part, config), fixed: false };
+}
+
 const emptyOptions = () => ({ wedaqi: null, tetay: null, tenesh: null, siyaf: null });
 
 export function leadOptions(table) {
@@ -418,9 +447,8 @@ export function slotOptions(lineDef, slot, lineState) {
   const part = lineDef.parts[slot.part];
   if (part.kind === "hareg") return part.options;
 
-  const config = lineState.parts[slot.part];
-  const table = partTable(part, config);
-  const side = part.kind === "medeb" && partSource(part, config) === "medeb" ? table.medeb : table.mewqe;
+  const { table, source } = partMeasure(lineDef, slot.part, lineState);
+  const side = part.kind === "medeb" && source === "medeb" ? table.medeb : table.mewqe;
 
   if (slot.role === "lead") return leadOptions(side);
 
@@ -512,6 +540,10 @@ export function meterTables(meter) {
   for (const line of meter.lines)
     for (const part of line.parts)
       for (const table of part.tables ?? []) if (!seen.has(table.id)) seen.set(table.id, table);
+  // Sheets reached only through a swap come last, after the ones a line names outright.
+  for (const line of meter.lines)
+    for (const part of line.parts)
+      if (part.swap?.table && !seen.has(part.swap.table.id)) seen.set(part.swap.table.id, part.swap.table);
   return [...seen.values()];
 }
 

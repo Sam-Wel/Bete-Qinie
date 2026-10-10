@@ -14,8 +14,7 @@ import {
   buildLineSlots,
   isAllowed,
   meterTables,
-  partSource,
-  partTable,
+  partMeasure,
   slotOptions,
 } from "../lib/keneMeters";
 import { useKeneMeters } from "../hooks/useKeneMeters";
@@ -241,13 +240,17 @@ export function MeterChecker() {
     );
 
   // Re-measuring a pair invalidates whatever was picked inside it, so clear both slots.
+  // Moving a መውቀዒ ቤት to another sheet can also change which sheet measures the line's
+  // መደብ, so those pairs are cleared with it.
   const patchPart = (lineIndex, partIndex, next) =>
     setState((prev) =>
       prev.map((line, i) => {
         if (i !== lineIndex) return line;
+        const parts = meter.lines[i].parts;
+        const resheeted = parts[partIndex].kind === "mewqe" && "table" in next;
         const cleared = Object.fromEntries(
           slotsByLine[i]
-            .filter((slot) => slot.part === partIndex)
+            .filter((slot) => slot.part === partIndex || (resheeted && parts[slot.part].swap))
             .map((slot) => [slot.key, { ...line.slots[slot.key], type: null, count: null }])
         );
         return {
@@ -361,6 +364,10 @@ export function MeterChecker() {
           value: state[measuring.line].slots[slot.key],
           part: meter.lines[measuring.line].parts[slot.part],
           config: state[measuring.line].parts[slot.part],
+          measure:
+            slot.kind === "hareg"
+              ? null
+              : partMeasure(meter.lines[measuring.line], slot.part, state[measuring.line]),
           options: optionsOf(measuring.line, slot),
           leadLabel: slots.find((s) => s.key === slot.leadKey)?.label,
         };
@@ -516,9 +523,7 @@ export function MeterChecker() {
                     <Text style={styles.sheetTitle}>{sheet.slot.label}</Text>
                     <Text style={styles.sheetCaption}>
                       ቤት {ORDINALS[measuring.line]}
-                      {showsTableNames && sheet.part.kind !== "hareg"
-                        ? ` · ${partTable(sheet.part, sheet.config).name}`
-                        : ""}
+                      {showsTableNames && sheet.measure ? ` · ${sheet.measure.table.name}` : ""}
                     </Text>
                   </View>
                   <Pressable onPress={() => setMeasuring(null)} hitSlop={10} style={styles.sheetClose}>
@@ -530,11 +535,11 @@ export function MeterChecker() {
 
                 <OrnamentDivider style={{ marginBottom: spacing.xs }} />
 
-                {sheet.part.kind === "medeb" && sheet.part.sourceChoice ? (
+                {sheet.part.kind === "medeb" && sheet.part.sourceChoice && !sheet.measure.fixed ? (
                   <Toggle
                     hint="ይለኩ በ"
                     options={MEASURE_SOURCES}
-                    activeKey={partSource(sheet.part, sheet.config)}
+                    activeKey={sheet.measure.source}
                     onSelect={(source) => patchPart(measuring.line, sheet.slot.part, { source })}
                   />
                 ) : null}
