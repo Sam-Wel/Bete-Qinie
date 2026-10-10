@@ -539,7 +539,7 @@ export function MeterChecker() {
                   />
                 ) : null}
 
-                {sheet.part.kind === "mewqe" && sheet.part.tables.length > 1 ? (
+                {sheet.part.kind !== "hareg" && sheet.part.tables.length > 1 ? (
                   <Toggle
                     hint="ይለኩ በ"
                     options={sheet.part.tables.map((table, i) => ({ key: i, label: table.name }))}

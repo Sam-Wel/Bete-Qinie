@@ -65,30 +65,35 @@ const QANA_MEWQE = [
   },
 ];
 
-// ማንደርደርያ — the middle line of ዘአምላኪየ. ወዳቂ is አይአቱን as a መደብ, and the ተቀባሊ ወዳቂ count
-// tracks the መደብ count: the lower one takes 3, the higher takes 2, with 6 always beside
-// it. ተጣይ and ተነሽ are always 6; ስያፍ is never allowed.
+// ማንደርደርያ — the middle line of ዘአምላኪየ, which comes long or short. The long one always
+// rests on 6 and never takes a ወዳቂ መደብ; the short one rests on a ወዳቂ of 2 or 3 and
+// nothing else. ስያፍ never receives in either. Both share one መውቀዒ ቤት side.
+const LONG_REST = { wedaqi: [6], tetay: [6], tenesh: [6], siyaf: null };
+
 const MANDERDERYA_MEDEB = [
   { type: "wedaqi", branches: [] },
-  {
-    type: "tetay",
-    branches: [
-      { counts: [3], follow: { wedaqi: [3, 6], tetay: [6], tenesh: [6], siyaf: null } },
-      { counts: [4], follow: { wedaqi: [2, 6], tetay: [6], tenesh: [6], siyaf: null } },
-    ],
-  },
+  { type: "tetay", branches: [{ counts: [2, 3, 4], follow: LONG_REST }] },
+  { type: "tenesh", branches: [{ counts: [2, 3, 4], follow: LONG_REST }] },
+  { type: "siyaf", branches: [{ counts: [3, 4, 5], follow: LONG_REST }] },
+];
+
+const shortRest = (counts) => ({ wedaqi: counts, tetay: null, tenesh: null, siyaf: null });
+
+const MANDERDERYA_SHORT_MEDEB = [
+  { type: "wedaqi", branches: [{ counts: [1, 2, 3], follow: shortRest([3]) }] },
+  { type: "tetay", branches: [{ counts: [2, 3, 4], follow: shortRest([2, 3]) }] },
   {
     type: "tenesh",
     branches: [
-      { counts: [3], follow: { wedaqi: [3, 6], tetay: [6], tenesh: [6], siyaf: null } },
-      { counts: [4], follow: { wedaqi: [2, 6], tetay: [6], tenesh: [6], siyaf: null } },
+      { counts: [2, 3], follow: shortRest([3]) },
+      { counts: [4], follow: shortRest([2]) },
     ],
   },
   {
     type: "siyaf",
     branches: [
-      { counts: [4], follow: { wedaqi: [3, 6], tetay: [6], tenesh: [6], siyaf: null } },
-      { counts: [5], follow: { wedaqi: [2, 6], tetay: [6], tenesh: [6], siyaf: null } },
+      { counts: [3, 4], follow: shortRest([3]) },
+      { counts: [5], follow: shortRest([2]) },
     ],
   },
 ];
@@ -192,6 +197,14 @@ const MANDERDERYA_TABLE = {
   mewqe: MANDERDERYA_MEWQE,
 };
 
+const MANDERDERYA_SHORT_TABLE = {
+  id: "manderderya_short",
+  name: "ሓጺር ማንደርደርያ",
+  examples: { rowGroup: "", receiving: "", mewqe: "", house: "" },
+  medeb: MANDERDERYA_SHORT_MEDEB,
+  mewqe: MANDERDERYA_MEWQE,
+};
+
 const LEWUT_TABLE = {
   id: "lewut",
   name: "ልውጥ ሚ በዝሑ",
@@ -209,6 +222,7 @@ export const DEFAULT_TABLES = {
   qana: QANA_TABLE,
   ezl: EZL_TABLE,
   manderderya: MANDERDERYA_TABLE,
+  manderderya_short: MANDERDERYA_SHORT_TABLE,
   lewut: LEWUT_TABLE,
 };
 
@@ -264,7 +278,7 @@ export const METER_DEFS = [
       { parts: [medebPair(), mewqePair()] },
       {
         parts: [
-          medebPair({ tableIds: ["manderderya"], sourceChoice: false }),
+          medebPair({ tableIds: ["manderderya", "manderderya_short"], sourceChoice: false }),
           mewqePair({ tableIds: ["manderderya"] }),
         ],
       },
