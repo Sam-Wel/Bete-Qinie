@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { colors, fontFamily, radii, spacing } from "../theme";
 
-const CELL_MIN_WIDTH = 780;
+const CELL_MIN_WIDTH = 700;
 
 function Cell({ children, flex = 1, bold, header, last, style }) {
   return (
@@ -32,9 +32,10 @@ function SubHeaderRow({ last }) {
   );
 }
 
+// Stretches to the row's height so the column borders run the full height of a tall lead cell.
 function QuadRow({ values, borderBottom }) {
   return (
-    <View style={[styles.row, borderBottom && styles.rowBorderBottom]}>
+    <View style={[styles.row, styles.quadRow, borderBottom && styles.rowBorderBottom]}>
       <Cell flex={1}>{values.wedaqi}</Cell>
       <Cell flex={1}>{values.tetay}</Cell>
       <Cell flex={1}>{values.tenesh}</Cell>
@@ -54,7 +55,12 @@ export function KeneMeasureTable({ title, rowGroupLabel, receivingLabel, houseLa
   return (
     <View style={styles.wrapper}>
       <Text style={styles.title}>{title}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator style={{ width: "100%" }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator
+        style={{ width: "100%" }}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={[styles.table, { minWidth: hasMedeb && hasMewqe ? CELL_MIN_WIDTH : CELL_MIN_WIDTH / 2 }]}>
           {/* Header row A */}
           <View style={[styles.row, styles.rowBorderBottom]}>
@@ -88,11 +94,13 @@ export function KeneMeasureTable({ title, rowGroupLabel, receivingLabel, houseLa
                   {rowGroupLabel}
                 </Cell>
                 <View style={{ flex: 4 }}>
-                  <View style={[styles.row, styles.rowBorderBottom]}>
-                    <Cell flex={4} header bold last>
-                      {receivingLabel}
-                    </Cell>
-                  </View>
+                  {receivingLabel ? (
+                    <View style={[styles.row, styles.rowBorderBottom]}>
+                      <Cell flex={4} header bold last>
+                        {receivingLabel}
+                      </Cell>
+                    </View>
+                  ) : null}
                   <SubHeaderRow last />
                 </View>
               </>
@@ -103,11 +111,13 @@ export function KeneMeasureTable({ title, rowGroupLabel, receivingLabel, houseLa
                   {mewqeHeaderLabel}
                 </Cell>
                 <View style={{ flex: 4 }}>
-                  <View style={[styles.row, styles.rowBorderBottom]}>
-                    <Cell flex={4} header bold last>
-                      {houseLabel}
-                    </Cell>
-                  </View>
+                  {houseLabel ? (
+                    <View style={[styles.row, styles.rowBorderBottom]}>
+                      <Cell flex={4} header bold last>
+                        {houseLabel}
+                      </Cell>
+                    </View>
+                  ) : null}
                   <SubHeaderRow last />
                 </View>
               </>
@@ -153,7 +163,9 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginBottom: spacing.sm,
   },
+  scrollContent: { flexGrow: 1 },
   table: {
+    flexGrow: 1,
     borderWidth: 1,
     borderColor: colors.borderInk,
     borderRadius: radii.md,
@@ -164,6 +176,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "stretch",
   },
+  quadRow: { flexGrow: 1 },
   rowBorderBottom: {
     borderBottomWidth: 1,
     borderColor: colors.borderInk,

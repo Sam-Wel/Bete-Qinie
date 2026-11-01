@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { OrnamentDivider } from "./ui/OrnamentDivider";
@@ -27,6 +27,8 @@ const SPRING = { damping: 15, stiffness: 300 };
 const EMPTY = { type: null, count: null, text: "", skipped: false };
 const CELL_WIDTH = 132;
 const CELL_GAP = spacing.sm;
+// Past this width a long line wraps onto a second row instead of scrolling sideways.
+const WRAP_LINES_AT = 720;
 
 const buildState = (meter) =>
   meter.lines.map((def) => ({
@@ -183,6 +185,7 @@ export function MeterChecker() {
   const [hydrated, setHydrated] = useState(false);
   const [restored, setRestored] = useState(false);
   const scrollers = useRef({});
+  const wrapLines = useWindowDimensions().width >= WRAP_LINES_AT;
   const { user, profile } = useAuth();
 
   const slotsByLine = meter.lines.map(buildLineSlots);
@@ -415,44 +418,52 @@ export function MeterChecker() {
 
       {restored ? <Text style={styles.restored}>ያልተጠናቀቀ ስራዎ ተመልሷል።</Text> : null}
 
-      {slotsByLine.map((slots, lineIndex) => (
-        <View key={lineIndex} style={styles.lineBlock}>
-          <View style={styles.lineHeader}>
-            <Text style={styles.lineLabel}>ቤት {ORDINALS[lineIndex]}</Text>
-            <View style={styles.lineRule} />
+      {slotsByLine.map((slots, lineIndex) => {
+        const cells = slots.map((slot) => {
+          const value = state[lineIndex].slots[slot.key];
+          const unused = !neededOf(lineIndex, slot);
+          const filled = !unused && Boolean(value.type) && value.count != null && !value.skipped;
+
+          return (
+            <SlotCell
+              key={slot.key}
+              slot={slot}
+              value={value}
+              active={active.line === lineIndex && active.slot === slot.key}
+              unused={unused}
+              broken={filled && !readyOf(lineIndex, slot)}
+              onFocus={() => setActive({ line: lineIndex, slot: slot.key })}
+              onMeasure={() => openMeasure(lineIndex, slot.key)}
+              onChangeText={(text) => patchSlot(lineIndex, slot.key, { text })}
+            />
+          );
+        });
+
+        return (
+          <View key={lineIndex} style={styles.lineBlock}>
+            <View style={styles.lineHeader}>
+              <Text style={styles.lineLabel}>ቤት {ORDINALS[lineIndex]}</Text>
+              <View style={styles.lineRule} />
+            </View>
+
+            {wrapLines ? (
+              <View style={[styles.lineRow, styles.lineRowWrapped]}>{cells}</View>
+            ) : (
+              <ScrollView
+                ref={(node) => {
+                  scrollers.current[lineIndex] = node;
+                }}
+                horizontal
+                showsHorizontalScrollIndicator
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.lineRow}
+              >
+                {cells}
+              </ScrollView>
+            )}
           </View>
-
-          <ScrollView
-            ref={(node) => {
-              scrollers.current[lineIndex] = node;
-            }}
-            horizontal
-            showsHorizontalScrollIndicator
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.lineRow}
-          >
-            {slots.map((slot) => {
-              const value = state[lineIndex].slots[slot.key];
-              const unused = !neededOf(lineIndex, slot);
-              const filled = !unused && Boolean(value.type) && value.count != null && !value.skipped;
-
-              return (
-                <SlotCell
-                  key={slot.key}
-                  slot={slot}
-                  value={value}
-                  active={active.line === lineIndex && active.slot === slot.key}
-                  unused={unused}
-                  broken={filled && !readyOf(lineIndex, slot)}
-                  onFocus={() => setActive({ line: lineIndex, slot: slot.key })}
-                  onMeasure={() => openMeasure(lineIndex, slot.key)}
-                  onChangeText={(text) => patchSlot(lineIndex, slot.key, { text })}
-                />
-              );
-            })}
-          </ScrollView>
-        </View>
-      ))}
+        );
+      })}
 
       {complete ? (
         <Animated.View entering={FadeIn.duration(320)} style={styles.finale}>
@@ -619,6 +630,7 @@ const styles = StyleSheet.create({
   lineLabel: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, color: colors.textMuted, letterSpacing: 0.5 },
   lineRule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   lineRow: { flexDirection: "row", gap: CELL_GAP, paddingVertical: 2, paddingRight: spacing.sm },
+  lineRowWrapped: { flexWrap: "wrap", paddingRight: 0 },
 
   cell: {
     width: CELL_WIDTH,
