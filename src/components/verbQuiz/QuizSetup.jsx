@@ -8,7 +8,6 @@ import {
   FILTERS,
   LANGUAGES,
   LANGUAGE_LABEL,
-  familyProgress,
   filterPool,
   hasLanguage,
   partProgress,
@@ -16,31 +15,11 @@ import {
   stateOf,
   wordsInScope,
 } from "../../lib/verbQuiz";
-import { colors, fontFamily, radii, spacing, typography } from "../../theme";
-import { Chip, Legend, Section, StackedBar, shared } from "./shared";
+import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
+import { FamilyGrid } from "./FamilyGrid";
+import { Chip, Legend, Section, shared } from "./shared";
 
 const COUNTS = [10, 20, 50, "all"];
-
-function FamilyTile({ family, available, progress, selected, onPress, width }) {
-  const empty = available === 0;
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={empty}
-      style={({ hovered }) => [
-        styles.tile,
-        { width },
-        selected && styles.tileSelected,
-        hovered && !empty && !selected && styles.tileHover,
-        empty && styles.tileEmpty,
-      ]}
-    >
-      <Text style={[styles.tileLetter, selected && styles.tileLetterSelected]}>{family.label}</Text>
-      <Text style={styles.tileCount}>{empty ? "none" : available}</Text>
-      <StackedBar counts={progress.counts} total={progress.total} height={4} style={styles.tileBar} />
-    </Pressable>
-  );
-}
 
 function PartPicker({ bank, stats, familyId, pick, lang, onPick, onRemove }) {
   const parts = partsOf(bank, familyId);
@@ -83,6 +62,7 @@ export function QuizSetup({ bank, stats, settings, onChange, onStart, paused, on
   const { lang, scope, filter, count, direction, alsoShow } = settings;
   const picks = scope.mode === "choose" ? scope.picks : {};
   const pickedIds = Object.keys(picks);
+  const [open, setOpen] = useState(false);
 
   const pool = useMemo(() => wordsInScope(bank, scope, lang), [bank, scope, lang]);
   const matching = useMemo(
@@ -91,29 +71,43 @@ export function QuizSetup({ bank, stats, settings, onChange, onStart, paused, on
   );
   const asked = count === "all" ? matching : Math.min(count, matching);
 
-  const available = (familyId) => bank.byFamily[familyId].filter((e) => hasLanguage(e, lang)).length;
+  const tally = useMemo(() => {
+    const t = { new: 0, review: 0, known: 0 };
+    for (const entry of pool) {
+      const state = stateOf(stats[entry.id]);
+      if (state === "new") t.new += 1;
+      else if (state === "known") t.known += 1;
+      else t.review += 1;
+    }
+    return t;
+  }, [pool, stats]);
 
-  const setPicks = (next) => onChange({ scope: { mode: Object.keys(next).length ? "choose" : scope.mode, picks: next } });
+  const available = (familyId) => bank.byFamily[familyId].filter((e) => hasLanguage(e, lang)).length;
+  const setPicks = (next) => onChange({ scope: { mode: "choose", picks: next } });
 
   const toggleFamily = (familyId) => {
     if (scope.mode === "all") {
-      onChange({ scope: { mode: "choose", picks: { [familyId]: "all" } } });
+      setPicks({ [familyId]: "all" });
       return;
     }
     const next = { ...picks };
     if (familyId in next) delete next[familyId];
     else next[familyId] = "all";
-    onChange({ scope: { mode: "choose", picks: next } });
+    setPicks(next);
   };
 
-  // As many tiles per row as fit, stretched to fill it, so a phone gets four
-  // across instead of three and a gap.
-  const [tilesWidth, setTilesWidth] = useState(0);
-  const perRow = Math.max(1, Math.floor((tilesWidth + TILE_GAP) / (TILE_MIN + TILE_GAP)));
-  const tileWidth = tilesWidth ? Math.min(TILE_MAX, (tilesWidth - TILE_GAP * (perRow - 1)) / perRow) : TILE_MAX;
+  const scopeLabel =
+    scope.mode === "all"
+      ? "all groups"
+      : pickedIds.length === 0
+        ? "no groups yet"
+        : pickedIds
+            .map((id) => `${FAMILY_BY_ID[id].label}${picks[id] === "all" ? "" : ` part ${picks[id] + 1}`}`)
+            .join(", ");
+  const filterLabel = FILTERS.find((f) => f.key === filter)?.label;
+  const directionLabel = DIRECTIONS.find((d) => d.key === direction)?.label;
 
-  const unseenInPool = pool.filter((e) => stateOf(stats[e.id]) === "new").length;
-  const filterHint = FILTERS.find((f) => f.key === filter)?.hint;
+  const startLabel = asked === 0 ? "Nothing to ask" : `Start · ${asked} question${asked === 1 ? "" : "s"}`;
 
   return (
     <View>
@@ -140,167 +134,180 @@ export function QuizSetup({ bank, stats, settings, onChange, onStart, paused, on
         </View>
       ) : null}
 
-      <Section title="Answer in">
-        <View style={shared.row}>
-          {LANGUAGES.map((l) => (
-            <Chip
-              key={l.code}
-              label={l.label}
-              active={lang === l.code}
-              onPress={() =>
-                onChange({
-                  lang: l.code,
-                  alsoShow: LANGUAGES.map((x) => x.code).filter((code) => code !== l.code),
-                })
-              }
-            />
-          ))}
-        </View>
-      </Section>
-
-      <Section
-        title="Groups · by ending letter"
-        right={
-          <View style={shared.row}>
-            <Chip label="All groups" active={scope.mode === "all"} onPress={() => onChange({ scope: { mode: "all", picks } })} />
-            <Chip
-              label="Choose groups"
-              active={scope.mode === "choose"}
-              onPress={() => onChange({ scope: { mode: "choose", picks } })}
-            />
+      {/* One tap to practise; everything else is folded away until wanted. */}
+      <View style={[shared.card, styles.hero]}>
+        <Text style={styles.heroKicker}>{filterLabel}</Text>
+        <View style={styles.tally}>
+          <View style={styles.tallyItem}>
+            <Text style={[styles.tallyValue, { color: colors.accent }]}>{tally.review}</Text>
+            <Text style={styles.tallyLabel}>to review</Text>
           </View>
-        }
-      >
-        <Text style={shared.hint}>
-          {scope.mode === "all"
-            ? "Every group is in. Tap a letter to study just that group."
-            : "Tap the groups you want; split a big group into parts of 20."}
-        </Text>
-
-        <View style={styles.tiles} onLayout={(e) => setTilesWidth(e.nativeEvent.layout.width)}>
-          {FAMILIES.map((family) => (
-            <FamilyTile
-              key={family.id}
-              family={family}
-              available={available(family.id)}
-              progress={familyProgress(bank, stats, family.id)}
-              selected={scope.mode === "choose" && family.id in picks}
-              width={tileWidth}
-              onPress={() => toggleFamily(family.id)}
-            />
-          ))}
+          <View style={styles.tallyItem}>
+            <Text style={styles.tallyValue}>{tally.new}</Text>
+            <Text style={styles.tallyLabel}>new</Text>
+          </View>
+          <View style={styles.tallyItem}>
+            <Text style={[styles.tallyValue, { color: colors.success }]}>{tally.known}</Text>
+            <Text style={styles.tallyLabel}>known</Text>
+          </View>
         </View>
 
-        <View style={styles.underTiles}>
-          <Legend />
-          {scope.mode === "choose" ? (
+        <Button onPress={onStart} disabled={asked === 0} style={styles.heroStart}>
+          {startLabel}
+        </Button>
+
+        <Pressable onPress={() => setOpen((v) => !v)} style={styles.summaryRow} hitSlop={6}>
+          <Text style={styles.summaryText} numberOfLines={2}>
+            <Text style={styles.summaryEthiopic}>{LANGUAGE_LABEL[lang]}</Text>
+            {` · ${scopeLabel} · ${directionLabel}`}
+          </Text>
+          <Text style={styles.summaryToggle}>{open ? "Hide settings ▴" : "Change ▾"}</Text>
+        </Pressable>
+      </View>
+
+      {open ? (
+        <View style={styles.settings}>
+          <Section title="Answer in">
             <View style={shared.row}>
-              <Pressable
-                onPress={() =>
-                  setPicks(
-                    Object.fromEntries(FAMILIES.filter((f) => available(f.id) > 0).map((f) => [f.id, picks[f.id] ?? "all"]))
-                  )
-                }
-              >
-                <Text style={styles.link}>Select all</Text>
-              </Pressable>
-              <Pressable onPress={() => onChange({ scope: { mode: "choose", picks: {} } })}>
-                <Text style={styles.link}>Clear</Text>
-              </Pressable>
+              {LANGUAGES.map((l) => (
+                <Chip
+                  key={l.code}
+                  label={l.label}
+                  active={lang === l.code}
+                  onPress={() =>
+                    onChange({ lang: l.code, alsoShow: LANGUAGES.map((x) => x.code).filter((code) => code !== l.code) })
+                  }
+                />
+              ))}
             </View>
-          ) : null}
+          </Section>
+
+          <Section
+            title="Groups · by ending letter"
+            right={
+              <View style={shared.row}>
+                <Chip label="All groups" active={scope.mode === "all"} onPress={() => onChange({ scope: { mode: "all", picks } })} />
+                <Chip label="Choose" active={scope.mode === "choose"} onPress={() => setPicks(picks)} />
+              </View>
+            }
+          >
+            <Text style={shared.hint}>
+              {scope.mode === "all"
+                ? "Every group is in. Tap a letter to study just that group."
+                : "Tap the groups you want; split a big group into parts of 20."}
+            </Text>
+
+            <FamilyGrid
+              bank={bank}
+              stats={stats}
+              mode="pick"
+              lang={lang}
+              selected={scope.mode === "choose" ? pickedIds : []}
+              onPress={toggleFamily}
+            />
+
+            <View style={styles.underTiles}>
+              <Legend />
+              {scope.mode === "choose" ? (
+                <View style={shared.row}>
+                  <Pressable
+                    onPress={() =>
+                      setPicks(
+                        Object.fromEntries(FAMILIES.filter((f) => available(f.id) > 0).map((f) => [f.id, picks[f.id] ?? "all"]))
+                      )
+                    }
+                  >
+                    <Text style={styles.link}>Select all</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setPicks({})}>
+                    <Text style={styles.link}>Clear</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+            </View>
+
+            {pickedIds.length ? (
+              <View style={styles.parts}>
+                {FAMILIES.filter((f) => f.id in picks).map((f) => (
+                  <PartPicker
+                    key={f.id}
+                    bank={bank}
+                    stats={stats}
+                    familyId={f.id}
+                    pick={picks[f.id]}
+                    lang={lang}
+                    onPick={(pick) => setPicks({ ...picks, [f.id]: pick })}
+                    onRemove={() => {
+                      const next = { ...picks };
+                      delete next[f.id];
+                      setPicks(next);
+                    }}
+                  />
+                ))}
+                <Text style={shared.muted}>Parts follow the order the words were entered in the dictionary.</Text>
+              </View>
+            ) : null}
+          </Section>
+
+          <Section title="Words to include">
+            <View style={shared.row}>
+              {FILTERS.map((f) => (
+                <Chip key={f.key} label={f.label} active={filter === f.key} onPress={() => onChange({ filter: f.key })} />
+              ))}
+            </View>
+            <Text style={shared.hint}>{FILTERS.find((f) => f.key === filter)?.hint}</Text>
+          </Section>
+
+          <Section title="Questions">
+            <View style={shared.row}>
+              {COUNTS.map((n) => (
+                <Chip key={n} label={n === "all" ? "All" : String(n)} active={count === n} onPress={() => onChange({ count: n })} />
+              ))}
+            </View>
+            <Text style={[shared.hint, count !== "all" && matching < count && { color: colors.accent }]}>
+              {matching === 0
+                ? "No words match. Pick other groups or another filter."
+                : count !== "all" && matching < count
+                  ? `Only ${matching} words match, so the quiz will have ${matching}.`
+                  : `${matching} words match.`}
+            </Text>
+          </Section>
+
+          <Section title="Question type">
+            <View style={shared.row}>
+              {DIRECTIONS.map((d) => (
+                <Chip key={d.key} label={d.label} active={direction === d.key} onPress={() => onChange({ direction: d.key })} />
+              ))}
+            </View>
+          </Section>
+
+          <Section title="Also show in answers">
+            <View style={shared.row}>
+              {LANGUAGES.filter((l) => l.code !== lang).map((l) => {
+                const on = alsoShow.includes(l.code);
+                return (
+                  <Chip
+                    key={l.code}
+                    label={`${on ? "✓ " : ""}${l.label}`}
+                    ethiopic={l.code !== "en"}
+                    active={on}
+                    onPress={() => onChange({ alsoShow: on ? alsoShow.filter((c) => c !== l.code) : [...alsoShow, l.code] })}
+                  />
+                );
+              })}
+            </View>
+          </Section>
+
+          <Button onPress={onStart} disabled={asked === 0} style={styles.start}>
+            {startLabel}
+          </Button>
         </View>
-
-        {pickedIds.length ? (
-          <View style={styles.parts}>
-            {FAMILIES.filter((f) => f.id in picks).map((f) => (
-              <PartPicker
-                key={f.id}
-                bank={bank}
-                stats={stats}
-                familyId={f.id}
-                pick={picks[f.id]}
-                lang={lang}
-                onPick={(pick) => setPicks({ ...picks, [f.id]: pick })}
-                onRemove={() => {
-                  const next = { ...picks };
-                  delete next[f.id];
-                  onChange({ scope: { mode: "choose", picks: next } });
-                }}
-              />
-            ))}
-            <Text style={shared.muted}>Parts follow the order the words were entered in the dictionary.</Text>
-          </View>
-        ) : null}
-
-        <Text style={styles.summary}>
-          {pool.length} words with {LANGUAGE_LABEL[lang]} · {unseenInPool} you haven't seen yet
-        </Text>
-      </Section>
-
-      <Section title="Words to include">
-        <View style={shared.row}>
-          {FILTERS.map((f) => (
-            <Chip key={f.key} label={f.label} active={filter === f.key} onPress={() => onChange({ filter: f.key })} />
-          ))}
-        </View>
-        <Text style={shared.hint}>{filterHint}</Text>
-      </Section>
-
-      <Section title="Questions">
-        <View style={shared.row}>
-          {COUNTS.map((n) => (
-            <Chip key={n} label={n === "all" ? "All" : String(n)} active={count === n} onPress={() => onChange({ count: n })} />
-          ))}
-        </View>
-        <Text style={[shared.hint, count !== "all" && matching < count && { color: colors.accent }]}>
-          {matching === 0
-            ? "No words match. Pick other groups or another filter."
-            : count !== "all" && matching < count
-              ? `Only ${matching} words match, so the quiz will have ${matching}.`
-              : `${matching} words match.`}
-        </Text>
-      </Section>
-
-      <Section title="Question type">
-        <View style={shared.row}>
-          {DIRECTIONS.map((d) => (
-            <Chip key={d.key} label={d.label} active={direction === d.key} onPress={() => onChange({ direction: d.key })} />
-          ))}
-        </View>
-      </Section>
-
-      <Section title="Also show in answers">
-        <View style={shared.row}>
-          {LANGUAGES.filter((l) => l.code !== lang).map((l) => {
-            const on = alsoShow.includes(l.code);
-            return (
-              <Chip
-                key={l.code}
-                label={`${on ? "✓ " : ""}${l.label}`}
-                ethiopic={l.code !== "en"}
-                active={on}
-                onPress={() =>
-                  onChange({ alsoShow: on ? alsoShow.filter((c) => c !== l.code) : [...alsoShow, l.code] })
-                }
-              />
-            );
-          })}
-        </View>
-      </Section>
-
-      <Button onPress={onStart} disabled={asked === 0} style={styles.start}>
-        {asked === 0 ? "Nothing to ask" : `Start · ${asked} question${asked === 1 ? "" : "s"}`}
-      </Button>
+      ) : null}
 
       {storageNote ? <Text style={[shared.muted, styles.note]}>{storageNote}</Text> : null}
     </View>
   );
 }
-
-const TILE_MIN = 76;
-const TILE_MAX = 100;
-const TILE_GAP = spacing.sm;
 
 const styles = StyleSheet.create({
   resume: {
@@ -308,29 +315,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexWrap: "wrap",
     gap: spacing.md,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     borderColor: colors.borderGold,
     backgroundColor: colors.surfaceMuted,
   },
   resumeTitle: { ...typography.bodySemiBold, color: colors.textPrimary },
-  tiles: { flexDirection: "row", flexWrap: "wrap", gap: TILE_GAP },
-  tile: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+  hero: { gap: spacing.md, marginBottom: spacing.xl, ...shadows.card },
+  heroKicker: { ...typography.label, color: colors.textMuted, letterSpacing: 1, textTransform: "uppercase" },
+  tally: { flexDirection: "row", gap: spacing.xl },
+  tallyItem: { gap: 0 },
+  tallyValue: { fontFamily: fontFamily.latinBold, fontSize: 28, lineHeight: 34, color: colors.textPrimary },
+  tallyLabel: { ...typography.caption, color: colors.textMuted },
+  heroStart: { alignSelf: "stretch" },
+  summaryRow: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: 2,
+    justifyContent: "space-between",
+    gap: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
-  tileSelected: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
-  tileHover: { borderColor: colors.primary },
-  tileEmpty: { opacity: 0.45 },
-  tileLetter: { fontFamily: fontFamily.ethiopicBold, fontSize: 20, lineHeight: 28, color: colors.textPrimary },
-  tileLetterSelected: { color: colors.primaryDark },
-  tileCount: { ...typography.caption, color: colors.textSecondary },
-  tileBar: { alignSelf: "stretch", marginTop: 4 },
+  summaryText: { ...typography.caption, color: colors.textSecondary, flex: 1 },
+  summaryEthiopic: { fontFamily: fontFamily.ethiopicBold },
+  summaryToggle: { ...typography.label, color: colors.primary },
+  settings: { marginBottom: spacing.md },
   underTiles: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: spacing.sm, marginTop: 2 },
   link: { ...typography.label, color: colors.primary, textDecorationLine: "underline" },
   parts: {
@@ -362,7 +371,6 @@ const styles = StyleSheet.create({
   partDotFill: { height: 3, backgroundColor: colors.success },
   partCount: { ...typography.caption, color: colors.textMuted },
   partRemove: { ...typography.label, color: colors.textMuted },
-  summary: { ...typography.label, color: colors.textSecondary, marginTop: spacing.xs },
   start: { alignSelf: "flex-start", minWidth: 220 },
   note: { marginTop: spacing.md },
 });

@@ -192,7 +192,8 @@ export default function VerbQuiz() {
   return (
     <ScreenContainer scroll>
       <ScreenHeader title="ግሲ ፈተና" titleEthiopic />
-      <TabSwitch value={tab} onChange={setTab} />
+      {/* A quiz in progress gets the screen to itself; Pause leads back out. */}
+      {quiz && tab === "practice" ? null : <TabSwitch value={tab} onChange={setTab} />}
       {body}
     </ScreenContainer>
   );

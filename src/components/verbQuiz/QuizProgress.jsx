@@ -1,9 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Button, EmptyState } from "../ui";
-import { FAMILIES, LANGUAGE_LABEL, familyProgress, hardestWords, overview } from "../../lib/verbQuiz";
+import { LANGUAGE_LABEL, hardestWords, overview } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 import { AccuracyChart } from "./AccuracyChart";
-import { Legend, Section, StackedBar, percent, scriptFont, shared } from "./shared";
+import { FamilyGrid } from "./FamilyGrid";
+import { Legend, Section, percent, scriptFont, shared } from "./shared";
 
 const CHART_RUNS = 30;
 
@@ -61,28 +62,11 @@ export function QuizProgress({ bank, stats, runs, lang, onPractiseFamily, onPrac
       ) : null}
 
       <Section title="By group" right={<Legend />}>
-        <View>
-          {FAMILIES.map((family) => {
-            const p = familyProgress(bank, stats, family.id);
-            const touched = p.total - p.counts.new;
-            return (
-              <Pressable
-                key={family.id}
-                onPress={() => onPractiseFamily(family.id)}
-                style={({ hovered }) => [styles.familyRow, hovered && styles.familyRowHover]}
-              >
-                <Text style={styles.familyLetter}>{family.label}</Text>
-                <Text style={styles.familyCount}>
-                  {p.counts.known} / {p.total}
-                </Text>
-                <StackedBar counts={p.counts} total={p.total} height={8} style={{ flex: 1 }} />
-                <Text style={styles.familyPct}>{touched ? percent(p.accuracy) : "—"}</Text>
-                <Text style={styles.practise}>Practise ›</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        <Text style={shared.muted}>Known means right three times in a row. Accuracy counts every answer in the group.</Text>
+        <FamilyGrid bank={bank} stats={stats} mode="progress" onPress={onPractiseFamily} />
+        <Text style={shared.muted}>
+          Tiles show words known out of the group, with first-try accuracy underneath. Tap one to practise it. Known
+          means right three times in a row.
+        </Text>
       </Section>
 
       {hardest.length ? (
@@ -133,21 +117,6 @@ const styles = StyleSheet.create({
   historyDate: { ...typography.body, color: colors.textSecondary, flex: 1 },
   historyScore: { ...typography.bodySemiBold, color: colors.textPrimary, width: 80 },
   historyPct: { ...typography.body, color: colors.textSecondary, width: 50, textAlign: "right" },
-  familyRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    borderRadius: radii.sm,
-  },
-  familyRowHover: { backgroundColor: colors.surfaceMuted },
-  familyLetter: { fontFamily: fontFamily.ethiopicBold, fontSize: 17, color: colors.textPrimary, width: 58 },
-  familyCount: { ...typography.caption, color: colors.textSecondary, width: 62 },
-  familyPct: { ...typography.caption, color: colors.textSecondary, width: 38, textAlign: "right" },
-  practise: { ...typography.caption, color: colors.primary },
   hardList: { gap: 2 },
   hardRow: {
     flexDirection: "row",

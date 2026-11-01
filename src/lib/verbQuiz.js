@@ -10,10 +10,11 @@ export const LANGUAGES = [
 
 export const LANGUAGE_LABEL = Object.fromEntries(LANGUAGES.map((l) => [l.code, l.label]));
 
-// Letters that sound alike share a family; the label names every letter in it so
-// none silently disappears. ቈ and ኰ are labialised forms of ቀ and ከ.
+// Letters that sound alike share a family, and a verb may end in any of them
+// (including the fourth-order ኃ, ዓ and ኣ). The label names every letter so none
+// silently disappears. ቈ and ኰ are labialised forms of ቀ and ከ.
 export const FAMILIES = [
-  { id: "ሀ", letters: ["ሀ", "ሐ", "ኀ"] },
+  { id: "ሀ", letters: ["ሀ", "ሐ", "ኃ", "ኀ"] },
   { id: "ለ", letters: ["ለ"] },
   { id: "መ", letters: ["መ"] },
   { id: "ሰ", letters: ["ሰ", "ሠ"] },
@@ -22,7 +23,7 @@ export const FAMILIES = [
   { id: "በ", letters: ["በ"] },
   { id: "ተ", letters: ["ተ"] },
   { id: "ነ", letters: ["ነ"] },
-  { id: "አ", letters: ["አ", "ዐ"] },
+  { id: "አ", letters: ["ዐ", "ዓ", "አ", "ኣ"] },
   { id: "ከ", letters: ["ከ"], also: ["ኰ"] },
   { id: "ወ", letters: ["ወ"] },
   { id: "ዘ", letters: ["ዘ"] },

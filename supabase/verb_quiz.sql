@@ -12,9 +12,11 @@
 
 -- ---------------------------------------------------------------------
 -- verb_quiz_bank
--- A verb is a Ge'ez word ending in a first-order (ግዕዝ) letter. security_invoker
--- makes the view read words/translationmappings with the caller's own rights,
--- so it is exactly as public as those tables already are.
+-- Every Ge'ez word with its ti/am/en meanings. Which words count as verbs, and
+-- which ending letters group together, is decided in the app
+-- (src/lib/verbQuiz.js), so changing the groups never needs this file re-run.
+-- security_invoker makes the view read words/translationmappings with the
+-- caller's own rights, so it is exactly as public as those tables already are.
 -- ---------------------------------------------------------------------
 create or replace view public.verb_quiz_bank
 with (security_invoker = true) as
@@ -28,10 +30,6 @@ from public.words g
 left join public.translationmappings m on m.word_id = g.word_id
 left join public.words t on t.word_id = m.related_word_id
 where g.language_code = 'gz'
-  and right(btrim(g.word), 1) = any (array[
-    'ሀ','ለ','ሐ','መ','ሠ','ረ','ሰ','ቀ','ቈ','በ','ተ','ኀ','ነ','አ','ከ','ኰ',
-    'ወ','ዐ','ዘ','የ','ደ','ገ','ጠ','ጰ','ጸ','ፀ','ፈ','ፐ'
-  ])
 group by g.word_id, g.word;
 
 grant select on public.verb_quiz_bank to anon, authenticated;
@@ -57,6 +55,8 @@ create table if not exists public.verb_quiz_word_stats (
 
 alter table public.verb_quiz_word_stats enable row level security;
 
+-- Dropped first so the whole file can be run again safely.
+drop policy if exists "Users manage their own verb quiz stats" on public.verb_quiz_word_stats;
 create policy "Users manage their own verb quiz stats"
   on public.verb_quiz_word_stats for all
   using (auth.uid() = user_id)
