@@ -23,6 +23,12 @@ export default function AppLayout() {
       <Drawer.Screen name="game" options={{ title: "Games" }} />
       <Drawer.Screen name="shooter" options={{ title: "ቀስት" }} />
       <Drawer.Screen name="kal" options={{ title: "ቃል" }} />
+      <Drawer.Screen name="memory-match" options={{ title: "Verb Memory Match" }} />
+      <Drawer.Screen name="guess-action" options={{ title: "Guess the Action" }} />
+      <Drawer.Screen name="unscramble" options={{ title: "Unscramble the Verb" }} />
+      <Drawer.Screen name="lightning" options={{ title: "Verb Lightning Round" }} />
+      <Drawer.Screen name="verb-sort" options={{ title: "Verb Sorting Challenge" }} />
+      <Drawer.Screen name="boss-battle" options={{ title: "Verb Boss Battle" }} />
       <Drawer.Screen name="verb-quiz" options={{ title: "ግሲ ፈተና" }} />
       <Drawer.Screen name="blog" options={{ title: "ቅኔ አበው" }} />
       <Drawer.Screen name="account" options={{ title: "Account" }} />

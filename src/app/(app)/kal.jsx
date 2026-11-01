@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { ScreenContainer, ScreenHeader, Button, Icon } from "../../components/ui";
 import { KalBoard, KalLegend, MARK_COLORS, consonantsOf } from "../../components/games/KalBoard";
@@ -8,6 +7,7 @@ import { Meanings } from "../../components/verbQuiz/QuizPlay";
 import { shared, scriptFont } from "../../components/verbQuiz/shared";
 import { useVerbBank } from "../../hooks/useVerbBank";
 import { useKalHistory } from "../../hooks/useKalHistory";
+import { useGameLanguage } from "../../hooks/useGameLanguage";
 import { useWordProgress } from "../../context/WordProgressContext";
 import {
   HINT_AFTER,
@@ -24,7 +24,6 @@ import {
 import { LANGUAGES, LANGUAGE_LABEL } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
-const SETTINGS_KEY = "bete-qinie:verb-quiz-settings:v1";
 
 function untilTomorrow(now = Date.now()) {
   const next = new Date(now);
@@ -71,18 +70,12 @@ export default function Kal() {
   const { bank, loading, error } = useVerbBank();
   const progress = useWordProgress();
   const kal = useKalHistory();
-  const [lang, setLang] = useState("am");
+  const [lang] = useGameLanguage();
   const [mode, setMode] = useState("daily");
   const [practice, setPractice] = useState(null); // { target, guesses, hint }
   const [copied, setCopied] = useState(false);
   // Phones get a one-line header so the board and keyboard fit on one screen.
   const narrow = useWindowDimensions().width < 760;
-
-  useEffect(() => {
-    AsyncStorage.getItem(SETTINGS_KEY)
-      .then((raw) => raw && JSON.parse(raw).lang && setLang(JSON.parse(raw).lang))
-      .catch(() => {});
-  }, []);
 
   const puzzles = useMemo(() => (bank ? puzzleWords(bank) : []), [bank]);
   const allowed = useMemo(() => (bank ? guessSet(bank) : new Set()), [bank]);

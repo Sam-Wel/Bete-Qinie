@@ -77,6 +77,22 @@ export default function Games() {
           art={<Text style={styles.artLetters}>ቃል</Text>}
           onPress={() => router.push("/kal")}
         />
+        {[
+          ["Verb Memory Match", "Turn cards to pair each ግዕዝ verb with its meaning.", "🃏", "/memory-match"],
+          ["Guess the Action", "See an action, pick the ግዕዝ verb for it.", "🎭", "/guess-action"],
+          ["Unscramble the Verb", "Put a verb's shuffled letters back in order.", "🔀", "/unscramble"],
+          ["Verb Lightning Round", "Meanings against the clock, with combo multipliers.", "⚡", "/lightning"],
+          ["Verb Sorting Challenge", "Sort verbs into groups: movement, speech, feelings and more.", "🗂️", "/verb-sort"],
+          ["Verb Boss Battle", "Answer to strike four bosses in turn; miss and they strike back.", "🐉", "/boss-battle"],
+        ].map(([title, subtitle, emoji, route]) => (
+          <GameCard
+            key={route}
+            title={title}
+            subtitle={subtitle}
+            art={<Text style={styles.artEmoji}>{emoji}</Text>}
+            onPress={() => router.push(route)}
+          />
+        ))}
         <GameCard
           title="ግሲ ፈተና"
           subtitle="The quiz behind it all: pick groups, review your misses, see what you know."
@@ -121,6 +137,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  artEmoji: { fontSize: 30 },
   artLetters: { fontFamily: fontFamily.ethiopicBold, fontSize: 22, color: "#e0a52a" },
   titleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   title: { fontFamily: fontFamily.ethiopicBold, fontSize: 20, lineHeight: 28, color: colors.textPrimary },

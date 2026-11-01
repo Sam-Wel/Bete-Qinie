@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ActivityIndicator, Text } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { ScreenContainer, ScreenHeader } from "../../components/ui";
 import { Shooter } from "../../components/games/Shooter";
@@ -8,36 +7,22 @@ import { ShooterOver, ShooterStart } from "../../components/games/ShooterPanels"
 import { useVerbBank } from "../../hooks/useVerbBank";
 import { useWordProgress } from "../../context/WordProgressContext";
 import { useGameScores } from "../../hooks/useGameScores";
+import { useGameLanguage } from "../../hooks/useGameLanguage";
 import { newGame } from "../../lib/shooter";
 import { stateOf, wordsInScope } from "../../lib/verbQuiz";
 import { colors, spacing, typography } from "../../theme";
 
 const GAME_TYPE = "verb_shooter";
-// Shares the answer language with ግሲ ፈተና, so switching it in one switches both.
-const SETTINGS_KEY = "bete-qinie:verb-quiz-settings:v1";
 
 export default function ShooterScreen() {
   const { bank, loading, error } = useVerbBank();
   const progress = useWordProgress();
   const scores = useGameScores(GAME_TYPE);
 
-  const [lang, setLang] = useState("am");
+  const [lang, changeLang] = useGameLanguage();
   const [playing, setPlaying] = useState(null); // the game handed to <Shooter>
   const [over, setOver] = useState(null); // { game, isBest, previousBest, nowKnown }
   const [knownBefore, setKnownBefore] = useState(() => new Set());
-
-  useEffect(() => {
-    AsyncStorage.getItem(SETTINGS_KEY)
-      .then((raw) => raw && JSON.parse(raw).lang && setLang(JSON.parse(raw).lang))
-      .catch(() => {});
-  }, []);
-
-  const changeLang = (code) => {
-    setLang(code);
-    AsyncStorage.getItem(SETTINGS_KEY)
-      .then((raw) => AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...JSON.parse(raw || "{}"), lang: code })))
-      .catch(() => {});
-  };
 
   const pool = useMemo(() => (bank ? wordsInScope(bank, { mode: "all" }, lang) : []), [bank, lang]);
 

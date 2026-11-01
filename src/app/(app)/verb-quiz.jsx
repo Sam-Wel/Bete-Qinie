@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
+import { setGameLanguage, useGameLanguage } from "../../hooks/useGameLanguage";
 import { ScreenContainer, ScreenHeader } from "../../components/ui";
 import { QuizSetup } from "../../components/verbQuiz/QuizSetup";
 import { QuizPlay } from "../../components/verbQuiz/QuizPlay";
@@ -68,7 +69,14 @@ export default function VerbQuiz() {
       .catch(() => {});
   }, []);
 
+  // A language picked in a game shows up here too.
+  const [sharedLang] = useGameLanguage();
+  useEffect(() => {
+    setSettings((current) => (current.lang === sharedLang ? current : { ...current, lang: sharedLang, alsoShow: ["ti", "am", "en"].filter((c) => c !== sharedLang) }));
+  }, [sharedLang]);
+
   const changeSettings = useCallback((patch) => {
+    if (patch.lang) setGameLanguage(patch.lang); // the games follow the quiz's language
     setSettings((current) => {
       const next = { ...current, ...patch };
       AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(next)).catch(() => {});

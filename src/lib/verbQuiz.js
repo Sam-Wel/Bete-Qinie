@@ -300,12 +300,12 @@ const meaningOf = (entry, lang) => entry.ask[lang].slice(0, 3).join(" · ");
 // Wrong options come from the same ending family first: they look like the
 // answer, so they can only be told apart by knowing the word. Any option that
 // shares a meaning with the answer is left out, so exactly one is right.
-function distractors(entry, lang, direction, bank, random) {
+function distractors(entry, lang, direction, bank, random, near = true) {
   const meanings = new Set(entry.tr[lang]);
   const clash = (other) => other.id === entry.id || other.word === entry.word || other.tr[lang].some((m) => meanings.has(m));
   const candidates = (list) => shuffle(list.filter((o) => hasLanguage(o, lang) && !clash(o)), random);
 
-  const ordered = [...candidates(bank.byFamily[entry.family]), ...candidates(bank.words)];
+  const ordered = near ? [...candidates(bank.byFamily[entry.family]), ...candidates(bank.words)] : candidates(bank.words);
   const texts = [];
   const answerText = direction === "toGeez" ? entry.word : null;
   for (const other of ordered) {
@@ -317,11 +317,13 @@ function distractors(entry, lang, direction, bank, random) {
   return texts;
 }
 
-export function buildQuestion(entry, lang, direction, bank, random = Math.random) {
+// near: wrong options from the same ending family first (look-alikes, harder);
+// false draws them from the whole dictionary (easier).
+export function buildQuestion(entry, lang, direction, bank, random = Math.random, { near = true } = {}) {
   const dir = direction === "mixed" ? (random() < 0.5 ? "toMeaning" : "toGeez") : direction;
   const answer =
     dir === "toGeez" ? entry.word : entry.ask[lang][Math.floor(random() * entry.ask[lang].length)];
-  const options = shuffle([answer, ...distractors(entry, lang, dir, bank, random)], random);
+  const options = shuffle([answer, ...distractors(entry, lang, dir, bank, random, near)], random);
   return {
     wordId: entry.id,
     family: entry.family,
