@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router, useLocalSearchParams } from "expo-router";
 import { ScreenContainer, ScreenHeader } from "../../components/ui";
 import { QuizSetup } from "../../components/verbQuiz/QuizSetup";
 import { QuizPlay } from "../../components/verbQuiz/QuizPlay";
@@ -8,7 +9,7 @@ import { QuizResults } from "../../components/verbQuiz/QuizResults";
 import { QuizProgress } from "../../components/verbQuiz/QuizProgress";
 import { useVerbBank } from "../../hooks/useVerbBank";
 import { useVerbProgress } from "../../hooks/useVerbProgress";
-import { buildQuiz, pickWords, summarizeRun, wordsInScope } from "../../lib/verbQuiz";
+import { buildQuiz, hasLanguage, pickWords, summarizeRun, wordsInScope } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
 const SETTINGS_KEY = "bete-qinie:verb-quiz-settings:v1";
@@ -95,7 +96,20 @@ export default function VerbQuiz() {
     startWith(pickWords(pool, progress.stats, settings.filter, settings.count));
   };
 
-  const practiseWords = (ids) => startWith(ids.map((id) => bank.byId[id]).filter(Boolean), { filter: "all" });
+  // Only words that have a meaning in the answer language can be asked.
+  const practiseWords = (ids) =>
+    startWith(
+      ids.map((id) => bank.byId[id]).filter((entry) => entry && hasLanguage(entry, settings.lang)),
+      { filter: "all" }
+    );
+
+  // Another screen (a game's "practise the missed") can hand over words to quiz on.
+  const { words: handedOver } = useLocalSearchParams();
+  useEffect(() => {
+    if (!handedOver || !bank || !progress.ready) return;
+    practiseWords(String(handedOver).split(",").map(Number));
+    router.setParams({ words: undefined });
+  }, [handedOver, bank, progress.ready]);
 
   const practiseFamily = (familyId) => {
     changeSettings({ scope: { mode: "choose", picks: { [familyId]: "all" } }, filter: "smart" });
