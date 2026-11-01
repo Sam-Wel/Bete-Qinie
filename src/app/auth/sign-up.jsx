@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Text } from "react-native";
+import { Platform, Text } from "react-native";
 import { Link, router } from "expo-router";
 import { supabase } from "../../lib/supabaseClient";
 import { ScreenContainer, Card, TextField, Button, ScreenHeader } from "../../components/ui";
@@ -21,7 +21,11 @@ export default function SignUp() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName } },
+      options: {
+        data: { display_name: displayName },
+        // Without this the confirmation link points at the Supabase project's Site URL.
+        emailRedirectTo: Platform.OS === "web" ? `${window.location.origin}/` : undefined,
+      },
     });
 
     setLoading(false);

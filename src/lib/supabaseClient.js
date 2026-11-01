@@ -20,6 +20,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: Platform.OS === "web" ? undefined : AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // On web the email confirmation link lands back here carrying the session.
+    detectSessionInUrl: Platform.OS === "web",
   },
 });
