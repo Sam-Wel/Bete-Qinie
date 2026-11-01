@@ -11,7 +11,7 @@ export function TopNavBar({ navigation }) {
     <SafeAreaView edges={["top"]} style={styles.safeArea}>
       <View style={styles.bar}>
         <Pressable onPress={() => navigation.openDrawer()} hitSlop={10} style={styles.menuButton}>
-          <CrossMenuIcon size={24} />
+          <CrossMenuIcon size={32} />
         </Pressable>
         <Text style={styles.brand}>ቤተ ቅኔ</Text>
       </View>
@@ -33,9 +33,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm + 2,
   },
   menuButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.primaryLight,
