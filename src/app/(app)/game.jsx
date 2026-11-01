@@ -5,6 +5,8 @@ import { CrossMenuIcon } from "../../components/ui/CrossMenuIcon";
 import { useGameScores } from "../../hooks/useGameScores";
 import { useWordProgress } from "../../context/WordProgressContext";
 import { reviewSummary } from "../../lib/verbQuiz";
+import { useKalHistory } from "../../hooks/useKalHistory";
+import { dateKey, stats as kalStats } from "../../lib/kal";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
 function GameCard({ title, subtitle, art, meta, soon, onPress }) {
@@ -33,6 +35,7 @@ function GameCard({ title, subtitle, art, meta, soon, onPress }) {
 export default function Games() {
   const shooter = useGameScores("verb_shooter");
   const { stats, ready } = useWordProgress();
+  const kal = useKalHistory();
   const due = ready ? reviewSummary(stats).due : 0;
 
   return (
@@ -62,8 +65,17 @@ export default function Games() {
         <GameCard
           title="ቃል"
           subtitle="A daily three-letter verb to guess, with hints that know the fidel: right letter, wrong vowel order."
+          meta={
+            kal.ready
+              ? kal.history.some((h) => h.date === dateKey())
+                ? `Today's done · streak ${kalStats(kal.history).current}`
+                : kalStats(kal.history).current
+                  ? `Keep your ${kalStats(kal.history).current}-day streak going`
+                  : "New puzzle every day"
+              : null
+          }
           art={<Text style={styles.artLetters}>ቃል</Text>}
-          soon
+          onPress={() => router.push("/kal")}
         />
         <GameCard
           title="ግሲ ፈተና"

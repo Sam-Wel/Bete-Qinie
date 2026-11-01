@@ -22,6 +22,7 @@ export default function AppLayout() {
       <Drawer.Screen name="review" options={{ title: "ክለሳ" }} />
       <Drawer.Screen name="game" options={{ title: "Games" }} />
       <Drawer.Screen name="shooter" options={{ title: "ቀስት" }} />
+      <Drawer.Screen name="kal" options={{ title: "ቃል" }} />
       <Drawer.Screen name="verb-quiz" options={{ title: "ግሲ ፈተና" }} />
       <Drawer.Screen name="blog" options={{ title: "ቅኔ አበው" }} />
       <Drawer.Screen name="account" options={{ title: "Account" }} />

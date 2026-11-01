@@ -79,7 +79,9 @@ export function buildBank(rows) {
   const byFamily = Object.fromEntries(FAMILIES.map((f) => [f.id, []]));
   for (const entry of words) byFamily[entry.family].push(entry);
   const byId = Object.fromEntries(words.map((w) => [w.id, w]));
-  return { words, byFamily, byId };
+  // Every Ge'ez word, verb or not, for games that accept any real word as a guess.
+  const allWords = [...new Set(rows.map((r) => (r.word || "").trim()).filter(Boolean))];
+  return { words, byFamily, byId, allWords };
 }
 
 export const hasLanguage = (entry, lang) => entry.ask[lang]?.length > 0;
