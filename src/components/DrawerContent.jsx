@@ -3,6 +3,7 @@ import { DrawerContentScrollView } from "expo-router/drawer";
 import { Icon } from "./ui/Icon";
 import { router } from "expo-router";
 import { useAuth } from "../context/AuthContext";
+import { THEME_CHOICES, useColorTheme } from "../hooks/useColorTheme";
 import { OrnamentDivider } from "./ui";
 import { colors, fontFamily, spacing, typography } from "../theme";
 
@@ -14,6 +15,32 @@ function MenuItem({ icon, label, ethiopic, onPress }) {
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+function ThemeSwitch() {
+  const { choice, setChoice, available } = useColorTheme();
+  if (!available) return null;
+  return (
+    <View style={styles.theme}>
+      <Text style={styles.themeLabel}>APPEARANCE</Text>
+      <View style={styles.themeRow} accessibilityRole="radiogroup">
+        {THEME_CHOICES.map((c) => {
+          const on = c.key === choice;
+          return (
+            <Pressable
+              key={c.key}
+              onPress={() => setChoice(c.key)}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: on }}
+              style={({ hovered }) => [styles.themeOption, hovered && !on && styles.themeHover, on && styles.themeOn]}
+            >
+              <Text style={[styles.themeText, on && styles.themeTextOn]}>{c.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -60,6 +87,8 @@ export function DrawerContent(props) {
           <MenuItem icon="person-add-outline" label="Sign Up" onPress={() => go("/auth/sign-up")} />
         </>
       )}
+
+      <ThemeSwitch />
     </DrawerContentScrollView>
   );
 }
@@ -89,4 +118,19 @@ const styles = StyleSheet.create({
   divider: {
     marginVertical: spacing.md,
   },
+  theme: { marginTop: "auto", paddingTop: spacing.lg, gap: spacing.xs },
+  themeLabel: { ...typography.caption, color: colors.textMuted, letterSpacing: 1 },
+  themeRow: {
+    flexDirection: "row",
+    padding: 3,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  themeOption: { flex: 1, alignItems: "center", paddingVertical: 6, borderRadius: 7 },
+  themeHover: { backgroundColor: colors.border },
+  themeOn: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.primary },
+  themeText: { ...typography.label, color: colors.textSecondary },
+  themeTextOn: { color: colors.textPrimary },
 });

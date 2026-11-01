@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
 
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(43, 32, 19, 0.45)",
+    backgroundColor: colors.backdrop,
     alignItems: "center",
     justifyContent: "center",
     padding: spacing.lg,

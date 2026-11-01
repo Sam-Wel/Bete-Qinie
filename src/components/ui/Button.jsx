@@ -18,7 +18,7 @@ const VARIANTS = {
     border: colors.border,
   },
   danger: { bg: colors.dangerLight, hoverBg: colors.dangerLight, text: colors.dangerDark, border: colors.dangerDark },
-  dangerConfirm: { bg: colors.danger, hoverBg: colors.dangerDark, text: colors.white, border: "transparent" },
+  dangerConfirm: { bg: colors.danger, hoverBg: colors.dangerHover, text: colors.white, border: "transparent" },
   ghost: { bg: "transparent", hoverBg: colors.primaryLight, text: colors.primary, border: "transparent" },
 };
 
