@@ -80,7 +80,7 @@ export function ShooterStart({ lang, onLang, available, best, last, onPlay }) {
 export function ShooterOver({ game, bank, isBest, previousBest, nowKnown, signedIn, onAgain, onPractise }) {
   const review = useSavedToReview();
   const missed = game.missed.map((id) => bank.byId[id]).filter(Boolean);
-  const unsaved = missed.filter((e) => !review.saved(e.word)).map((e) => e.word);
+  const unsaved = missed.filter((e) => !review.saved(e.id)).map((e) => e.id);
   const best = Math.max(previousBest ?? 0, game.score);
   const rankedUp = rankFor(best).index > rankFor(previousBest ?? 0).index;
 
@@ -118,11 +118,9 @@ export function ShooterOver({ game, bank, isBest, previousBest, nowKnown, signed
         <View style={styles.missed}>
           <View style={styles.missedHeader}>
             <Text style={styles.sectionLabel}>WORDS THAT GOT AWAY</Text>
-            {review.isSignedIn ? (
-              <Button size="sm" variant="ghost" disabled={!unsaved.length} onPress={() => review.save(unsaved)}>
-                {unsaved.length ? `Add ${unsaved.length} to ክለሳ` : "All in ክለሳ ✓"}
-              </Button>
-            ) : null}
+            <Button size="sm" variant="ghost" disabled={!unsaved.length} onPress={() => review.save(unsaved)}>
+              {unsaved.length ? `Add ${unsaved.length} to ክለሳ` : "All in ክለሳ ✓"}
+            </Button>
           </View>
           {missed.map((entry) => (
             <View key={entry.id} style={styles.missedRow}>

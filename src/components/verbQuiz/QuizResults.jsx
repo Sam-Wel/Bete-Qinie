@@ -15,8 +15,8 @@ export function QuizResults({ run, quiz, bank, onRetryMissed, onNewQuiz, onProgr
   const { lang, alsoShow } = quiz.settings;
   const accuracy = run.total ? run.correct / run.total : 0;
   const fixed = quiz.retry ? quiz.retry.answers.filter((a) => a.correct).length : 0;
-  const missedWords = run.missed.map((id) => bank.byId[id]?.word).filter(Boolean);
-  const unsaved = missedWords.filter((word) => !review.saved(word));
+  const missedIds = run.missed.filter((id) => bank.byId[id]);
+  const unsaved = missedIds.filter((id) => !review.saved(id));
 
   const verdict =
     accuracy === 1 ? "Perfect round." : accuracy >= 0.8 ? "Strong work." : accuracy >= 0.5 ? "Getting there." : "Keep at it.";
@@ -46,7 +46,7 @@ export function QuizResults({ run, quiz, bank, onRetryMissed, onNewQuiz, onProgr
             See my progress
           </Button>
         </View>
-        {review.isSignedIn && missedWords.length ? (
+        {missedIds.length ? (
           <Button size="sm" variant="ghost" disabled={!unsaved.length} onPress={() => review.save(unsaved)}>
             {unsaved.length ? `Add ${unsaved.length} missed to ክለሳ` : "Missed words are in ክለሳ ✓"}
           </Button>
@@ -93,16 +93,9 @@ export function QuizResults({ run, quiz, bank, onRetryMissed, onNewQuiz, onProgr
                     </Text>
                   ) : null}
                 </View>
-                {review.isSignedIn ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={review.saved(entry.word)}
-                    onPress={() => review.save([entry.word])}
-                  >
-                    {review.saved(entry.word) ? "✓" : "＋ ክለሳ"}
-                  </Button>
-                ) : null}
+                <Button size="sm" variant="ghost" disabled={review.saved(entry.id)} onPress={() => review.save([entry.id])}>
+                  {review.saved(entry.id) ? "✓" : "＋ ክለሳ"}
+                </Button>
               </View>
             );
           })}

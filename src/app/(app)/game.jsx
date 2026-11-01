@@ -3,6 +3,8 @@ import { router } from "expo-router";
 import { ScreenContainer, ScreenHeader, Icon } from "../../components/ui";
 import { CrossMenuIcon } from "../../components/ui/CrossMenuIcon";
 import { useGameScores } from "../../hooks/useGameScores";
+import { useWordProgress } from "../../context/WordProgressContext";
+import { reviewSummary } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
 function GameCard({ title, subtitle, art, meta, soon, onPress }) {
@@ -30,6 +32,8 @@ function GameCard({ title, subtitle, art, meta, soon, onPress }) {
 // count toward the same word progress as ግሲ ፈተና.
 export default function Games() {
   const shooter = useGameScores("verb_shooter");
+  const { stats, ready } = useWordProgress();
+  const due = ready ? reviewSummary(stats).due : 0;
 
   return (
     <ScreenContainer scroll>
@@ -38,6 +42,14 @@ export default function Games() {
         Games on the Ge'ez verbs of the dictionary. Every answer counts toward your ግሲ ፈተና progress, so playing is
         studying.
       </Text>
+
+      {due ? (
+        <Pressable onPress={() => router.push("/review")} style={styles.due}>
+          <Text style={styles.dueText}>
+            {due} word{due === 1 ? "" : "s"} due for review in ክለሳ ›
+          </Text>
+        </Pressable>
+      ) : null}
 
       <View style={styles.list}>
         <GameCard
@@ -67,6 +79,15 @@ export default function Games() {
 const styles = StyleSheet.create({
   lead: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.lg },
   list: { gap: spacing.md },
+  due: {
+    alignSelf: "flex-start",
+    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    backgroundColor: colors.primaryLight,
+  },
+  dueText: { ...typography.label, color: colors.primaryDark },
   card: {
     flexDirection: "row",
     alignItems: "center",

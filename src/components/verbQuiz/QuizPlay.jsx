@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { Button } from "../ui";
-import { useStudyList } from "../../hooks/useStudyList";
+import { useWordProgress } from "../../context/WordProgressContext";
 import { FAMILY_BY_ID, LANGUAGE_LABEL, buildQuestion } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 import { scriptFont, scriptFontBold, shared } from "./shared";
@@ -26,20 +26,10 @@ export function Meanings({ entry, langs, style }) {
   );
 }
 
+// "Save to ክለሳ" by word id, into the shared word progress (guests too, on the device).
 export function useSavedToReview() {
-  const { allItems, loadItems, saveWord, isSignedIn } = useStudyList();
-  const [justSaved, setJustSaved] = useState(() => new Set());
-
-  useEffect(() => {
-    if (isSignedIn) loadItems();
-  }, [isSignedIn, loadItems]);
-
-  const saved = (word) => justSaved.has(word) || allItems.some((item) => item.word === word && item.language_code === "gz");
-  const save = async (words) => {
-    setJustSaved((current) => new Set([...current, ...words]));
-    for (const word of words) await saveWord(word);
-  };
-  return { isSignedIn, saved, save };
+  const { stats, save } = useWordProgress();
+  return { saved: (wordId) => Boolean(stats[wordId]?.saved), save };
 }
 
 export function QuizPlay({ quiz, bank, onChange, onFirstAnswer, onFinish, onQuit }) {
@@ -197,18 +187,9 @@ export function QuizPlay({ quiz, bank, onChange, onFirstAnswer, onFinish, onQuit
           ) : null}
 
           <View style={styles.feedbackActions}>
-            {review.isSignedIn ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={review.saved(entry.word)}
-                onPress={() => review.save([entry.word])}
-              >
-                {review.saved(entry.word) ? "In ክለሳ ✓" : "Save to ክለሳ"}
-              </Button>
-            ) : (
-              <View />
-            )}
+            <Button variant="ghost" size="sm" disabled={review.saved(entry.id)} onPress={() => review.save([entry.id])}>
+              {review.saved(entry.id) ? "In ክለሳ ✓" : "Save to ክለሳ"}
+            </Button>
             <Button size="sm" onPress={advance}>
               {isLast && (inRetry || quiz.answers.every((a) => a.correct)) ? "See results" : "Next →"}
             </Button>

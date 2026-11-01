@@ -1,8 +1,7 @@
-import { useEffect } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useDictionarySearch } from "../../hooks/useDictionarySearch";
 import { useRecentSearches } from "../../hooks/useRecentSearches";
-import { useStudyList } from "../../hooks/useStudyList";
+import { useWordProgress } from "../../context/WordProgressContext";
 import { ScreenContainer, Card, TextField, Button, EmptyState, ScreenHeader, Select } from "../../components/ui";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
@@ -23,13 +22,10 @@ export default function Dictionary() {
     handleSearch,
   } = useDictionarySearch();
   const { recentSearches, addRecentSearch } = useRecentSearches();
-  const { allItems, saveWord, removeWord, loadItems, isSignedIn } = useStudyList();
-
-  useEffect(() => {
-    if (isSignedIn) loadItems();
-  }, [isSignedIn, loadItems]);
-
-  const savedItem = allItems.find((item) => item.word === query && item.language_code === "gz");
+  const progress = useWordProgress();
+  // The searched Ge'ez word's id comes back with its translations.
+  const wordId = selectedLanguage === "gz" ? results[0]?.word_id : null;
+  const saved = Boolean(wordId && progress.stats[wordId]?.saved);
 
   const runSearch = async (searchQuery, searchLanguage) => {
     const result = await handleSearch(searchQuery, searchLanguage);
@@ -117,16 +113,16 @@ export default function Dictionary() {
         <Card style={styles.resultsCard}>
           <View style={styles.resultsHeader}>
             <Text style={styles.cardTitle}>Results:</Text>
-            {isSignedIn && selectedLanguage === "gz" && (
+            {wordId ? (
               <Button
-                variant={savedItem ? "danger" : "secondary"}
+                variant={saved ? "danger" : "secondary"}
                 size="sm"
                 pill
-                onPress={() => (savedItem ? removeWord(savedItem.id) : saveWord(query, "gz"))}
+                onPress={() => (saved ? progress.unsave(wordId) : progress.save([wordId]))}
               >
-                {savedItem ? "Saved ✓" : "Save"}
+                {saved ? "In ክለሳ ✓" : "Save to ክለሳ"}
               </Button>
-            )}
+            ) : null}
           </View>
           {groupedResults.map(([language, words]) => (
             <View key={language} style={styles.resultRow}>

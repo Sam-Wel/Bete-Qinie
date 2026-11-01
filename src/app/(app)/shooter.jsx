@@ -6,7 +6,7 @@ import { ScreenContainer, ScreenHeader } from "../../components/ui";
 import { Shooter } from "../../components/games/Shooter";
 import { ShooterOver, ShooterStart } from "../../components/games/ShooterPanels";
 import { useVerbBank } from "../../hooks/useVerbBank";
-import { useVerbProgress } from "../../hooks/useVerbProgress";
+import { useWordProgress } from "../../context/WordProgressContext";
 import { useGameScores } from "../../hooks/useGameScores";
 import { newGame } from "../../lib/shooter";
 import { stateOf, wordsInScope } from "../../lib/verbQuiz";
@@ -18,7 +18,7 @@ const SETTINGS_KEY = "bete-qinie:verb-quiz-settings:v1";
 
 export default function ShooterScreen() {
   const { bank, loading, error } = useVerbBank();
-  const progress = useVerbProgress();
+  const progress = useWordProgress();
   const scores = useGameScores(GAME_TYPE);
 
   const [lang, setLang] = useState("am");

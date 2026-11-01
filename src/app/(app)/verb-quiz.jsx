@@ -8,7 +8,7 @@ import { QuizPlay } from "../../components/verbQuiz/QuizPlay";
 import { QuizResults } from "../../components/verbQuiz/QuizResults";
 import { QuizProgress } from "../../components/verbQuiz/QuizProgress";
 import { useVerbBank } from "../../hooks/useVerbBank";
-import { useVerbProgress } from "../../hooks/useVerbProgress";
+import { useWordProgress } from "../../context/WordProgressContext";
 import { buildQuiz, hasLanguage, pickWords, summarizeRun, wordsInScope } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
@@ -54,7 +54,7 @@ const newQuiz = (questions, settings) => ({
 
 export default function VerbQuiz() {
   const { bank, loading, error } = useVerbBank();
-  const progress = useVerbProgress();
+  const progress = useWordProgress();
 
   const [tab, setTab] = useState("practice");
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);

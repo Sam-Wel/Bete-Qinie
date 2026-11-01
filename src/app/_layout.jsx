@@ -9,6 +9,7 @@ import {
 } from "@expo-google-fonts/noto-sans-ethiopic";
 import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import { AuthProvider } from "../context/AuthContext";
+import { WordProgressProvider } from "../context/WordProgressContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -34,11 +35,13 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(app)" />
-          <Stack.Screen name="admin" />
-          <Stack.Screen name="auth" />
-        </Stack>
+        <WordProgressProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(app)" />
+            <Stack.Screen name="admin" />
+            <Stack.Screen name="auth" />
+          </Stack>
+        </WordProgressProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

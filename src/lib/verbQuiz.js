@@ -111,17 +111,86 @@ export function wordsInScope(bank, scope, lang) {
 // Word progress
 // ---------------------------------------------------------------------
 
+// ---------------------------------------------------------------------
+// Review schedule (ክለሳ). Every answer, from any game or the quiz, moves the
+// same record: a right answer moves the word up a box and puts its next
+// review further off; a wrong one drops it to box 1, due tomorrow. Dates are
+// whole days, so a word due "tomorrow" is ready from tomorrow morning.
+// ---------------------------------------------------------------------
+
+export const REVIEW_DAYS = [1, 1, 3, 7, 21, 60]; // by box
+export const REVIEW_SESSION = 20;
+
+export const startOfDay = (time) => {
+  const d = new Date(time);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+};
+
+// Midnight `days` calendar days after `time`. Counted in days, not 24-hour
+// steps, so a clock change can't land "tomorrow" late tonight.
+export const addDays = (time, days) => {
+  const d = new Date(startOfDay(time));
+  d.setDate(d.getDate() + days);
+  return d.getTime();
+};
+
+const dueAfter = (box, correct, now) => addDays(now, correct ? REVIEW_DAYS[Math.min(box, MAX_BOX)] : 1);
+
 export function applyAnswer(stat, correct, now = Date.now()) {
   const s = stat || { seen: 0, correct: 0, streak: 0, box: 0 };
+  const box = correct ? Math.min(MAX_BOX, s.box + 1) : 1;
   return {
     seen: s.seen + 1,
     correct: s.correct + (correct ? 1 : 0),
     streak: correct ? s.streak + 1 : 0,
-    box: correct ? Math.min(MAX_BOX, s.box + 1) : 1,
+    box,
     lastCorrect: correct,
     lastSeen: now,
     lastWrong: correct ? s.lastWrong ?? null : now,
+    due: dueAfter(box, correct, now),
+    saved: Boolean(s.saved),
   };
+}
+
+// Records kept before review dates existed get one from their last answer.
+export function withDue(stat) {
+  if (!stat || stat.due != null || !stat.seen) return stat;
+  return { ...stat, due: dueAfter(stat.box, stat.lastCorrect !== false, stat.lastSeen ?? Date.now()) };
+}
+
+// Added to ክለሳ by hand: in today's review unless it is already scheduled.
+export function markSaved(stat, now = Date.now()) {
+  const s = stat || { seen: 0, correct: 0, streak: 0, box: 0, lastCorrect: null, lastSeen: null, lastWrong: null };
+  return { ...s, saved: true, due: s.due ?? now };
+}
+
+export const markUnsaved = (stat) => (stat ? { ...stat, saved: false } : stat);
+
+export const inReview = (stat) => Boolean(stat && (stat.saved || stat.seen > 0) && stat.due != null);
+export const isDue = (stat, now = Date.now()) => inReview(stat) && stat.due <= now;
+
+// What ክለሳ asks today: words missed last time first, then the most overdue,
+// at most `limit` at a time so a long game can't bury the learner.
+export function dueQueue(stats, now = Date.now(), limit = REVIEW_SESSION) {
+  return Object.entries(stats)
+    .filter(([, s]) => isDue(s, now))
+    .sort(([, a], [, b]) => (b.lastCorrect === false) - (a.lastCorrect === false) || a.due - b.due)
+    .slice(0, limit)
+    .map(([id]) => Number(id));
+}
+
+export function reviewSummary(stats, now = Date.now()) {
+  let due = 0;
+  let week = 0;
+  let saved = 0;
+  for (const s of Object.values(stats)) {
+    if (s?.saved) saved += 1;
+    if (!inReview(s)) continue;
+    if (s.due <= now) due += 1;
+    else if (s.due < addDays(now, 8)) week += 1;
+  }
+  return { due, week, saved };
 }
 
 // new: never asked. shaky: the last answer was wrong. learning: right lately but
@@ -183,7 +252,9 @@ const STALE_MS = 7 * 24 * 3600 * 1000;
 function smartPick(pool, stats, count, random, now) {
   const by = { shaky: [], learning: [], new: [], known: [] };
   for (const entry of pool) by[stateOf(stats[entry.id])].push(entry);
-  const oldestFirst = (a, b) => (stats[a.id]?.lastSeen ?? 0) - (stats[b.id]?.lastSeen ?? 0);
+  // Words due for review come first, then the ones seen longest ago.
+  const oldestFirst = (a, b) =>
+    isDue(stats[b.id], now) - isDue(stats[a.id], now) || (stats[a.id]?.lastSeen ?? 0) - (stats[b.id]?.lastSeen ?? 0);
   by.shaky.sort(oldestFirst);
   by.learning.sort(oldestFirst);
   by.known.sort(oldestFirst);
@@ -197,7 +268,7 @@ function smartPick(pool, stats, count, random, now) {
     ...practised.slice(0, count - newQuota),
     ...by.new.slice(0, newQuota),
   ];
-  const stale = by.known.filter((e) => now - (stats[e.id]?.lastSeen ?? 0) > STALE_MS);
+  const stale = by.known.filter((e) => isDue(stats[e.id], now) || now - (stats[e.id]?.lastSeen ?? 0) > STALE_MS);
   const fillers = [...practised.slice(count - newQuota), ...by.new.slice(newQuota), ...stale, ...by.known];
   for (const entry of fillers) {
     if (picked.length >= count) break;
@@ -368,6 +439,8 @@ export function mergeStats(base, extra) {
       lastCorrect: newer.lastCorrect,
       lastSeen: newer.lastSeen,
       lastWrong: Math.max(a.lastWrong ?? 0, b.lastWrong ?? 0) || null,
+      due: newer.due ?? a.due ?? b.due ?? null,
+      saved: Boolean(a.saved || b.saved),
     };
   }
   return out;
@@ -383,6 +456,8 @@ export function statFromRow(row) {
     lastCorrect: row.last_correct,
     lastSeen: row.last_seen_at ? Date.parse(row.last_seen_at) : null,
     lastWrong: row.last_wrong_at ? Date.parse(row.last_wrong_at) : null,
+    due: row.due_at ? Date.parse(row.due_at) : null,
+    saved: Boolean(row.saved),
   };
 }
 
@@ -397,5 +472,7 @@ export function rowFromStat(userId, wordId, s) {
     last_correct: s.lastCorrect ?? null,
     last_seen_at: s.lastSeen ? new Date(s.lastSeen).toISOString() : null,
     last_wrong_at: s.lastWrong ? new Date(s.lastWrong).toISOString() : null,
+    due_at: s.due ? new Date(s.due).toISOString() : null,
+    saved: Boolean(s.saved),
   };
 }

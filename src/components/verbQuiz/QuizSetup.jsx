@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { router } from "expo-router";
 import { Button } from "../ui";
 import {
   DIRECTIONS,
@@ -10,6 +11,7 @@ import {
   LANGUAGE_LABEL,
   filterPool,
   hasLanguage,
+  isDue,
   partProgress,
   partsOf,
   stateOf,
@@ -77,7 +79,7 @@ export function QuizSetup({ bank, stats, settings, onChange, onStart, paused, on
       const state = stateOf(stats[entry.id]);
       if (state === "new") t.new += 1;
       else if (state === "known") t.known += 1;
-      else t.review += 1;
+      if (isDue(stats[entry.id])) t.review += 1;
     }
     return t;
   }, [pool, stats]);
@@ -140,7 +142,7 @@ export function QuizSetup({ bank, stats, settings, onChange, onStart, paused, on
         <View style={styles.tally}>
           <View style={styles.tallyItem}>
             <Text style={[styles.tallyValue, { color: colors.accent }]}>{tally.review}</Text>
-            <Text style={styles.tallyLabel}>to review</Text>
+            <Text style={styles.tallyLabel}>due for review</Text>
           </View>
           <View style={styles.tallyItem}>
             <Text style={styles.tallyValue}>{tally.new}</Text>
@@ -155,6 +157,13 @@ export function QuizSetup({ bank, stats, settings, onChange, onStart, paused, on
         <Button onPress={onStart} disabled={asked === 0} style={styles.heroStart}>
           {startLabel}
         </Button>
+        {tally.review ? (
+          <Pressable onPress={() => router.push("/review")}>
+            <Text style={styles.reviewLink}>
+              Smart mix asks due words first, or review them as flashcards in ክለሳ ›
+            </Text>
+          </Pressable>
+        ) : null}
 
         <Pressable onPress={() => setOpen((v) => !v)} style={styles.summaryRow} hitSlop={6}>
           <Text style={styles.summaryText} numberOfLines={2}>
@@ -327,6 +336,7 @@ const styles = StyleSheet.create({
   tallyValue: { fontFamily: fontFamily.latinBold, fontSize: 28, lineHeight: 34, color: colors.textPrimary },
   tallyLabel: { ...typography.caption, color: colors.textMuted },
   heroStart: { alignSelf: "stretch" },
+  reviewLink: { ...typography.caption, color: colors.primary },
   summaryRow: {
     flexDirection: "row",
     alignItems: "center",

@@ -1,7 +1,6 @@
-import { useEffect } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useGeezEndings } from "../../hooks/useGeezEndings";
-import { useStudyList } from "../../hooks/useStudyList";
+import { useWordProgress } from "../../context/WordProgressContext";
 import { ScreenContainer, Card, Button, EmptyState, ScreenHeader } from "../../components/ui";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
@@ -20,13 +19,11 @@ export default function VerbRoots() {
     selectWord,
     error,
   } = useGeezEndings();
-  const { allItems, saveWord, removeWord, loadItems, isSignedIn } = useStudyList();
+  const progress = useWordProgress();
 
-  useEffect(() => {
-    if (isSignedIn) loadItems();
-  }, [isSignedIn, loadItems]);
-
-  const savedItem = allItems.find((item) => item.word === selectedWord && item.language_code === "gz");
+  // The selected verb's id comes back with its translations.
+  const wordId = selectedWord ? translations[0]?.word_id : null;
+  const saved = Boolean(wordId && progress.stats[wordId]?.saved);
 
   const groupedTranslations = Object.entries(
     translations.reduce((acc, result) => {
@@ -92,16 +89,16 @@ export default function VerbRoots() {
         <Card style={styles.fullWidth}>
           <View style={styles.resultsHeader}>
             <Text style={styles.cardTitle}>{selectedWord} -- Translations</Text>
-            {isSignedIn && (
+            {wordId ? (
               <Button
-                variant={savedItem ? "danger" : "secondary"}
+                variant={saved ? "danger" : "secondary"}
                 size="sm"
                 pill
-                onPress={() => (savedItem ? removeWord(savedItem.id) : saveWord(selectedWord, "gz"))}
+                onPress={() => (saved ? progress.unsave(wordId) : progress.save([wordId]))}
               >
-                {savedItem ? "Saved ✓" : "Save"}
+                {saved ? "In ክለሳ ✓" : "Save to ክለሳ"}
               </Button>
-            )}
+            ) : null}
           </View>
           {groupedTranslations.map(([language, words]) => (
             <View key={language} style={styles.resultRow}>
