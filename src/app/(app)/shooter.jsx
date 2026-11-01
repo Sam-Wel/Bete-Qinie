@@ -9,7 +9,7 @@ import { useVerbBank } from "../../hooks/useVerbBank";
 import { useVerbProgress } from "../../hooks/useVerbProgress";
 import { useGameScores } from "../../hooks/useGameScores";
 import { newGame } from "../../lib/shooter";
-import { wordsInScope } from "../../lib/verbQuiz";
+import { stateOf, wordsInScope } from "../../lib/verbQuiz";
 import { colors, spacing, typography } from "../../theme";
 
 const GAME_TYPE = "verb_shooter";
@@ -23,7 +23,8 @@ export default function ShooterScreen() {
 
   const [lang, setLang] = useState("am");
   const [playing, setPlaying] = useState(null); // the game handed to <Shooter>
-  const [over, setOver] = useState(null); // { game, isBest }
+  const [over, setOver] = useState(null); // { game, isBest, previousBest, nowKnown }
+  const [knownBefore, setKnownBefore] = useState(() => new Set());
 
   useEffect(() => {
     AsyncStorage.getItem(SETTINGS_KEY)
@@ -42,18 +43,22 @@ export default function ShooterScreen() {
 
   const play = () => {
     setOver(null);
+    setKnownBefore(new Set(Object.keys(progress.stats).filter((id) => stateOf(progress.stats[id]) === "known").map(Number)));
     setPlaying(newGame({ bank, pool, stats: progress.stats, lang }));
   };
 
   const finish = async (game) => {
+    const previousBest = scores.best;
+    // Verbs this game took over the line into "known" (right three times running).
+    const nowKnown = game.practised.filter((id) => !knownBefore.has(id) && stateOf(progress.stats[id]) === "known").length;
     setPlaying(null);
-    setOver({ game, isBest: false });
+    setOver({ game, isBest: false, previousBest, nowKnown });
     const isBest = await scores.saveScore({
       score: game.score,
       rounds: game.cleared + game.escaped,
       state: { bestCombo: game.bestCombo, lang: game.lang, missed: game.missed },
     });
-    setOver({ game, isBest });
+    setOver({ game, isBest, previousBest, nowKnown });
   };
 
   let body;
@@ -74,6 +79,9 @@ export default function ShooterScreen() {
         game={over.game}
         bank={bank}
         isBest={over.isBest}
+        previousBest={over.previousBest}
+        nowKnown={over.nowKnown}
+        signedIn={progress.mode === "account"}
         onAgain={play}
         onPractise={(ids) => router.push({ pathname: "/verb-quiz", params: { words: ids.join(",") } })}
       />

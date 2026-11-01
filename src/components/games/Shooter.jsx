@@ -3,7 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from
 import Svg, { Circle, Line } from "react-native-svg";
 import { CrossMenuIcon } from "../ui/CrossMenuIcon";
 import { LANGUAGE_LABEL } from "../../lib/verbQuiz";
-import { BOTTOM, LANES, LIVES, multiplier, shoot, step } from "../../lib/shooter";
+import { BOTTOM, COUNTDOWN, EVENT_MS, LANES, LIVES, levelOf, liveEvents, multiplier, shoot, step } from "../../lib/shooter";
 import { colors, fontFamily, radii, spacing } from "../../theme";
 import { scriptFont, scriptFontBold } from "../verbQuiz/shared";
 
@@ -15,9 +15,30 @@ const GOLD_SOFT = "#f6e2ac";
 const RED = "#d0553c";
 const GREEN = "#7fb069";
 
-const ENEMY_H = 48;
+const ENEMY_H = 52;
 const SHOT_MS = 220;
 const BURST_MS = 420;
+const SHAKE_MS = 360;
+const MAX_FONT = 20;
+const MIN_FONT = 11;
+
+// Web ignores React Native's shrink-to-fit, so verbs are sized by length to
+// fit their lane: one line when that stays readable, otherwise two smaller
+// lines, breaking after a "/" between spellings, at a space, or mid-word.
+const GLYPH = 0.9; // Ethiopic glyph width as a fraction of the font size
+const READABLE = 15;
+
+export function fitVerb(text, boxWidth) {
+  const room = boxWidth - 14;
+  const chars = [...text].length;
+  const oneLine = room / (chars * GLYPH);
+  if (oneLine >= READABLE) {
+    const fontSize = Math.min(MAX_FONT, oneLine);
+    return { text, fontSize, lineHeight: Math.round(fontSize * 1.4), lines: 1 };
+  }
+  const fontSize = Math.max(MIN_FONT, Math.min(16, room / (Math.ceil(chars / 2) * GLYPH)));
+  return { text: text.replace(/\//g, "/\u200b"), fontSize, lineHeight: Math.round(fontSize * 1.2), lines: 2 };
+}
 
 function Lives({ lives }) {
   return (
@@ -31,21 +52,23 @@ function Lives({ lives }) {
   );
 }
 
-// One game of ቀስት, from the first wave until the last life is lost.
+const fade = (age) => Math.max(0, 1 - age / EVENT_MS);
+
+// One game of ቀስት, from the countdown until the last cross is lost.
 export function Shooter({ initialGame, bank, onAnswer, onOver }) {
   const game = useRef(initialGame);
   const [, redraw] = useReducer((n) => n + 1, 0);
   const [paused, setPaused] = useState(false);
   const [width, setWidth] = useState(0);
   const { height: screenH } = useWindowDimensions();
-  const height = Math.max(380, Math.min(540, screenH - 240));
+  const height = Math.max(400, Math.min(560, screenH - 230));
 
   // Callbacks change identity on every parent render; the loop reads the latest.
   const handlers = useRef({ onAnswer, onOver });
   handlers.current = { onAnswer, onOver };
 
   const stars = useMemo(
-    () => Array.from({ length: 40 }, () => ({ x: Math.random(), y: Math.random() * BOTTOM, r: Math.random() * 1.2 + 0.4 })),
+    () => Array.from({ length: 44 }, () => ({ x: Math.random(), y: Math.random() * BOTTOM, r: Math.random() * 1.2 + 0.4 })),
     []
   );
 
@@ -59,12 +82,11 @@ export function Shooter({ initialGame, bank, onAnswer, onOver }) {
       const result = step(game.current, dt);
       game.current = result.game;
       if (result.answer) handlers.current.onAnswer(result.answer);
+      redraw();
       if (result.game.over) {
-        redraw();
         handlers.current.onOver(result.game);
         return;
       }
-      redraw();
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -97,10 +119,17 @@ export function Shooter({ initialGame, bank, onAnswer, onOver }) {
   const g = game.current;
   const { wave } = g;
   const laneW = width / LANES;
+  const boxW = laneW - 8;
   const bowX = width / 2;
   const bowY = BOTTOM * height;
   const target = wave.enemies[wave.question.answerIndex];
   const answerEntry = bank.byId[wave.question.wordId];
+  const events = liveEvents(g);
+  const escape = events.find((e) => e.type === "escape");
+  const shakeAge = escape ? g.t - escape.at : Infinity;
+  const shake = shakeAge < SHAKE_MS ? Math.sin(shakeAge / 22) * 7 * (1 - shakeAge / SHAKE_MS) : 0;
+  const banner = [...events].reverse().find((e) => ["level", "life", "streak"].includes(e.type));
+  const counting = g.t < 0;
 
   return (
     <View>
@@ -108,14 +137,20 @@ export function Shooter({ initialGame, bank, onAnswer, onOver }) {
         <View>
           <Text style={styles.score}>{g.score}</Text>
           <Text style={styles.hudLabel}>
-            wave {wave.number}
-            {g.combo > 1 ? ` · combo ×${multiplier(g.combo)}` : ""}
+            level {levelOf(wave.number)} · wave {wave.number}
           </Text>
         </View>
         <Lives lives={g.lives} />
       </View>
 
-      <View style={[styles.field, { height }]} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      <View
+        style={[
+          styles.field,
+          { height, transform: [{ translateX: shake }] },
+          escape && shakeAge < 700 && styles.fieldHurt,
+        ]}
+        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      >
         {width ? (
           <Svg width={width} height={height} style={StyleSheet.absoluteFill} pointerEvents="none">
             {stars.map((s, i) => (
@@ -137,17 +172,23 @@ export function Shooter({ initialGame, bank, onAnswer, onOver }) {
                   opacity={1 - (g.t - s.at) / SHOT_MS}
                 />
               ))}
-            {wave.outcome === "hit" && g.t - wave.endedAt < BURST_MS ? (
-              <Circle
-                cx={laneW * (target.lane + 0.5)}
-                cy={target.y * height + ENEMY_H / 2}
-                r={20 + ((g.t - wave.endedAt) / BURST_MS) * 50}
-                fill="none"
-                stroke={GREEN}
-                strokeWidth={4}
-                opacity={1 - (g.t - wave.endedAt) / BURST_MS}
-              />
-            ) : null}
+            {wave.outcome === "hit" && g.t - wave.endedAt < BURST_MS
+              ? [0, 0.35].map((delay) => {
+                  const p = Math.max(0, (g.t - wave.endedAt) / BURST_MS - delay);
+                  return (
+                    <Circle
+                      key={delay}
+                      cx={laneW * (target.lane + 0.5)}
+                      cy={target.y * height + ENEMY_H / 2}
+                      r={18 + p * 60}
+                      fill="none"
+                      stroke={delay ? GOLD : GREEN}
+                      strokeWidth={4 - p * 3}
+                      opacity={Math.max(0, 1 - p)}
+                    />
+                  );
+                })
+              : null}
           </Svg>
         ) : null}
 
@@ -159,18 +200,15 @@ export function Shooter({ initialGame, bank, onAnswer, onOver }) {
               const flashing = enemy.wrongAt != null && g.t - enemy.wrongAt < 500;
               const escapedTarget = wave.outcome === "escaped" && isTarget;
               if (hit && g.t - wave.endedAt > 160) return null;
+              const fit = fitVerb(enemy.text, boxW);
               return (
                 <Pressable
                   key={enemy.lane}
                   onPress={() => fire(enemy.lane)}
-                  style={[
+                  style={({ hovered }) => [
                     styles.enemy,
-                    {
-                      left: laneW * enemy.lane + 4,
-                      width: laneW - 8,
-                      top: Math.min(enemy.y, BOTTOM) * height,
-                      opacity: fading ? 0.25 : 1,
-                    },
+                    { left: laneW * enemy.lane + 4, width: boxW, top: Math.min(enemy.y, BOTTOM) * height, opacity: fading ? 0.25 : 1 },
+                    hovered && !wave.outcome && enemy.wrongAt == null && styles.enemyHover,
                     enemy.wrongAt != null && styles.enemyWrong,
                     flashing && styles.enemyFlash,
                     (hit || escapedTarget) && styles.enemyRight,
@@ -178,16 +216,60 @@ export function Shooter({ initialGame, bank, onAnswer, onOver }) {
                 >
                   <Text style={styles.laneKey}>{enemy.lane + 1}</Text>
                   <Text
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    style={[styles.enemyText, scriptFontBold(enemy.text), enemy.wrongAt != null && { color: RED }]}
+                    style={[
+                      styles.enemyText,
+                      scriptFontBold(enemy.text),
+                      { fontSize: fit.fontSize, lineHeight: fit.lineHeight },
+                      fit.lines > 1 && Platform.OS === "web" && { wordBreak: "break-word" },
+                      enemy.wrongAt != null && { color: RED },
+                    ]}
+                    numberOfLines={fit.lines}
                   >
-                    {enemy.text}
+                    {fit.text}
                   </Text>
                 </Pressable>
               );
             })
           : null}
+
+        {/* Points float up from each hit. */}
+        {width
+          ? events
+              .filter((e) => e.type === "hit" || e.type === "streak")
+              .map((e) => {
+                const age = g.t - e.at;
+                const x = e.type === "hit" ? laneW * (e.lane + 0.5) : width / 2;
+                const y = (e.type === "hit" ? e.y * height : height * 0.35) - (age / EVENT_MS) * 50;
+                return (
+                  <Text
+                    key={e.at + e.type}
+                    pointerEvents="none"
+                    style={[styles.pop, { left: x - 50, top: y, opacity: fade(age) }]}
+                  >
+                    {`+${e.points}`}
+                  </Text>
+                );
+              })
+          : null}
+
+        {banner ? (
+          <View pointerEvents="none" style={[styles.banner, { opacity: fade(g.t - banner.at) }]}>
+            <Text style={styles.bannerText}>
+              {banner.type === "level"
+                ? `Level ${banner.level} · faster`
+                : banner.type === "life"
+                  ? "10 in a row · a cross back"
+                  : "10 in a row · +50"}
+            </Text>
+          </View>
+        ) : null}
+
+        {g.combo > 1 && !counting ? (
+          <View pointerEvents="none" style={[styles.combo, { top: bowY - 34 }]}>
+            <Text style={styles.comboText}>{`×${multiplier(g.combo)}`}</Text>
+            <Text style={styles.comboSub}>{g.combo} in a row</Text>
+          </View>
+        ) : null}
 
         <View style={[styles.promptBar, { top: bowY + 6 }]}>
           {wave.outcome === "escaped" ? (
@@ -197,13 +279,20 @@ export function Shooter({ initialGame, bank, onAnswer, onOver }) {
             </Text>
           ) : (
             <>
-              <Text style={styles.promptLang}>{LANGUAGE_LABEL[g.lang]}</Text>
-              <Text style={[styles.prompt, scriptFontBold(wave.question.prompt)]} numberOfLines={2} adjustsFontSizeToFit>
+              <Text style={styles.promptLang}>{LANGUAGE_LABEL[g.lang]} · which verb means</Text>
+              <Text style={[styles.prompt, scriptFontBold(wave.question.prompt)]} numberOfLines={2}>
                 {wave.question.prompt}
               </Text>
             </>
           )}
         </View>
+
+        {counting ? (
+          <View pointerEvents="none" style={styles.countdown}>
+            <Text style={styles.countdownNumber}>{Math.ceil(-g.t / (COUNTDOWN / 3))}</Text>
+            <Text style={styles.countdownHint}>Read the meaning below</Text>
+          </View>
+        ) : null}
 
         {paused ? (
           <Pressable style={styles.pauseCover} onPress={() => setPaused(false)}>
@@ -235,6 +324,7 @@ const styles = StyleSheet.create({
     borderColor: NIGHT_EDGE,
     overflow: "hidden",
   },
+  fieldHurt: { borderColor: RED },
   enemy: {
     position: "absolute",
     height: ENEMY_H,
@@ -245,7 +335,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 6,
+    overflow: "hidden",
   },
+  enemyHover: { backgroundColor: "#33250f" },
   enemyWrong: { borderColor: RED, backgroundColor: "#2a120c" },
   enemyFlash: { backgroundColor: "#5a1e12" },
   enemyRight: { borderColor: GREEN, backgroundColor: "#1d2b14" },
@@ -257,11 +349,42 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#8a6d47",
   },
-  enemyText: { fontSize: 20, lineHeight: 28, color: GOLD_SOFT },
+  enemyText: { color: GOLD_SOFT, textAlign: "center" },
+  pop: {
+    position: "absolute",
+    width: 100,
+    textAlign: "center",
+    fontFamily: fontFamily.latinBold,
+    fontSize: 18,
+    color: GOLD,
+  },
+  banner: {
+    position: "absolute",
+    top: "38%",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  bannerText: {
+    fontFamily: fontFamily.latinBold,
+    fontSize: 20,
+    color: GOLD_SOFT,
+    backgroundColor: "rgba(224,165,42,0.18)",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.pill,
+    overflow: "hidden",
+  },
+  combo: { position: "absolute", right: spacing.md, alignItems: "flex-end" },
+  comboText: { fontFamily: fontFamily.latinBold, fontSize: 22, lineHeight: 24, color: GOLD },
+  comboSub: { fontFamily: fontFamily.latinRegular, fontSize: 11, color: "#c9b48a" },
   promptBar: { position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.md },
-  promptLang: { fontFamily: fontFamily.ethiopicBold, fontSize: 11, color: "#8a6d47" },
+  promptLang: { fontFamily: fontFamily.ethiopicRegular, fontSize: 11, color: "#8a6d47" },
   prompt: { fontSize: 20, lineHeight: 28, color: GOLD, textAlign: "center" },
   escaped: { fontSize: 18, lineHeight: 26, color: GREEN, textAlign: "center" },
+  countdown: { ...StyleSheet.absoluteFillObject, bottom: "20%", alignItems: "center", justifyContent: "center", gap: 4 },
+  countdownNumber: { fontFamily: fontFamily.latinBold, fontSize: 72, lineHeight: 80, color: GOLD },
+  countdownHint: { fontFamily: fontFamily.latinRegular, fontSize: 14, color: "#c9b48a" },
   pauseCover: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(23,17,10,0.82)",

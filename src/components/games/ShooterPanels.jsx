@@ -1,15 +1,42 @@
 import { StyleSheet, Text, View } from "react-native";
 import { Button } from "../ui";
 import { LANGUAGES } from "../../lib/verbQuiz";
+import { rankFor } from "../../lib/shooter";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 import { Meanings, useSavedToReview } from "../verbQuiz/QuizPlay";
 import { Chip, shared } from "../verbQuiz/shared";
 
-function ScoreBox({ label, value }) {
+function Stat({ value, label, tone }) {
   return (
-    <View style={styles.scoreBox}>
-      <Text style={styles.scoreValue}>{value ?? "—"}</Text>
-      <Text style={styles.scoreLabel}>{label}</Text>
+    <View style={styles.stat}>
+      <Text style={[styles.statValue, tone && { color: tone }]}>{value ?? "—"}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+// The rank a best score earns, and how far it is to the next one.
+function RankCard({ best, rankedUp }) {
+  const rank = rankFor(best ?? 0);
+  const span = rank.next ? rank.next.min - rank.min : 1;
+  const into = rank.next ? (best ?? 0) - rank.min : 1;
+  return (
+    <View style={styles.rank}>
+      <View style={styles.rankRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.rankKicker}>{rankedUp ? "NEW RANK" : "YOUR RANK"}</Text>
+          <Text style={styles.rankTitle}>{rank.title}</Text>
+        </View>
+        <Text style={styles.rankStep}>{rank.index + 1} / 6</Text>
+      </View>
+      <View style={styles.rankTrack}>
+        <View style={[styles.rankFill, { width: `${Math.min(100, (into / span) * 100)}%` }]} />
+      </View>
+      <Text style={styles.rankHint}>
+        {rank.next
+          ? `${rank.next.min - (best ?? 0)} more points on your best to reach ${rank.next.title}`
+          : "The highest rank. Keep your best climbing."}
+      </Text>
     </View>
   );
 }
@@ -18,15 +45,21 @@ export function ShooterStart({ lang, onLang, available, best, last, onPlay }) {
   return (
     <View style={[shared.card, styles.card]}>
       <Text style={styles.lead}>
-        A meaning appears under the bow. Shoot the ግዕዝ verb that means it before it reaches you. The wrong ones look
-        alike — they end in the same letter.
+        Shoot the ግዕዝ verb that means the word under the bow before it gets past. The wrong ones end in the same
+        letter, so they look alike.
       </Text>
 
       <View style={styles.rules}>
-        <Text style={shared.hint}>• Right shot: points, and your combo multiplies them up to ×5.</Text>
-        <Text style={shared.hint}>• Wrong shot: the combo resets, and that verb turns red.</Text>
-        <Text style={shared.hint}>• Let the right verb past and you lose one of three crosses.</Text>
-        <Text style={shared.hint}>• Every answer counts toward your ግሲ ፈተና progress.</Text>
+        <Text style={shared.hint}>• Hit it early for more points; hits in a row multiply them, up to ×5.</Text>
+        <Text style={shared.hint}>• A wrong shot pulls every verb closer and breaks your run.</Text>
+        <Text style={shared.hint}>• Three crosses. Ten hits in a row wins a lost one back.</Text>
+      </View>
+
+      <RankCard best={best} />
+
+      <View style={styles.statsRow}>
+        <Stat label="Best" value={best} />
+        <Stat label="Last game" value={last} />
       </View>
 
       <Text style={styles.sectionLabel}>MEANINGS IN</Text>
@@ -35,12 +68,7 @@ export function ShooterStart({ lang, onLang, available, best, last, onPlay }) {
           <Chip key={l.code} label={l.label} active={lang === l.code} onPress={() => onLang(l.code)} />
         ))}
       </View>
-      <Text style={shared.muted}>{available} verbs to play with.</Text>
-
-      <View style={styles.scores}>
-        <ScoreBox label="Best" value={best} />
-        <ScoreBox label="Last game" value={last} />
-      </View>
+      <Text style={shared.muted}>{available} verbs to play with. Your weakest come first.</Text>
 
       <Button onPress={onPlay} disabled={!available} style={styles.play}>
         Play
@@ -49,19 +77,26 @@ export function ShooterStart({ lang, onLang, available, best, last, onPlay }) {
   );
 }
 
-export function ShooterOver({ game, bank, isBest, onAgain, onPractise }) {
+export function ShooterOver({ game, bank, isBest, previousBest, nowKnown, signedIn, onAgain, onPractise }) {
   const review = useSavedToReview();
   const missed = game.missed.map((id) => bank.byId[id]).filter(Boolean);
   const unsaved = missed.filter((e) => !review.saved(e.word)).map((e) => e.word);
+  const best = Math.max(previousBest ?? 0, game.score);
+  const rankedUp = rankFor(best).index > rankFor(previousBest ?? 0).index;
 
   return (
     <View>
       <View style={[shared.card, styles.card, styles.overCard]}>
         <Text style={styles.kicker}>{isBest ? "New best!" : "Game over"}</Text>
         <Text style={styles.bigScore}>{game.score}</Text>
-        <Text style={shared.hint}>
-          {game.cleared} verb{game.cleared === 1 ? "" : "s"} shot down
-          {game.bestCombo > 1 ? ` · best run ${game.bestCombo} in a row` : ""}
+        <View style={styles.statsRow}>
+          <Stat label="verbs practised" value={game.practised.length} />
+          <Stat label="right first time" value={game.firstTry} tone={colors.success} />
+          <Stat label="now known" value={nowKnown} tone={colors.primaryDark} />
+          <Stat label="best run" value={game.bestCombo} />
+        </View>
+        <Text style={[shared.muted, { textAlign: "center" }]}>
+          Saved to your ግሲ ፈተና progress{signedIn ? "" : " on this device"}.
         </Text>
         <View style={styles.actions}>
           <Button size="sm" onPress={onAgain}>
@@ -73,6 +108,10 @@ export function ShooterOver({ game, bank, isBest, onAgain, onPractise }) {
             </Button>
           ) : null}
         </View>
+      </View>
+
+      <View style={{ marginBottom: spacing.xl }}>
+        <RankCard best={best} rankedUp={rankedUp} />
       </View>
 
       {missed.length ? (
@@ -88,7 +127,11 @@ export function ShooterOver({ game, bank, isBest, onAgain, onPractise }) {
           {missed.map((entry) => (
             <View key={entry.id} style={styles.missedRow}>
               <Text style={styles.missedWord}>{entry.word}</Text>
-              <Meanings entry={entry} langs={[game.lang, ...LANGUAGES.map((l) => l.code).filter((c) => c !== game.lang)]} style={{ flex: 1 }} />
+              <Meanings
+                entry={entry}
+                langs={[game.lang, ...LANGUAGES.map((l) => l.code).filter((c) => c !== game.lang)]}
+                style={{ flex: 1 }}
+              />
             </View>
           ))}
         </View>
@@ -102,12 +145,20 @@ const styles = StyleSheet.create({
   lead: { ...typography.body, color: colors.textPrimary },
   rules: { gap: 4 },
   sectionLabel: { ...typography.label, color: colors.textMuted, letterSpacing: 1 },
-  scores: { flexDirection: "row", gap: spacing.xl },
-  scoreBox: { gap: 0 },
-  scoreValue: { fontFamily: fontFamily.latinBold, fontSize: 26, lineHeight: 32, color: colors.textPrimary },
-  scoreLabel: { ...typography.caption, color: colors.textMuted },
+  statsRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: spacing.xl, rowGap: spacing.md },
+  stat: { alignItems: "center", minWidth: 70 },
+  statValue: { fontFamily: fontFamily.latinBold, fontSize: 24, lineHeight: 30, color: colors.textPrimary },
+  statLabel: { ...typography.caption, color: colors.textMuted },
+  rank: { gap: spacing.sm, padding: spacing.md, borderRadius: radii.md, backgroundColor: "#17110a" },
+  rankRow: { flexDirection: "row", alignItems: "flex-end" },
+  rankKicker: { fontFamily: fontFamily.latinSemiBold, fontSize: 11, letterSpacing: 1, color: "#c9b48a" },
+  rankTitle: { fontFamily: fontFamily.ethiopicBold, fontSize: 22, lineHeight: 30, color: "#e0a52a" },
+  rankStep: { fontFamily: fontFamily.latinSemiBold, fontSize: 13, color: "#c9b48a" },
+  rankTrack: { height: 6, borderRadius: radii.pill, backgroundColor: "#3a2c17", overflow: "hidden" },
+  rankFill: { height: 6, borderRadius: radii.pill, backgroundColor: "#e0a52a" },
+  rankHint: { ...typography.caption, color: "#c9b48a" },
   play: { alignSelf: "stretch" },
-  overCard: { alignItems: "center", paddingVertical: spacing.xl, marginBottom: spacing.xl },
+  overCard: { alignItems: "center", paddingVertical: spacing.xl, marginBottom: spacing.lg },
   kicker: { ...typography.label, color: colors.primaryDark, letterSpacing: 1, textTransform: "uppercase" },
   bigScore: { fontFamily: fontFamily.latinBold, fontSize: 52, lineHeight: 60, color: colors.textPrimary },
   actions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: spacing.sm, marginTop: spacing.sm },
