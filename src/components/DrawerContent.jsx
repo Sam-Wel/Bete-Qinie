@@ -41,7 +41,7 @@ export function DrawerContent(props) {
       <MenuItem icon="musical-notes-outline" label="ዜማ" ethiopic onPress={() => go("/zema")} />
       <MenuItem icon="school-outline" label="ክለሳ" ethiopic onPress={() => go("/review")} />
       <MenuItem icon="game-controller-outline" label="Game" onPress={() => go("/game")} />
-      <MenuItem icon="ribbon-outline" label="ግሲ ፈተና" ethiopic onPress={() => go("/verb-quiz")} />
+      <MenuItem icon="quiz-outline" label="ግሲ ፈተና" ethiopic onPress={() => go("/verb-quiz")} />
       <MenuItem icon="newspaper-outline" label="ቅኔ አበው" ethiopic onPress={() => go("/blog")} />
 
       <OrnamentDivider style={styles.divider} />
