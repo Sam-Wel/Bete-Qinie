@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useGeezEndings } from "../../hooks/useGeezEndings";
 import { useWordProgress } from "../../context/WordProgressContext";
-import { ScreenContainer, Card, Button, EmptyState } from "../../components/ui";
+import { ScreenContainer, Card, Button, EmptyState, Icon } from "../../components/ui";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
 export default function VerbRoots() {
@@ -20,6 +21,17 @@ export default function VerbRoots() {
     error,
   } = useGeezEndings();
   const progress = useWordProgress();
+  // Picking a word folds the list down to that word; "Show all" opens it again.
+  const [showAll, setShowAll] = useState(false);
+  const collapsed = Boolean(selectedWord) && !showAll;
+  const pickLetter = (letter) => {
+    setShowAll(false);
+    selectLetter(letter);
+  };
+  const pickWord = (word) => {
+    setShowAll(false);
+    selectWord(word);
+  };
 
   // The selected verb's id comes back with its translations.
   const wordId = selectedWord ? translations[0]?.word_id : null;
@@ -47,7 +59,7 @@ export default function VerbRoots() {
           <Pressable
             key={letter}
             style={[styles.chip, selectedLetter === letter && styles.chipSelected]}
-            onPress={() => selectLetter(letter)}
+            onPress={() => pickLetter(letter)}
           >
             <Text style={selectedLetter === letter ? styles.chipTextSelected : styles.chipText}>
               {letter}
@@ -58,19 +70,41 @@ export default function VerbRoots() {
 
       {selectedLetter && (
         <Card style={styles.fullWidth}>
-          <Text style={styles.cardTitle}>Words ending with "{selectedLetter}"</Text>
+          <View style={styles.resultsHeader}>
+            <Text style={styles.cardTitle}>
+              Words ending with "{selectedLetter}"
+              {!wordsLoading && endingWords.length ? <Text style={styles.count}>  {endingWords.length}</Text> : null}
+            </Text>
+            {selectedWord && !wordsLoading ? (
+              <Pressable
+                onPress={() => setShowAll(!showAll)}
+                accessibilityRole="button"
+                hitSlop={6}
+                style={({ hovered }) => [styles.toggle, hovered && styles.toggleHover]}
+              >
+                <Text style={styles.toggleText}>{collapsed ? "Show all" : "Hide list"}</Text>
+                <Icon name={collapsed ? "chevron-down" : "chevron-up"} size={16} color={colors.primaryDark} />
+              </Pressable>
+            ) : null}
+          </View>
 
           {wordsLoading ? (
             <ActivityIndicator color={colors.primary} style={styles.spacingTop} />
           ) : endingWords.length === 0 ? (
             <EmptyState message={`No words found ending with "${selectedLetter}".`} icon="search-outline" />
+          ) : collapsed ? (
+            <Pressable onPress={() => setShowAll(true)} style={styles.chipRowLeft} accessibilityLabel="Show all words">
+              <View style={[styles.chipMuted, styles.chipSelected]}>
+                <Text style={styles.chipTextSelected}>{selectedWord}</Text>
+              </View>
+            </Pressable>
           ) : (
             <View style={styles.chipRow}>
               {endingWords.map((word) => (
                 <Pressable
                   key={word}
                   style={[styles.chipMuted, selectedWord === word && styles.chipSelected]}
-                  onPress={() => selectWord(word)}
+                  onPress={() => pickWord(word)}
                 >
                   <Text style={selectedWord === word ? styles.chipTextSelected : styles.chipText}>
                     {word}
@@ -161,6 +195,29 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
+  },
+  chipRowLeft: {
+    flexDirection: "row",
+  },
+  count: {
+    fontFamily: fontFamily.latinRegular,
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  toggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+  },
+  toggleHover: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  toggleText: {
+    ...typography.label,
+    color: colors.primaryDark,
   },
   chipSelected: {
     backgroundColor: colors.primary,
