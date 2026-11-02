@@ -97,25 +97,26 @@ export function Button({
       style={[animatedStyle, { opacity: isDisabled ? 0.6 : 1 }, shapeStyle, hovered && shadows.raised, style]}
     >
       {gradient ? (
-        <LinearGradient colors={hovered ? gradients.goldButtonPressed : gradient} style={styles.base}>
-          <Pressable {...pressableProps} style={[styles.base, paddingStyle]}>
-            {content}
-          </Pressable>
-        </LinearGradient>
-      ) : (
-        <Pressable
-          {...pressableProps}
-          style={[styles.base, paddingStyle, { backgroundColor: hovered ? hoverBg ?? bg : bg }]}
-        >
-          {content}
-        </Pressable>
-      )}
+        <LinearGradient
+          colors={hovered ? gradients.goldButtonPressed : gradient}
+          style={StyleSheet.absoluteFillObject}
+          pointerEvents="none"
+        />
+      ) : null}
+      {/* The Pressable fills the whole button, so a tap anywhere on it counts. */}
+      <Pressable
+        {...pressableProps}
+        style={[styles.base, paddingStyle, !gradient && { backgroundColor: hovered ? hoverBg ?? bg : bg }]}
+      >
+        {content}
+      </Pressable>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
