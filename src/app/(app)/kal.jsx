@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { router } from "expo-router";
+import { backToGames } from "../../components/games/GameFrame";
 import { ScreenContainer, ScreenHeader, Button, Icon } from "../../components/ui";
 import { KalBoard, KalLegend, MARK_COLORS, consonantsOf } from "../../components/games/KalBoard";
 import { Meanings } from "../../components/verbQuiz/QuizPlay";
@@ -142,7 +142,7 @@ export default function Kal() {
     }
   };
 
-  const goBack = () => (router.canGoBack() ? router.back() : router.replace("/game"));
+  const goBack = backToGames;
 
   const modeSwitch = (
     <View style={[styles.modes, narrow && styles.modesCompact]}>

@@ -6,7 +6,8 @@ import { LANGUAGES } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 import { Chip, shared } from "../verbQuiz/shared";
 
-export const backToGames = () => (router.canGoBack() ? router.back() : router.replace("/game"));
+// Always the hub: router.back() in the drawer goes to the first screen (Dictionary).
+export const backToGames = () => router.navigate("/game");
 
 // The page around every verb game: its title with the usual back link, and
 // (outside play) the shared meaning-language and difficulty pickers.

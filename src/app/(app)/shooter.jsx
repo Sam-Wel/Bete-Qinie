@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Text } from "react-native";
 import { router } from "expo-router";
+import { backToGames } from "../../components/games/GameFrame";
 import { ScreenContainer, ScreenHeader } from "../../components/ui";
 import { Shooter } from "../../components/games/Shooter";
 import { ShooterOver, ShooterStart } from "../../components/games/ShooterPanels";
@@ -88,7 +89,7 @@ export default function ShooterScreen() {
       <ScreenHeader
         title="ቀስት"
         titleEthiopic
-        onBack={playing ? undefined : () => (router.canGoBack() ? router.back() : router.replace("/game"))}
+        onBack={playing ? undefined : backToGames}
       />
       {body}
     </ScreenContainer>
