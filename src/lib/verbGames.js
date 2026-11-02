@@ -208,11 +208,12 @@ export const fitsBin = (card, bin) => metaOf(card.entry)?.categories.includes(bi
 
 export const PLAYER_HP = 100;
 
+// Forces of evil from Scripture and the icons, each one beaten by the cross.
 export const BOSSES = [
-  { key: "crocodile", name: "አዞ", english: "Crocodile", emoji: "🐊", hp: 100, hit: 14, seconds: 14 },
-  { key: "python", name: "ዘንዶ", english: "Python", emoji: "🐍", hp: 140, hit: 18, seconds: 12 },
-  { key: "lion", name: "አንበሳ", english: "Lion", emoji: "🦁", hp: 180, hit: 22, seconds: 11 },
-  { key: "dragon", name: "ታላቁ ዘንዶ", english: "Great Dragon", emoji: "🐉", hp: 240, hit: 26, seconds: 10 },
+  { key: "serpent", name: "ከይሲ", english: "Serpent of Eden", emoji: "🐍", hp: 100, hit: 14, seconds: 14 },
+  { key: "goliath", name: "ጎልያድ", english: "Goliath", emoji: "🛡️", hp: 140, hit: 18, seconds: 12 },
+  { key: "lion", name: "አንበሳ", english: "Roaring Lion", emoji: "🦁", hp: 180, hit: 22, seconds: 11 },
+  { key: "dragon", name: "ዘንዶ", english: "The Dragon", emoji: "🐉", hp: 240, hit: 26, seconds: 10 },
 ];
 
 export const newBattle = (level = 0, playerHp = PLAYER_HP) => ({
