@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import * as DocumentPicker from "expo-document-picker";
-import { Button, Card, Icon, ScreenContainer, ScreenHeader } from "../../components/ui";
+import { Button, Card, Icon, ScreenContainer } from "../../components/ui";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
 // Tight enough that the loop turns over without an audible overshoot.
@@ -229,7 +229,6 @@ export default function Zema() {
 
   return (
     <ScreenContainer scroll>
-      <ScreenHeader title="ዜማ" titleEthiopic />
 
       {!track ? (
         <Card style={styles.intro}>

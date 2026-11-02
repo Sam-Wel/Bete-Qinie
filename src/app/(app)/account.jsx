@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Redirect, router } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../lib/supabaseClient";
-import { ScreenContainer, Card, Button, ScreenHeader, EmptyState } from "../../components/ui";
+import { ScreenContainer, Card, Button, EmptyState } from "../../components/ui";
 import { colors, spacing, typography } from "../../theme";
 
 const GAME_TYPE_LABELS = {
@@ -64,7 +64,6 @@ export default function Account() {
 
   return (
     <ScreenContainer scroll contentContainerStyle={styles.container}>
-      <ScreenHeader title="Account" />
 
       <Card style={styles.card}>
         <Text style={styles.label}>Signed in as</Text>

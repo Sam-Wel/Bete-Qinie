@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { ScreenContainer, ScreenHeader } from "../../components/ui";
+import { ScreenContainer } from "../../components/ui";
 import { MeterChecker } from "../../components/MeterChecker";
 import { MeterTables } from "../../components/MeterTables";
 import { colors, fontFamily, radii, shadows, spacing } from "../../theme";
@@ -34,7 +34,6 @@ export default function Meaqeni() {
 
   return (
     <ScreenContainer scroll keyboardAvoiding>
-      <ScreenHeader title="መዐቀኒ" titleEthiopic />
       <TabSwitch value={tab} onChange={setTab} />
 
       {tab === "checker" ? <MeterChecker /> : <MeterTables />}

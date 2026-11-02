@@ -4,7 +4,7 @@ import { Link } from "expo-router";
 import { useBlogPosts } from "../../../hooks/useBlogPosts";
 import { BLOG_CONTENT_TYPES } from "../../../util/blogContentTypes";
 import { toVerseLines } from "../../../util/renderBlogContent";
-import { ScreenContainer, Card, TextField, Button, EmptyState, ScreenHeader, Select } from "../../../components/ui";
+import { ScreenContainer, Card, TextField, Button, EmptyState, Select } from "../../../components/ui";
 import { colors, fontFamily, spacing, typography } from "../../../theme";
 
 // A ቅኔ is short; four verses is enough to recognise one in a list.
@@ -38,7 +38,6 @@ export default function BlogList() {
   return (
     <ScreenContainer contentContainerStyle={styles.noPadding}>
       <View style={styles.controls}>
-        <ScreenHeader title="ቅኔ አበው" titleEthiopic />
         <TextField
           value={searchText}
           onChangeText={(value) => {

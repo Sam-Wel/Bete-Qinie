@@ -5,7 +5,7 @@ import { useWordProgress } from "../../context/WordProgressContext";
 import { useVerbBank } from "../../hooks/useVerbBank";
 import { supabase } from "../../lib/supabaseClient";
 import { REVIEW_DAYS, applyAnswer, dueQueue, reviewSummary, startOfDay, stateOf } from "../../lib/verbQuiz";
-import { ScreenContainer, Button, ScreenHeader } from "../../components/ui";
+import { ScreenContainer, Button } from "../../components/ui";
 import { STATE_COLORS, scriptFont, shared } from "../../components/verbQuiz/shared";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
@@ -192,7 +192,6 @@ export default function Review() {
     const id = session.queue[session.index];
     return (
       <ScreenContainer scroll>
-        <ScreenHeader title="ክለሳ" titleEthiopic />
         <View style={styles.sessionTop}>
           <Text style={styles.counter}>
             {session.index + 1} of {session.queue.length}
@@ -215,7 +214,6 @@ export default function Review() {
 
   return (
     <ScreenContainer scroll>
-      <ScreenHeader title="ክለሳ" titleEthiopic />
 
       <View style={[shared.card, styles.hero]}>
         {done ? (

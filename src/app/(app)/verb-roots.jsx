@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useGeezEndings } from "../../hooks/useGeezEndings";
 import { useWordProgress } from "../../context/WordProgressContext";
-import { ScreenContainer, Card, Button, EmptyState, ScreenHeader } from "../../components/ui";
+import { ScreenContainer, Card, Button, EmptyState } from "../../components/ui";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
 export default function VerbRoots() {
@@ -36,7 +36,6 @@ export default function VerbRoots() {
 
   return (
     <ScreenContainer scroll contentContainerStyle={styles.container}>
-      <ScreenHeader title="ግሲ" titleEthiopic style={{ width: "100%" }} />
       <Text style={styles.subtitle}>
         Browse Ge'ez words by their last letter -- tap a letter to see words ending with it.
       </Text>

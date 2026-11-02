@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { colors, fontFamily, radii, spacing, typography } from "../theme";
 
 // Rendered by the admin Stack rather than by each screen, so it sits in exactly the same
-// place everywhere — the same reason TopNavBar is wired into the Drawer.
+// place everywhere — the same reason AppHeader is wired into the Drawer.
 export function AdminTopBar() {
   const { user, signOut } = useAuth();
 

@@ -72,7 +72,6 @@ export default function BlogPostDetail() {
     return (
       <ScreenContainer center>
         <Stack.Screen options={{ title: "Not found" }} />
-        <ScreenHeader title="ቅኔ አበው" titleEthiopic onBack={() => router.back()} />
         <EmptyState message="Post not found." icon="alert-circle-outline" />
       </ScreenContainer>
     );
@@ -81,7 +80,7 @@ export default function BlogPostDetail() {
   return (
     <ScreenContainer scroll>
       <Stack.Screen options={{ title: post.title }} />
-      <ScreenHeader title={post.title} titleEthiopic onBack={() => router.back()} />
+      <ScreenHeader title={post.title} titleEthiopic />
 
       {post.is_published === false && (
         <Badge label="Draft (only visible to you)" tone="warning" />

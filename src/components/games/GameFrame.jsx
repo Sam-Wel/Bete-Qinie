@@ -1,6 +1,6 @@
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
-import { Button, ScreenContainer, ScreenHeader } from "../ui";
+import { Button, ScreenContainer } from "../ui";
 import { DIFFICULTIES } from "../../lib/verbGames";
 import { LANGUAGES } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
@@ -17,7 +17,6 @@ export function GameFrame({ title, game, children, scroll = true }) {
   else if (!game.ready) body = <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />;
   return (
     <ScreenContainer scroll={scroll}>
-      <ScreenHeader title={title} onBack={backToGames} />
       {body}
     </ScreenContainer>
   );

@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Text } from "react-native";
 import { router } from "expo-router";
-import { backToGames } from "../../components/games/GameFrame";
-import { ScreenContainer, ScreenHeader } from "../../components/ui";
+import { ScreenContainer } from "../../components/ui";
 import { Shooter } from "../../components/games/Shooter";
 import { ShooterOver, ShooterStart } from "../../components/games/ShooterPanels";
 import { useVerbBank } from "../../hooks/useVerbBank";
@@ -86,11 +85,6 @@ export default function ShooterScreen() {
 
   return (
     <ScreenContainer scroll>
-      <ScreenHeader
-        title="ቀስት"
-        titleEthiopic
-        onBack={playing ? undefined : backToGames}
-      />
       {body}
     </ScreenContainer>
   );

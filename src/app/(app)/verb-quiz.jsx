@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-nati
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { setGameLanguage, useGameLanguage } from "../../hooks/useGameLanguage";
-import { ScreenContainer, ScreenHeader } from "../../components/ui";
+import { ScreenContainer } from "../../components/ui";
 import { QuizSetup } from "../../components/verbQuiz/QuizSetup";
 import { QuizPlay } from "../../components/verbQuiz/QuizPlay";
 import { QuizResults } from "../../components/verbQuiz/QuizResults";
@@ -213,7 +213,6 @@ export default function VerbQuiz() {
 
   return (
     <ScreenContainer scroll>
-      <ScreenHeader title="ግሲ ፈተና" titleEthiopic />
       {/* A quiz in progress gets the screen to itself; Pause leads back out. */}
       {quiz && tab === "practice" ? null : <TabSwitch value={tab} onChange={setTab} />}
       {body}

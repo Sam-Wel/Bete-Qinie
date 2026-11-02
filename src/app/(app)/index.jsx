@@ -2,7 +2,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "
 import { useDictionarySearch } from "../../hooks/useDictionarySearch";
 import { useRecentSearches } from "../../hooks/useRecentSearches";
 import { useWordProgress } from "../../context/WordProgressContext";
-import { ScreenContainer, Card, TextField, Button, EmptyState, ScreenHeader, Select } from "../../components/ui";
+import { ScreenContainer, Card, TextField, Button, EmptyState, Select } from "../../components/ui";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
 export default function Dictionary() {
@@ -49,7 +49,6 @@ export default function Dictionary() {
 
   return (
     <ScreenContainer scroll keyboardAvoiding contentContainerStyle={styles.container}>
-      <ScreenHeader title="Dictionary" style={{ width: "100%" }} />
 
       <Select
         label="Select Language:"

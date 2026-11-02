@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
-import { ScreenContainer, ScreenHeader, Icon } from "../../components/ui";
+import { ScreenContainer, Icon } from "../../components/ui";
 import { CrossMenuIcon } from "../../components/ui/CrossMenuIcon";
 import { useGameScores } from "../../hooks/useGameScores";
 import { useWordProgress } from "../../context/WordProgressContext";
@@ -40,7 +40,6 @@ export default function Games() {
 
   return (
     <ScreenContainer scroll>
-      <ScreenHeader title="ጨዋታዎች" titleEthiopic />
       <Text style={styles.lead}>
         Games on the Ge'ez verbs of the dictionary. Every answer counts toward your ግሲ ፈተና progress, so playing is
         studying.

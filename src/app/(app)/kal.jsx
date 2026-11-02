@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { backToGames } from "../../components/games/GameFrame";
-import { ScreenContainer, ScreenHeader, Button, Icon } from "../../components/ui";
+import { ScreenContainer, Button } from "../../components/ui";
 import { KalBoard, KalLegend, MARK_COLORS, consonantsOf } from "../../components/games/KalBoard";
 import { Meanings } from "../../components/verbQuiz/QuizPlay";
 import { shared, scriptFont } from "../../components/verbQuiz/shared";
@@ -142,7 +141,6 @@ export default function Kal() {
     }
   };
 
-  const goBack = backToGames;
 
   const modeSwitch = (
     <View style={[styles.modes, narrow && styles.modesCompact]}>
@@ -169,20 +167,7 @@ export default function Kal() {
 
   return (
     <ScreenContainer scroll keyboardAvoiding>
-      {narrow ? (
-        <View style={styles.compactHeader}>
-          <Pressable onPress={goBack} hitSlop={10}>
-            <Icon name="chevron-back" size={22} color={colors.primary} />
-          </Pressable>
-          <Text style={styles.compactTitle}>ቃል</Text>
-          {modeSwitch}
-        </View>
-      ) : (
-        <>
-          <ScreenHeader title="ቃል" titleEthiopic onBack={goBack} />
-          {modeSwitch}
-        </>
-      )}
+      {modeSwitch}
 
       <View style={styles.hintBar}>
         {playing.hint || done ? (
@@ -277,8 +262,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   mode: { paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radii.pill },
-  compactHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm },
-  compactTitle: { fontFamily: fontFamily.ethiopicBold, fontSize: 22, lineHeight: 30, color: colors.textPrimary, flex: 1 },
   modesCompact: { marginBottom: 0 },
   modeActive: { backgroundColor: colors.surface, ...shadows.card },
   modeText: { ...typography.label, color: colors.textSecondary },

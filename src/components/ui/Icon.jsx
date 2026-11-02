@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
+  Ellipsis,
   FileText,
   Gamepad2,
   GraduationCap,
@@ -19,6 +20,7 @@ import {
   Newspaper,
   Pencil,
   PlusCircle,
+  RotateCcw,
   Search,
   ShieldCheck,
   Trophy,
@@ -53,6 +55,8 @@ const ICONS = {
   "chevron-back": ChevronLeft,
   "chevron-down": ChevronDown,
   checkmark: Check,
+  "refresh-outline": RotateCcw,
+  "more-horizontal": Ellipsis,
 };
 
 export function Icon({ name, size = 20, color = colors.textPrimary, strokeWidth = 1.75, style }) {

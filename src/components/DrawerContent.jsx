@@ -1,136 +1,191 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { DrawerContentScrollView } from "expo-router/drawer";
-import { Icon } from "./ui/Icon";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
-import { THEME_CHOICES, useColorTheme } from "../hooks/useColorTheme";
-import { OrnamentDivider } from "./ui";
-import { colors, fontFamily, spacing, typography } from "../theme";
+import { useDueCount } from "../hooks/useDueCount";
+import { NAV_GROUPS, sectionOf } from "../lib/navigation";
+import { colors, fontFamily, radii, spacing, typography } from "../theme";
+import { ThemeSwitch } from "./nav/ThemeSwitch";
+import { CrossMenuIcon } from "./ui/CrossMenuIcon";
+import { Icon } from "./ui/Icon";
 
-function MenuItem({ icon, label, ethiopic, onPress }) {
+export function Brand({ compact = false }) {
   return (
-    <Pressable style={styles.item} onPress={onPress}>
-      <Icon name={icon} size={20} color={colors.primary} />
-      <Text style={[typography.bodySemiBold, ethiopic && { fontFamily: fontFamily.ethiopicBold }, styles.itemLabel]}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-function ThemeSwitch() {
-  const { choice, setChoice, available } = useColorTheme();
-  if (!available) return null;
-  return (
-    <View style={styles.theme}>
-      <Text style={styles.themeLabel}>APPEARANCE</Text>
-      <View style={styles.themeRow} accessibilityRole="radiogroup">
-        {THEME_CHOICES.map((c) => {
-          const on = c.key === choice;
-          return (
-            <Pressable
-              key={c.key}
-              onPress={() => setChoice(c.key)}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: on }}
-              style={({ hovered }) => [styles.themeOption, hovered && !on && styles.themeHover, on && styles.themeOn]}
-            >
-              <Text style={[styles.themeText, on && styles.themeTextOn]}>{c.label}</Text>
-            </Pressable>
-          );
-        })}
+    <View style={styles.brand}>
+      <View style={[styles.brandTile, compact && styles.brandTileCompact]}>
+        <CrossMenuIcon size={compact ? 26 : 30} />
       </View>
+      {compact ? null : (
+        <View>
+          <Text style={styles.brandName}>ቤተ ቅኔ</Text>
+          <Text style={styles.brandSub}>Ge'ez · Qine</Text>
+        </View>
+      )}
     </View>
   );
 }
 
-export function DrawerContent(props) {
-  const { user, isAdmin, signOut } = useAuth();
+export function DueBadge({ count, suffix = "" }) {
+  if (!count) return null;
+  return (
+    <View style={styles.badge}>
+      <Text style={styles.badgeText}>
+        {count > 99 ? "99+" : count}
+        {suffix}
+      </Text>
+    </View>
+  );
+}
+
+function NavItem({ item, active, due, onPress }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="link"
+      accessibilityState={{ selected: active }}
+      style={({ hovered }) => [styles.item, hovered && !active && styles.itemHover, active && styles.itemActive]}
+    >
+      <Icon name={item.icon} size={18} color={colors.primaryDark} />
+      <Text style={styles.itemTitle}>{item.title}</Text>
+      <View style={styles.itemEnd}>
+        {item.badge === "due" && due ? (
+          <DueBadge count={due} />
+        ) : (
+          <Text style={[styles.itemEnglish, active && styles.itemEnglishActive]}>{item.english}</Text>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
+// The sidebar: permanent on wide screens. Sections grouped, the current one
+// highlighted, appearance and account at the bottom.
+export function DrawerContent({ state, navigation }) {
+  const { user, profile, isAdmin } = useAuth();
+  const due = useDueCount();
+  const current = sectionOf(state.routes[state.index]?.name);
 
   const go = (href) => {
-    props.navigation.closeDrawer();
-    router.push(href);
-  };
-
-  const handleSignOut = async () => {
-    props.navigation.closeDrawer();
-    await signOut();
-    router.replace("/");
+    navigation.closeDrawer?.();
+    router.navigate(href);
   };
 
   return (
-    <DrawerContentScrollView {...props} contentContainerStyle={styles.container}>
-      <Text style={styles.brand}>ቤተ ቅኔ</Text>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.root}>
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <Brand />
+        {NAV_GROUPS.map((group) => (
+          <View key={group.label} style={styles.group}>
+            <Text style={styles.groupLabel}>{group.label}</Text>
+            {group.items.map((item) => (
+              <NavItem key={item.route} item={item} active={current === item.route} due={due} onPress={() => go(item.href)} />
+            ))}
+          </View>
+        ))}
 
-      <MenuItem icon="book-outline" label="Dictionary" onPress={() => go("/")} />
-      <MenuItem icon="list-outline" label="ግሲ" ethiopic onPress={() => go("/verb-roots")} />
-      <MenuItem icon="grid-outline" label="መዐቀኒ" ethiopic onPress={() => go("/meaqeni")} />
-      <MenuItem icon="musical-notes-outline" label="ዜማ" ethiopic onPress={() => go("/zema")} />
-      <MenuItem icon="school-outline" label="ክለሳ" ethiopic onPress={() => go("/review")} />
-      <MenuItem icon="game-controller-outline" label="Games" onPress={() => go("/game")} />
-      <MenuItem icon="quiz-outline" label="ግሲ ፈተና" ethiopic onPress={() => go("/verb-quiz")} />
-      <MenuItem icon="newspaper-outline" label="ቅኔ አበው" ethiopic onPress={() => go("/blog")} />
-
-      <OrnamentDivider style={styles.divider} />
-
-      {user ? (
-        <>
-          <MenuItem icon="person-circle-outline" label="Account" onPress={() => go("/account")} />
-          {isAdmin && (
-            <MenuItem icon="shield-checkmark-outline" label="Admin Dashboard" onPress={() => go("/admin")} />
+        <View style={styles.footer}>
+          <ThemeSwitch />
+          {user ? (
+            <Pressable
+              onPress={() => go("/account")}
+              style={({ hovered }) => [styles.account, (hovered || current === "account") && styles.itemHover]}
+            >
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{(profile?.display_name || user.email || "?").slice(0, 1).toUpperCase()}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.accountName} numberOfLines={1}>
+                  {profile?.display_name || "Account"}
+                </Text>
+                <Text style={styles.accountSub} numberOfLines={1}>
+                  Progress synced
+                </Text>
+              </View>
+            </Pressable>
+          ) : (
+            <Pressable onPress={() => go("/auth/sign-in")} style={({ hovered }) => [styles.account, hovered && styles.itemHover]}>
+              <Icon name="log-in-outline" size={18} color={colors.primaryDark} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.accountName}>Sign in</Text>
+                <Text style={styles.accountSub}>Keep progress on every device</Text>
+              </View>
+            </Pressable>
           )}
-          <MenuItem icon="log-out-outline" label="Sign Out" onPress={handleSignOut} />
-        </>
-      ) : (
-        <>
-          <MenuItem icon="log-in-outline" label="Sign In" onPress={() => go("/auth/sign-in")} />
-          <MenuItem icon="person-add-outline" label="Sign Up" onPress={() => go("/auth/sign-up")} />
-        </>
-      )}
-
-      <ThemeSwitch />
-    </DrawerContentScrollView>
+          {isAdmin ? (
+            <Pressable onPress={() => go("/admin")} style={({ hovered }) => [styles.adminLink, hovered && styles.itemHover]}>
+              <Icon name="shield-checkmark-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.adminText}>Admin dashboard</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.background,
-    padding: spacing.lg,
-    flexGrow: 1,
+  root: { flex: 1, backgroundColor: colors.surface },
+  scroll: { flexGrow: 1, paddingHorizontal: spacing.md + 2, paddingVertical: spacing.xl - 4, gap: spacing.lg + 2 },
+  brand: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 6 },
+  brandTile: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  brand: {
-    fontFamily: fontFamily.ethiopicBold,
-    fontSize: 24,
-    color: colors.primary,
-    textAlign: "center",
-    marginBottom: spacing.lg,
+  brandTileCompact: { width: 36, height: 36, borderRadius: 10 },
+  brandName: { fontFamily: fontFamily.ethiopicBold, fontSize: 19, lineHeight: 24, color: colors.primaryDark },
+  brandSub: { ...typography.caption, fontSize: 12, color: colors.textSecondary },
+  group: { gap: 2 },
+  groupLabel: {
+    fontFamily: fontFamily.latinSemiBold,
+    fontSize: 11,
+    letterSpacing: 1,
+    color: colors.textSecondary,
+    paddingHorizontal: 10,
+    paddingBottom: 6,
   },
-  item: {
+  item: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, paddingHorizontal: 10, borderRadius: radii.md },
+  itemHover: { backgroundColor: colors.surfaceMuted },
+  itemActive: { backgroundColor: colors.primaryLight },
+  itemTitle: { fontFamily: fontFamily.ethiopicBold, fontSize: 15, lineHeight: 22, color: colors.textPrimary },
+  itemEnd: { marginLeft: "auto" },
+  itemEnglish: { ...typography.caption, fontSize: 12, color: colors.textSecondary },
+  itemEnglishActive: { color: colors.primaryDark },
+  badge: {
+    minWidth: 20,
+    paddingHorizontal: 7,
+    height: 20,
+    borderRadius: radii.pill,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: { fontFamily: fontFamily.latinBold, fontSize: 11, color: colors.white },
+  footer: { marginTop: "auto", gap: spacing.sm + 2, paddingTop: spacing.md },
+  account: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm + 2,
-    paddingVertical: spacing.sm + 2,
-  },
-  itemLabel: {
-    color: colors.textPrimary,
-  },
-  divider: {
-    marginVertical: spacing.md,
-  },
-  theme: { marginTop: "auto", paddingTop: spacing.lg, gap: spacing.xs },
-  themeLabel: { ...typography.caption, color: colors.textMuted, letterSpacing: 1 },
-  themeRow: {
-    flexDirection: "row",
-    padding: 3,
-    borderRadius: 10,
-    backgroundColor: colors.surfaceMuted,
+    gap: 10,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: 10,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  themeOption: { flex: 1, alignItems: "center", paddingVertical: 6, borderRadius: 7 },
-  themeHover: { backgroundColor: colors.border },
-  themeOn: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.primary },
-  themeText: { ...typography.label, color: colors.textSecondary },
-  themeTextOn: { color: colors.textPrimary },
+  avatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: { fontFamily: fontFamily.latinBold, fontSize: 13, color: colors.primaryDark },
+  accountName: { ...typography.label, color: colors.textPrimary },
+  accountSub: { ...typography.caption, fontSize: 12, color: colors.textSecondary },
+  adminLink: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 6, paddingHorizontal: 10, borderRadius: radii.md },
+  adminText: { ...typography.caption, color: colors.textSecondary },
 });
