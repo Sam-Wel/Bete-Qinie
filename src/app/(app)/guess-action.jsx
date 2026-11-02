@@ -9,7 +9,7 @@ import { Meanings } from "../../components/verbQuiz/QuizPlay";
 import { shared } from "../../components/verbQuiz/shared";
 import { useVerbGame } from "../../hooks/useVerbGame";
 import { ACTION_SECONDS, actionQuestion, illustratedVerbs } from "../../lib/verbGames";
-import { LANGUAGES, isDue, shuffle } from "../../lib/verbQuiz";
+import { LANGUAGES, freshFirst } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
 const ROUND = 10;
@@ -41,10 +41,8 @@ export default function GuessAction() {
   }, [left]);
 
   const start = () => {
-    // Pictures for verbs due for review come first.
-    const due = illustrated.filter((x) => isDue(game.stats[x.entry.id]));
-    const rest = shuffle(illustrated.filter((x) => !due.includes(x)));
-    const targets = [...shuffle(due), ...rest].slice(0, Math.min(ROUND, illustrated.length));
+    // Verbs due for review first, then ones not seen yet, then the rest.
+    const targets = freshFirst(illustrated, game.stats, (x) => x.entry.id).slice(0, Math.min(ROUND, illustrated.length));
     setRound({
       questions: targets.map((t) => actionQuestion(t, illustrated, difficulty)),
       index: 0,

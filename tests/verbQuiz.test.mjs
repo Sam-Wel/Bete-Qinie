@@ -71,3 +71,22 @@ test("guest progress merges into an account without losing a save", () => {
   const row = Q.rowFromStat("u", "1", merged[1]);
   assert.deepEqual(Q.statFromRow(row).saved, true);
 });
+
+test("smart mix: due words first, then new; words not due yet wait", () => {
+  const now = new Date(2026, 10, 1, 12).getTime();
+  const pool = Q.wordsInScope(bank, { mode: "all" }, "ti").slice(0, 60);
+  const stats = {};
+  // 20 words answered right twice today (not due), 3 due yesterday, 2 just missed.
+  pool.slice(0, 20).forEach((e) => (stats[e.id] = Q.applyAnswer(Q.applyAnswer(null, true, now), true, now)));
+  pool.slice(20, 23).forEach((e) => (stats[e.id] = { ...Q.applyAnswer(null, true, now - 5 * DAY) }));
+  pool.slice(23, 25).forEach((e) => (stats[e.id] = Q.applyAnswer(null, false, now)));
+  const picked = Q.pickWords(pool, stats, "smart", 10, seeded(3), now);
+  const ids = new Set(picked.map((e) => e.id));
+  assert.equal(picked.length, 10);
+  for (const e of pool.slice(20, 25)) assert.ok(ids.has(e.id), "due and missed words are in");
+  for (const e of pool.slice(0, 20)) assert.ok(!ids.has(e.id), "not-due words wait");
+  assert.equal(picked.filter((e) => !stats[e.id]).length, 5);
+  // With no new words left, not-due words fill in, soonest due first.
+  const tiny = pool.slice(0, 22);
+  assert.equal(Q.pickWords(tiny, stats, "smart", 22, seeded(4), now).length, 22);
+});

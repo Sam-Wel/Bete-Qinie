@@ -4,7 +4,7 @@
 // options and meanings all come from the dictionary through verbQuiz.js; per-word
 // progress stays in the shared word-progress record.
 
-import { buildQuestion, hasLanguage, pickWords, shuffle, wordsInScope } from "./verbQuiz";
+import { buildQuestion, freshFirst, hasLanguage, pickWords, shuffle, wordsInScope } from "./verbQuiz";
 import { CATEGORIES, metaOf, withMeta } from "./verbMeta";
 
 export const DIFFICULTIES = [
@@ -178,8 +178,9 @@ export const lightningPoints = (combo) => 10 * lightningMultiplier(combo);
 export const SORT_SHAPE = { easy: { bins: 2, per: 3 }, medium: { bins: 3, per: 3 }, hard: { bins: 4, per: 3 } };
 
 // Bins are categories that have enough verbs; each verb card belongs to at
-// least one bin on the table (a verb may fit several).
-export function sortingRound(bank, lang, difficulty, random = Math.random) {
+// least one bin on the table (a verb may fit several). Within a bin, verbs due
+// for review come first, then new ones.
+export function sortingRound(bank, lang, difficulty, random = Math.random, stats = {}) {
   const { bins, per } = SORT_SHAPE[difficulty];
   const tagged = withMeta(bank).filter(({ entry, meta }) => meta.categories.length && hasLanguage(entry, lang));
   const byCategory = Object.fromEntries(
@@ -190,7 +191,7 @@ export function sortingRound(bank, lang, difficulty, random = Math.random) {
   const cards = [];
   const taken = new Set();
   for (const category of chosen) {
-    for (const item of shuffle(byCategory[category.key], random)) {
+    for (const item of freshFirst(byCategory[category.key], stats, (x) => x.entry.id, random)) {
       if (cards.filter((c) => c.home === category.key).length >= per) break;
       if (taken.has(item.entry.id)) continue;
       taken.add(item.entry.id);

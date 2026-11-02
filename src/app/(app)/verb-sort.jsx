@@ -60,7 +60,7 @@ export default function VerbSort() {
   const binViews = useRef({});
 
   const start = () => {
-    const { bins, cards } = sortingRound(game.bank, game.lang, difficulty);
+    const { bins, cards } = sortingRound(game.bank, game.lang, difficulty, Math.random, game.stats);
     setRound({ bins, cards, placed: {}, tries: {}, selected: null, flash: null });
     setResult(null);
     game.start();

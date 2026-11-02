@@ -216,7 +216,7 @@ export const STATES = [
 // ---------------------------------------------------------------------
 
 export const FILTERS = [
-  { key: "smart", label: "Smart mix", hint: "Your misses first, then words you're learning, then some new ones." },
+  { key: "smart", label: "Smart mix", hint: "Words that are due (misses first), then new ones. Words not due yet wait their turn." },
   { key: "all", label: "All words", hint: "Every word in what you picked, in random order." },
   { key: "missed", label: "Words I've missed", hint: "Words you've answered wrong and don't know yet." },
   { key: "unseen", label: "Words I haven't seen", hint: "Only words you've never been asked." },
@@ -246,37 +246,48 @@ export function filterPool(pool, stats, filter) {
   }
 }
 
-const STALE_MS = 7 * 24 * 3600 * 1000;
+// How ready a word is to be asked: 0 due now (or missed last time), 1 never
+// seen, 2 not due yet. Records from before review dates count from their last answer.
+export function freshness(stat, now = Date.now()) {
+  const state = stateOf(stat);
+  if (state === "new") return 1;
+  if (state === "shaky" || isDue(withDue(stat), now)) return 0;
+  return 2;
+}
 
-// Smart mix: what you got wrong, then what you're part-way through (longest
-// unseen first), with about a fifth new words; known words only fill in when
-// nothing else is left, oldest first.
+// Earliest first; words never answered sort last.
+const byDue = (stats) => (a, b) => (withDue(stats[a.id])?.due ?? Infinity) - (withDue(stats[b.id])?.due ?? Infinity);
+
+// Smart mix: words that are due (misses first, then most overdue) take up to
+// 60% of the slots and new words fill the rest. Words that aren't due yet only
+// come in when there is nothing else, soonest due first, so the same words
+// don't come back game after game.
 function smartPick(pool, stats, count, random, now) {
-  const by = { shaky: [], learning: [], new: [], known: [] };
-  for (const entry of pool) by[stateOf(stats[entry.id])].push(entry);
-  // Words due for review come first, then the ones seen longest ago.
-  const oldestFirst = (a, b) =>
-    isDue(stats[b.id], now) - isDue(stats[a.id], now) || (stats[a.id]?.lastSeen ?? 0) - (stats[b.id]?.lastSeen ?? 0);
-  by.shaky.sort(oldestFirst);
-  by.learning.sort(oldestFirst);
-  by.known.sort(oldestFirst);
-  // New words come from across everything picked, not just the first group;
-  // studying a group in order is what parts are for.
-  by.new = shuffle(by.new, random);
+  const ready = [];
+  const fresh = [];
+  const later = [];
+  for (const entry of pool) [ready, fresh, later][freshness(stats[entry.id], now)].push(entry);
+  const missedFirst = (a, b) =>
+    (stateOf(stats[b.id]) === "shaky") - (stateOf(stats[a.id]) === "shaky") || byDue(stats)(a, b);
+  ready.sort(missedFirst);
+  later.sort(byDue(stats));
+  const unseen = shuffle(fresh, random);
 
-  const newQuota = Math.min(by.new.length, Math.max(1, Math.round(count * 0.2)));
-  const practised = [...by.shaky, ...by.learning];
-  const picked = [
-    ...practised.slice(0, count - newQuota),
-    ...by.new.slice(0, newQuota),
-  ];
-  const stale = by.known.filter((e) => isDue(stats[e.id], now) || now - (stats[e.id]?.lastSeen ?? 0) > STALE_MS);
-  const fillers = [...practised.slice(count - newQuota), ...by.new.slice(newQuota), ...stale, ...by.known];
-  for (const entry of fillers) {
+  const readyTake = Math.min(ready.length, Math.ceil(count * 0.6));
+  const picked = [...ready.slice(0, readyTake), ...unseen.slice(0, count - readyTake)];
+  for (const entry of [...ready.slice(readyTake), ...unseen, ...later]) {
     if (picked.length >= count) break;
     if (!picked.includes(entry)) picked.push(entry);
   }
   return shuffle(picked.slice(0, count), random);
+}
+
+// Same order for games with their own small word lists: due, then new, then
+// the rest, shuffled within each.
+export function freshFirst(items, stats, idOf = (x) => x.id, random = Math.random, now = Date.now()) {
+  const tiers = [[], [], []];
+  for (const item of items) tiers[freshness(stats[idOf(item)], now)].push(item);
+  return tiers.flatMap((tier) => shuffle(tier, random));
 }
 
 export function pickWords(pool, stats, filter, count, random = Math.random, now = Date.now()) {
