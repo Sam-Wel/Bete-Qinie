@@ -3,151 +3,199 @@ import { router } from "expo-router";
 import { ScreenContainer, Icon } from "../../components/ui";
 import { CrossMenuIcon } from "../../components/ui/CrossMenuIcon";
 import { useGameScores } from "../../hooks/useGameScores";
-import { useWordProgress } from "../../context/WordProgressContext";
-import { reviewSummary } from "../../lib/verbQuiz";
+import { useDueCount } from "../../hooks/useDueCount";
 import { useKalHistory } from "../../hooks/useKalHistory";
 import { dateKey, stats as kalStats } from "../../lib/kal";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
-function GameCard({ title, subtitle, art, meta, soon, onPress }) {
+// Game art sits on the same dark tile in both themes, like the games themselves.
+const ART_BG = "#17110a";
+const ART_GOLD = "#e0a52a";
+
+const ARCADE = [
+  { route: "/shooter", type: "verb_shooter", title: "ቀስት", line: "Shoot the verb that matches the meaning" },
+  { route: "/lightning", type: "verb_lightning_60", title: "Lightning Round", line: "Beat the clock, build combos", icon: "zap" },
+  { route: "/boss-battle", type: "verb_boss", title: "Boss Battle", line: "Four bosses, rising difficulty", icon: "swords" },
+];
+
+const CALM = [
+  { route: "/memory-match", type: "verb_memory", title: "Memory Match", line: "Pair each verb with its meaning", icon: "layers" },
+  { route: "/guess-action", type: "verb_guess_action", title: "Guess the Action", line: "See it, name the verb", icon: "eye" },
+  { route: "/unscramble", type: "verb_unscramble", title: "Unscramble", line: "Put the letters back in order", icon: "shuffle" },
+  { route: "/verb-sort", type: "verb_sort", title: "Sorting", line: "Group verbs by what they mean", icon: "folders" },
+];
+
+function Art({ game, size = 52 }) {
+  return (
+    <View style={[styles.art, { width: size, height: size }]}>
+      {game.icon ? (
+        <Icon name={game.icon} size={size * 0.48} color={ART_GOLD} strokeWidth={2} />
+      ) : (
+        <CrossMenuIcon size={size * 0.62} color={ART_GOLD} ground={ART_BG} />
+      )}
+    </View>
+  );
+}
+
+function GameTile({ game, basis }) {
+  const scores = useGameScores(game.type);
+  const best = scores.ready && scores.best != null ? `Best ${scores.best}` : null;
   return (
     <Pressable
-      onPress={onPress}
-      disabled={soon}
-      style={({ hovered }) => [styles.card, hovered && !soon && styles.cardHover, soon && styles.cardSoon]}
+      onPress={() => router.push(game.route)}
+      accessibilityRole="link"
+      style={({ hovered, pressed }) => [styles.tile, { flexBasis: basis }, (hovered || pressed) && styles.tileHover]}
     >
-      <View style={styles.art}>{art}</View>
-      <View style={{ flex: 1, gap: 2 }}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>{title}</Text>
-          {soon ? <Text style={styles.soon}>coming soon</Text> : null}
-        </View>
-        <Text style={styles.subtitle}>{subtitle}</Text>
-        {meta ? <Text style={styles.meta}>{meta}</Text> : null}
+      <Art game={game} />
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <Text style={/[ሀ-፿]/.test(game.title) ? styles.tileTitleEthiopic : styles.tileTitle} numberOfLines={1}>
+          {game.title}
+        </Text>
+        <Text style={styles.tileLine} numberOfLines={2}>
+          {game.line}
+        </Text>
+        {best ? <Text style={styles.best}>{best}</Text> : null}
       </View>
-      {soon ? null : <Icon name="chevron-forward" size={20} color={colors.primary} />}
     </Pressable>
   );
 }
 
-// ጨዋታዎች: small games that all play on the dictionary's Ge'ez verbs, and all
-// count toward the same word progress as ግሲ ፈተና.
+function KalPreview() {
+  const marks = ["#7f9a5c", ART_GOLD, "#3a2c17", "#3a2c17", "#7f9a5c", ART_GOLD, "#7f9a5c", "#7f9a5c", "#7f9a5c"];
+  return (
+    <View style={[styles.art, styles.kalArt]}>
+      {marks.map((c, i) => (
+        <View key={i} style={[styles.kalCell, { backgroundColor: c }]} />
+      ))}
+    </View>
+  );
+}
+
+function Section({ label, children }) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionLabel}>{label}</Text>
+      <View style={styles.grid}>{children}</View>
+    </View>
+  );
+}
+
+// ጨዋታዎች: small games on the dictionary's Ge'ez verbs. Every answer counts
+// toward the same word progress as ግሲ ፈተና and ክለሳ.
 export default function Games() {
-  const shooter = useGameScores("verb_shooter");
-  const { stats, ready } = useWordProgress();
   const kal = useKalHistory();
-  const due = ready ? reviewSummary(stats).due : 0;
+  const due = useDueCount();
+  const kalDone = kal.ready && kal.history.some((h) => h.date === dateKey());
+  const streak = kal.ready ? kalStats(kal.history).current : 0;
+  const kalLine = kalDone
+    ? `Today's done · ${streak}-day streak`
+    : streak
+      ? `Keep your ${streak}-day streak going`
+      : "Guess today's three-letter verb";
 
   return (
-    <ScreenContainer scroll>
-      <Text style={styles.lead}>
-        Games on the Ge'ez verbs of the dictionary. Every answer counts toward your ግሲ ፈተና progress, so playing is
-        studying.
-      </Text>
+    <ScreenContainer scroll contentContainerStyle={styles.page}>
+      <Text style={styles.lead}>Every answer counts toward your progress, so playing is studying.</Text>
 
-      {due ? (
-        <Pressable onPress={() => router.push("/review")} style={styles.due}>
-          <Text style={styles.dueText}>
-            {due} word{due === 1 ? "" : "s"} due for review in ክለሳ ›
-          </Text>
-        </Pressable>
-      ) : null}
-
-      <View style={styles.list}>
-        <GameCard
-          title="ቀስት"
-          subtitle="Shoot the verb that means what's under the bow, before it reaches you."
-          meta={shooter.ready && shooter.best != null ? `Your best: ${shooter.best}` : "Arcade · meanings in ትግርኛ, አማርኛ or English"}
-          art={<CrossMenuIcon size={44} color="#e0a52a" ground="#17110a" />}
-          onPress={() => router.push("/shooter")}
-        />
-        <GameCard
-          title="ቃል"
-          subtitle="A daily three-letter verb to guess, with hints that know the fidel: right letter, wrong vowel order."
-          meta={
-            kal.ready
-              ? kal.history.some((h) => h.date === dateKey())
-                ? `Today's done · streak ${kalStats(kal.history).current}`
-                : kalStats(kal.history).current
-                  ? `Keep your ${kalStats(kal.history).current}-day streak going`
-                  : "New puzzle every day"
-              : null
-          }
-          art={<Text style={styles.artLetters}>ቃል</Text>}
+      <View style={styles.topRow}>
+        <Pressable
           onPress={() => router.push("/kal")}
-        />
-        {[
-          ["Verb Memory Match", "Turn cards to pair each ግዕዝ verb with its meaning.", "🃏", "/memory-match"],
-          ["Guess the Action", "See an action, pick the ግዕዝ verb for it.", "🎭", "/guess-action"],
-          ["Unscramble the Verb", "Put a verb's shuffled letters back in order.", "🔀", "/unscramble"],
-          ["Verb Lightning Round", "Meanings against the clock, with combo multipliers.", "⚡", "/lightning"],
-          ["Verb Sorting Challenge", "Sort verbs into groups: movement, speech, feelings and more.", "🗂️", "/verb-sort"],
-          ["Verb Boss Battle", "Answer to strike four bosses in turn; miss and they strike back.", "🐉", "/boss-battle"],
-        ].map(([title, subtitle, emoji, route]) => (
-          <GameCard
-            key={route}
-            title={title}
-            subtitle={subtitle}
-            art={<Text style={styles.artEmoji}>{emoji}</Text>}
-            onPress={() => router.push(route)}
-          />
-        ))}
-        <GameCard
-          title="ግሲ ፈተና"
-          subtitle="The quiz behind it all: pick groups, review your misses, see what you know."
-          art={<Icon name="quiz-outline" size={30} color="#e0a52a" />}
-          onPress={() => router.push("/verb-quiz")}
-        />
+          accessibilityRole="link"
+          style={({ hovered, pressed }) => [styles.feature, (hovered || pressed) && styles.tileHover]}
+        >
+          <KalPreview />
+          <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+            <Text style={styles.eyebrow}>TODAY'S PUZZLE</Text>
+            <Text style={styles.featureTitle}>ቃል</Text>
+            <Text style={styles.tileLine}>{kalLine}</Text>
+          </View>
+          <View style={styles.play}>
+            <Text style={styles.playText}>{kalDone ? "Open" : "Play"}</Text>
+          </View>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push(due ? "/review" : "/verb-quiz")}
+          accessibilityRole="link"
+          style={({ hovered, pressed }) => [styles.side, (hovered || pressed) && styles.tileHover]}
+        >
+          {due ? (
+            <>
+              <Text style={styles.eyebrow}>DUE IN ክለሳ</Text>
+              <Text style={styles.dueCount}>{due}</Text>
+              <Text style={styles.tileLine}>Review them before you play ›</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.eyebrow}>THE FULL QUIZ</Text>
+              <Text style={styles.featureTitle}>ግሲ ፈተና</Text>
+              <Text style={styles.tileLine}>Pick groups, see what you know ›</Text>
+            </>
+          )}
+        </Pressable>
       </View>
+
+      <Section label="ARCADE · FAST">
+        {ARCADE.map((g) => (
+          <GameTile key={g.route} game={g} basis={200} />
+        ))}
+      </Section>
+
+      <Section label="CALM · NO TIMER">
+        {CALM.map((g) => (
+          <GameTile key={g.route} game={g} basis={300} />
+        ))}
+      </Section>
     </ScreenContainer>
   );
 }
 
+const card = {
+  borderRadius: radii.lg + 2,
+  borderWidth: 1,
+  borderColor: colors.border,
+  backgroundColor: colors.surface,
+  ...shadows.card,
+};
+
 const styles = StyleSheet.create({
-  lead: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.lg },
-  list: { gap: spacing.md },
-  due: {
-    alignSelf: "flex-start",
-    marginBottom: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.pill,
-    backgroundColor: colors.primaryLight,
-  },
-  dueText: { ...typography.label, color: colors.primaryDark },
-  card: {
+  page: { gap: spacing.xl },
+  lead: { ...typography.body, color: colors.textSecondary, marginBottom: -spacing.sm },
+  topRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  feature: {
+    ...card,
+    flexGrow: 2,
+    flexBasis: 360,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.lg,
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    ...shadows.card,
+    padding: spacing.lg + 2,
+    borderColor: colors.primary,
   },
-  cardHover: { borderColor: colors.primary, ...shadows.raised },
-  cardSoon: { opacity: 0.6 },
-  art: {
-    width: 64,
-    height: 64,
-    borderRadius: radii.md,
-    backgroundColor: "#17110a",
+  side: { ...card, flexGrow: 1, flexBasis: 200, padding: spacing.lg + 2, gap: 2, justifyContent: "center" },
+  tileHover: { borderColor: colors.primary, ...shadows.raised },
+  eyebrow: { fontFamily: fontFamily.ethiopicBold, fontSize: 12, letterSpacing: 1, color: colors.primaryDark },
+  featureTitle: { fontFamily: fontFamily.ethiopicBold, fontSize: 24, lineHeight: 32, color: colors.textPrimary },
+  dueCount: { fontFamily: fontFamily.latinBold, fontSize: 32, lineHeight: 38, color: colors.textPrimary },
+  play: { paddingVertical: 10, paddingHorizontal: 18, borderRadius: radii.md, backgroundColor: colors.primary },
+  playText: { ...typography.label, color: colors.onPrimary },
+  section: { gap: spacing.sm + 2 },
+  sectionLabel: { fontFamily: fontFamily.latinSemiBold, fontSize: 12, letterSpacing: 1, color: colors.textSecondary },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  tile: {
+    ...card,
+    flexGrow: 1,
+    flexBasis: 220,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: spacing.md + 2,
+    padding: spacing.lg,
   },
-  artEmoji: { fontSize: 30 },
-  artLetters: { fontFamily: fontFamily.ethiopicBold, fontSize: 22, color: "#e0a52a" },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  title: { fontFamily: fontFamily.ethiopicBold, fontSize: 20, lineHeight: 28, color: colors.textPrimary },
-  soon: {
-    ...typography.caption,
-    color: colors.primaryDark,
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.pill,
-    overflow: "hidden",
-  },
-  subtitle: { ...typography.caption, color: colors.textSecondary },
-  meta: { ...typography.label, color: colors.primary, marginTop: 2 },
+  art: { borderRadius: radii.lg, backgroundColor: ART_BG, alignItems: "center", justifyContent: "center" },
+  kalArt: { width: 72, height: 72, flexDirection: "row", flexWrap: "wrap", gap: 4, padding: 10, alignContent: "center" },
+  kalCell: { width: 14, height: 14, borderRadius: 4 },
+  tileTitle: { fontFamily: fontFamily.latinBold, fontSize: 16, lineHeight: 22, color: colors.textPrimary },
+  tileTitleEthiopic: { fontFamily: fontFamily.ethiopicBold, fontSize: 18, lineHeight: 26, color: colors.textPrimary },
+  tileLine: { ...typography.caption, color: colors.textSecondary },
+  best: { ...typography.caption, fontFamily: fontFamily.latinSemiBold, color: colors.primaryDark, marginTop: 2 },
 });

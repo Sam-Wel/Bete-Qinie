@@ -1,10 +1,55 @@
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { router } from "expo-router";
 import { useDictionarySearch } from "../../hooks/useDictionarySearch";
 import { useRecentSearches } from "../../hooks/useRecentSearches";
 import { useWordProgress } from "../../context/WordProgressContext";
-import { ScreenContainer, Card, TextField, Button, EmptyState, Select } from "../../components/ui";
-import { colors, fontFamily, radii, spacing, typography } from "../../theme";
+import { useDueCount } from "../../hooks/useDueCount";
+import { Button, EmptyState, Icon, ScreenContainer, Select } from "../../components/ui";
+import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
+const ETHIOPIC = /[ሀ-፿]/;
+const ORDER = ["gz", "ti", "am", "en"];
+const rank = (code) => (ORDER.includes(code) ? ORDER.indexOf(code) : ORDER.length);
+
+// "ትግርኛ - Tigrinya" → "ትግርኛ"; English keeps its Latin name.
+function shortName(name = "") {
+  const [first, second] = name.split(" - ");
+  return ETHIOPIC.test(first) && !(second && /english/i.test(second)) ? first : second || first;
+}
+
+function LanguageChips({ languages, value, onChange }) {
+  if (languages.length > 6) {
+    return (
+      <Select
+        value={value}
+        onValueChange={onChange}
+        items={languages.map((l) => ({ label: l.language_name, value: l.language_code }))}
+      />
+    );
+  }
+  return (
+    <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel="Search in">
+      {[...languages].sort((a, b) => rank(a.language_code) - rank(b.language_code)).map((l) => {
+        const on = l.language_code === value;
+        const label = shortName(l.language_name);
+        return (
+          <Pressable
+            key={l.language_code}
+            onPress={() => onChange(l.language_code)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: on }}
+            style={({ hovered }) => [styles.chip, hovered && !on && styles.chipHover, on && styles.chipOn]}
+          >
+            <Text style={[ETHIOPIC.test(label) ? styles.chipEthiopic : styles.chipLatin, on && styles.chipTextOn]}>{label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+// መዝገበ ቃላት: search a word in any language and see it in the others.
 export default function Dictionary() {
   const {
     query,
@@ -15,7 +60,6 @@ export default function Dictionary() {
     languageMap,
     results,
     suggestions,
-    selectSuggestion,
     sewasewExamples,
     loading,
     error,
@@ -23,18 +67,18 @@ export default function Dictionary() {
   } = useDictionarySearch();
   const { recentSearches, addRecentSearch } = useRecentSearches();
   const progress = useWordProgress();
+  const due = useDueCount();
+  const [searched, setSearched] = useState(null);
   // The searched Ge'ez word's id comes back with its translations.
   const wordId = selectedLanguage === "gz" ? results[0]?.word_id : null;
   const saved = Boolean(wordId && progress.stats[wordId]?.saved);
+  const current = languages.find((l) => l.language_code === selectedLanguage);
 
   const runSearch = async (searchQuery, searchLanguage) => {
     const result = await handleSearch(searchQuery, searchLanguage);
     if (result) {
-      addRecentSearch(
-        result.query,
-        result.language,
-        languageMap[result.language] || result.language
-      );
+      setSearched(result.query);
+      addRecentSearch(result.query, result.language, languageMap[result.language] || result.language);
     }
   };
 
@@ -48,193 +92,242 @@ export default function Dictionary() {
   );
 
   return (
-    <ScreenContainer scroll keyboardAvoiding contentContainerStyle={styles.container}>
+    <ScreenContainer scroll keyboardAvoiding contentContainerStyle={styles.page}>
+      <View style={styles.searchCard}>
+        <LanguageChips languages={languages} value={selectedLanguage} onChange={setSelectedLanguage} />
 
-      <Select
-        label="Select Language:"
-        value={selectedLanguage}
-        onValueChange={setSelectedLanguage}
-        items={languages.map((language) => ({
-          label: language.language_name,
-          value: language.language_code,
-        }))}
-        style={styles.fullWidth}
-      />
-
-      <TextField
-        value={query}
-        onChangeText={onQueryChange}
-        placeholder="Enter a word to search..."
-        style={styles.fullWidth}
-      />
-
-      {suggestions.length > 0 && (
-        <View style={styles.suggestions}>
-          <FlatList
-            data={suggestions}
-            keyExtractor={(item, index) => `${item}-${index}`}
-            renderItem={({ item }) => (
-              <Pressable style={styles.suggestionRow} onPress={() => selectSuggestion(item)}>
-                <Text style={typography.body}>{item}</Text>
-              </Pressable>
-            )}
-          />
+        <View style={styles.searchRow}>
+          <View style={styles.inputBox}>
+            <Icon name="search-outline" size={20} color={colors.primaryDark} />
+            <TextInput
+              value={query}
+              onChangeText={onQueryChange}
+              onSubmitEditing={() => runSearch()}
+              returnKeyType="search"
+              placeholder={current ? `Search in ${shortName(current.language_name)}…` : "Search a word…"}
+              placeholderTextColor={colors.textMuted}
+              accessibilityLabel="Search a word"
+              style={styles.input}
+            />
+          </View>
+          <Button onPress={() => runSearch()} style={styles.searchButton}>
+            Search
+          </Button>
         </View>
-      )}
 
-      <Button variant="primary" onPress={() => runSearch()} style={styles.fullWidth}>
-        Search
-      </Button>
-
-      {recentSearches.length > 0 && (
-        <View style={styles.recentWrapper}>
-          <Text style={styles.muted}>Recent searches:</Text>
-          <View style={styles.chipRow}>
-            {recentSearches.map((item, index) => (
+        {suggestions.length > 0 ? (
+          <View style={styles.suggestions}>
+            {suggestions.map((item, index) => (
               <Pressable
-                key={`${item.language}-${item.query}-${index}`}
-                style={styles.chipMuted}
-                onPress={() => runSearch(item.query, item.language)}
+                key={`${item}-${index}`}
+                onPress={() => runSearch(item)}
+                style={({ hovered }) => [styles.suggestion, index > 0 && styles.suggestionLine, hovered && styles.chipHover]}
               >
-                <Text style={styles.chipText}>
-                  {item.query} <Text style={styles.muted}>({item.languageLabel})</Text>
-                </Text>
+                <Icon name="search-outline" size={14} color={colors.textSecondary} />
+                <Text style={styles.suggestionText}>{item}</Text>
               </Pressable>
             ))}
           </View>
-        </View>
-      )}
+        ) : null}
 
-      {loading && <ActivityIndicator style={styles.spacingTop} color={colors.primary} />}
-      {error && <Text style={[typography.body, { color: colors.danger }]}>{error}</Text>}
+        {recentSearches.length > 0 ? (
+          <View style={styles.recent}>
+            <Text style={styles.recentLabel}>Recent</Text>
+            {recentSearches.map((item, index) => (
+              <Pressable
+                key={`${item.language}-${item.query}-${index}`}
+                onPress={() => runSearch(item.query, item.language)}
+                accessibilityLabel={`${item.query}, ${item.languageLabel}`}
+                style={({ hovered }) => [styles.recentChip, hovered && styles.chipHover]}
+              >
+                <Text style={styles.recentText}>{item.query}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+      </View>
+
+      {loading ? <ActivityIndicator color={colors.primary} /> : null}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {groupedResults.length > 0 ? (
-        <Card style={styles.resultsCard}>
-          <View style={styles.resultsHeader}>
-            <Text style={styles.cardTitle}>Results:</Text>
+        <View style={styles.card}>
+          <View style={styles.wordRow}>
+            <Text style={styles.word}>{searched}</Text>
+            {current ? <Text style={styles.wordLang}>{shortName(current.language_name)}</Text> : null}
             {wordId ? (
-              <Button
-                variant={saved ? "danger" : "secondary"}
-                size="sm"
-                pill
+              <Pressable
                 onPress={() => (saved ? progress.unsave(wordId) : progress.save([wordId]))}
+                accessibilityRole="button"
+                accessibilityState={{ checked: saved }}
+                style={({ hovered }) => [styles.save, saved && styles.saveOn, hovered && !saved && styles.chipHover]}
               >
-                {saved ? "In ክለሳ ✓" : "Save to ክለሳ"}
-              </Button>
+                <Icon name="bookmark-outline" size={16} color={saved ? colors.success : colors.primaryDark} />
+                <Text style={[styles.saveText, saved && { color: colors.success }]}>{saved ? "In ክለሳ" : "Save to ክለሳ"}</Text>
+              </Pressable>
             ) : null}
           </View>
-          {groupedResults.map(([language, words]) => (
-            <View key={language} style={styles.resultRow}>
-              <Text style={styles.resultLanguage}>{language}</Text>
-              <Text style={styles.resultWords}>
-                {words.join(language === "ኢንግልሽ - English" ? ", " : "፣")}
-              </Text>
-            </View>
-          ))}
-        </Card>
-      ) : (
-        !loading && query.trim() !== "" && <EmptyState message="No results found." icon="search-outline" />
-      )}
+          <View style={styles.meanings}>
+            {groupedResults.map(([language, words]) => (
+              <View key={language} style={styles.meaning}>
+                <Text style={styles.meaningLang}>{shortName(language)}</Text>
+                <Text style={styles.meaningWords}>{words.join(/english/i.test(language) ? ", " : "፣ ")}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : !loading && searched && query.trim() === searched ? (
+        <EmptyState message="No results found." icon="search-outline" />
+      ) : null}
 
-      {sewasewExamples.length > 0 && (
-        <Card style={styles.resultsCard}>
-          <Text style={styles.cardTitle}>Sewasew:</Text>
+      {sewasewExamples.length > 0 ? (
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>ሰዋሰው</Text>
           {sewasewExamples.map((example) => (
-            <Text key={example.sewasew_id} style={styles.sewasewItem}>
-              • {example.sewasew_text}
+            <Text key={example.sewasew_id} style={styles.example}>
+              {example.sewasew_text}
             </Text>
           ))}
-        </Card>
-      )}
+        </View>
+      ) : null}
+
+      {due ? (
+        <Pressable
+          onPress={() => router.navigate("/review")}
+          accessibilityRole="link"
+          style={({ hovered }) => [styles.review, hovered && shadows.raised]}
+        >
+          <View style={styles.reviewCount}>
+            <Text style={styles.reviewCountText}>{due}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reviewTitle}>ክለሳ today</Text>
+            <Text style={styles.reviewLine}>
+              {due} word{due === 1 ? "" : "s"} due for review
+            </Text>
+          </View>
+          <Icon name="chevron-forward" size={18} color={colors.primaryLight} />
+        </Pressable>
+      ) : null}
     </ScreenContainer>
   );
 }
 
+const card = {
+  backgroundColor: colors.surface,
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: radii.lg + 4,
+  padding: spacing.lg + 4,
+  ...shadows.card,
+};
+
 const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  fullWidth: {
-    width: "100%",
-    maxWidth: 480,
-  },
-  suggestions: {
-    width: "100%",
-    maxWidth: 480,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    borderRadius: radii.sm,
-    maxHeight: 180,
-  },
-  suggestionRow: {
-    padding: spacing.sm + 2,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderMuted,
-  },
-  recentWrapper: {
-    width: "100%",
-    maxWidth: 480,
-    gap: spacing.xs + 2,
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  chipMuted: {
+  page: { gap: spacing.lg },
+  searchCard: { ...card, gap: spacing.md + 2 },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  chip: {
     paddingVertical: 6,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.sm,
-    backgroundColor: colors.surfaceMuted,
+    paddingHorizontal: 14,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
-  chipText: {
-    color: colors.textSecondary,
-    fontFamily: fontFamily.ethiopicRegular,
-  },
-  muted: {
-    ...typography.caption,
-    color: colors.textMuted,
-  },
-  spacingTop: {
-    marginTop: spacing.sm,
-  },
-  resultsCard: {
-    width: "100%",
-    maxWidth: 640,
-    gap: spacing.xs + 2,
-  },
-  resultsHeader: {
+  chipHover: { backgroundColor: colors.surfaceMuted },
+  chipOn: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
+  chipEthiopic: { fontFamily: fontFamily.ethiopicBold, fontSize: 14, lineHeight: 20, color: colors.textSecondary },
+  chipLatin: { fontFamily: fontFamily.latinSemiBold, fontSize: 14, lineHeight: 20, color: colors.textSecondary },
+  chipTextOn: { color: colors.textPrimary },
+  searchRow: { flexDirection: "row", gap: spacing.sm + 2, flexWrap: "wrap" },
+  inputBox: {
+    flexGrow: 4,
+    flexBasis: 220,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: spacing.sm + 2,
+    height: 54,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.lg,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: colors.background,
   },
-  cardTitle: {
-    ...typography.h2,
+  input: {
+    flex: 1,
+    minWidth: 0,
+    height: "100%",
+    fontFamily: fontFamily.ethiopicRegular,
     fontSize: 18,
     color: colors.textPrimary,
-    marginBottom: spacing.xs,
+    outlineStyle: "none",
   },
-  resultRow: {
+  searchButton: { flexGrow: 1, flexBasis: 120, height: 54, borderRadius: radii.lg },
+  suggestions: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, overflow: "hidden", marginTop: -4 },
+  suggestion: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md },
+  suggestionLine: { borderTopWidth: 1, borderTopColor: colors.borderMuted },
+  suggestionText: { fontFamily: fontFamily.ethiopicRegular, fontSize: 16, color: colors.textPrimary },
+  recent: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm },
+  recentLabel: { ...typography.caption, color: colors.textSecondary, marginRight: 2 },
+  recentChip: { paddingVertical: 4, paddingHorizontal: spacing.md, borderRadius: radii.pill, backgroundColor: colors.surfaceMuted },
+  recentText: { fontFamily: fontFamily.ethiopicBold, fontSize: 15, lineHeight: 22, color: colors.textPrimary },
+  error: { ...typography.body, color: colors.danger },
+  card: { ...card, gap: spacing.md },
+  wordRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, flexWrap: "wrap" },
+  word: { fontFamily: fontFamily.ethiopicBold, fontSize: 32, lineHeight: 42, color: colors.textPrimary },
+  wordLang: {
+    ...typography.caption,
+    fontFamily: fontFamily.ethiopicBold,
+    color: colors.success,
+    backgroundColor: colors.successLight,
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    overflow: "hidden",
+  },
+  save: {
+    marginLeft: "auto",
     flexDirection: "row",
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
+    alignItems: "center",
+    gap: 6,
+    height: 40,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  resultLanguage: {
-    ...typography.bodySemiBold,
-    color: colors.textPrimary,
-    minWidth: 120,
+  saveOn: { borderColor: colors.success, backgroundColor: colors.successLight },
+  saveText: { fontFamily: fontFamily.ethiopicBold, fontSize: 14, color: colors.primaryDark },
+  meanings: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  meaning: {
+    flexGrow: 1,
+    flexBasis: 180,
+    gap: 4,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.background,
   },
-  resultWords: {
-    flex: 1,
-    fontFamily: fontFamily.ethiopicRegular,
-    fontSize: 16,
-    color: colors.textPrimary,
+  meaningLang: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, color: colors.primaryDark },
+  meaningWords: { fontFamily: fontFamily.ethiopicRegular, fontSize: 16, lineHeight: 24, color: colors.textPrimary },
+  cardLabel: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, letterSpacing: 1, color: colors.primaryDark },
+  example: { fontFamily: fontFamily.ethiopicRegular, fontSize: 16, lineHeight: 26, color: colors.textPrimary },
+  review: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md + 2,
+    padding: spacing.lg,
+    borderRadius: radii.lg + 4,
+    backgroundColor: "#2B2013",
   },
-  sewasewItem: {
-    fontFamily: fontFamily.ethiopicRegular,
-    fontSize: 16,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
+  reviewCount: {
+    width: 46,
+    height: 46,
+    borderRadius: radii.lg,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
   },
+  reviewCountText: { fontFamily: fontFamily.latinBold, fontSize: 20, color: colors.onPrimary },
+  reviewTitle: { fontFamily: fontFamily.ethiopicBold, fontSize: 17, lineHeight: 24, color: "#FBF6EA" },
+  reviewLine: { ...typography.caption, color: "#EBE0C4" },
 });

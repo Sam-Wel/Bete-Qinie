@@ -9,6 +9,9 @@ import {
   ChevronRight,
   ClipboardCheck,
   Ellipsis,
+  Eye,
+  Folders,
+  Layers,
   FileText,
   Gamepad2,
   GraduationCap,
@@ -21,6 +24,9 @@ import {
   Pencil,
   PlusCircle,
   RotateCcw,
+  Shuffle,
+  Swords,
+  Zap,
   Search,
   ShieldCheck,
   Trophy,
@@ -57,6 +63,12 @@ const ICONS = {
   checkmark: Check,
   "refresh-outline": RotateCcw,
   "more-horizontal": Ellipsis,
+  eye: Eye,
+  folders: Folders,
+  layers: Layers,
+  shuffle: Shuffle,
+  swords: Swords,
+  zap: Zap,
 };
 
 export function Icon({ name, size = 20, color = colors.textPrimary, strokeWidth = 1.75, style }) {
