@@ -39,3 +39,45 @@ test("streaks count consecutive wins ending today or yesterday", () => {
   assert.equal(K.stats(h, "2026-11-02").current, 2);
   assert.equal(K.stats(h, "2026-11-03").current, 0);
 });
+
+test("root mode: consonants only, vowels ignored", () => {
+  const r = (w) => K.rootOf(w);
+  assert.ok(K.sameRoot(r("ሰብሐ"), r("ሰበሐ")), "ሰብሐ and ሰበሐ share a root");
+  assert.deepEqual(K.scoreRoot(r("ሰብሐ"), r("ሰብሐ")), ["exact", "exact", "exact"]);
+  assert.deepEqual(K.scoreRoot(r("ብሰሐ"), r("ሰብሐ")), ["moved", "moved", "exact"]);
+  assert.deepEqual(K.scoreRoot(r("ለለለ"), r("ለመሰ")), ["exact", "absent", "absent"]);
+});
+
+test("root mode: the remaining roots always include the answer and shrink", () => {
+  const roots = [...K.rootIndex(bank).keys()].map((k) => k.split(".").map(Number));
+  const puzzles = K.dailyPuzzles(bank);
+  assert.ok(puzzles.length > 50, "enough daily words");
+  for (const entry of puzzles.slice(0, 40)) {
+    const target = K.rootOf(entry.word);
+    const fixed = { 2: target[2] };
+    const all = K.possibleRoots(roots, [], target, fixed);
+    const guess = roots.find((g) => !K.sameRoot(g, target) && g[2] === target[2]) || roots[0];
+    const after = K.possibleRoots(roots, [guess], target, fixed);
+    assert.ok(after.some((x) => K.sameRoot(x, target)));
+    assert.ok(after.length <= all.length);
+  }
+});
+
+test("easy mode offers six consonants per open square, including the right one", () => {
+  const roots = [...K.rootIndex(bank).keys()].map((k) => k.split(".").map(Number));
+  const target = K.rootOf(K.dailyPuzzles(bank)[0].word);
+  const choices = K.easyChoices(target, roots, { 2: target[2] }, 7);
+  assert.equal(choices[2], null);
+  for (const i of [0, 1]) {
+    assert.ok(choices[i].includes(target[i]));
+    assert.ok(choices[i].length <= 6 && choices[i].length >= 2);
+  }
+  assert.deepEqual(K.easyChoices(target, roots, { 2: target[2] }, 7), choices, "same puzzle, same choices");
+});
+
+test("hints: stars drop as hints are used; the revealed consonant is one not yet known", () => {
+  assert.deepEqual([0, 1, 2, 3, 4].map(K.stars), [3, 2, 2, 1, 1]);
+  const t = K.rootOf("ሰብሐ");
+  assert.equal(K.revealPosition(t, [], { 2: t[2] }), 0);
+  assert.equal(K.revealPosition(t, [K.rootOf("ሰለሐ")], { 2: t[2] }), 1);
+});

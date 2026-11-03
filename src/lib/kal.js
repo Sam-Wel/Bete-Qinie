@@ -216,3 +216,124 @@ export function stats(history, today = dateKey()) {
 
   return { played: history.length, wins, winRate: history.length ? wins / history.length : null, current, best, distribution };
 }
+
+// ---------------------------------------------------------------------
+// Root mode: guess the three consonants (the root) instead of the full
+// spelling. The vowels follow from the verb, so they're shown once it's found.
+// ---------------------------------------------------------------------
+
+export const DAILY_VERSION = 2; // daily state saved by the root game
+
+export const rootOf = (word) => letters(word).map((ch) => splitFidel(ch).consonant);
+export const rootKey = (root) => root.join(".");
+export const sameRoot = (a, b) => rootKey(a) === rootKey(b);
+
+// Every root that a three-letter dictionary word has, with the words that share it.
+export function rootIndex(bank) {
+  const map = new Map();
+  for (const word of bank.allWords.filter(plain)) {
+    const key = rootKey(rootOf(word));
+    if (!map.has(key)) map.set(key, []);
+    if (!map.get(key).includes(word)) map.get(key).push(word);
+  }
+  return map;
+}
+
+// The daily pool: three-letter verbs with Tigrinya, Amharic and English, so
+// every hint has something to show and the word is a well-documented one.
+export function dailyPuzzles(bank) {
+  return puzzleWords(bank).filter((e) => e.tr.ti.length && e.tr.am.length && e.tr.en.length);
+}
+
+// Practice prefers verbs the learner has already met in the games or ክለሳ.
+export function practiceWord(puzzles, stats = {}, random = Math.random) {
+  const seen = puzzles.filter((e) => stats[e.id]?.seen);
+  const pool = seen.length >= 10 && random() < 0.7 ? seen : puzzles;
+  return pool[Math.floor(random() * pool.length)];
+}
+
+// Consonant feedback: exact (here), moved (elsewhere in the root), absent.
+export function scoreRoot(guess, target) {
+  const marks = Array(guess.length).fill("absent");
+  const used = Array(target.length).fill(false);
+  guess.forEach((c, i) => {
+    if (c === target[i]) {
+      marks[i] = "exact";
+      used[i] = true;
+    }
+  });
+  guess.forEach((c, i) => {
+    if (marks[i] !== "absent") return;
+    const j = target.findIndex((t, k) => !used[k] && t === c);
+    if (j >= 0) {
+      marks[i] = "moved";
+      used[j] = true;
+    }
+  });
+  return marks;
+}
+
+export function rootKeyboardMarks(guesses, target) {
+  const best = {};
+  for (const guess of guesses) {
+    scoreRoot(guess, target).forEach((mark, i) => {
+      const c = guess[i];
+      if (best[c] == null || RANK[mark] < RANK[best[c]]) best[c] = mark;
+    });
+  }
+  return best;
+}
+
+// Dictionary roots still consistent with every guess so far and with the
+// consonants already shown (fixed: { position: consonant }).
+export function possibleRoots(roots, guesses, target, fixed = {}) {
+  const wanted = guesses.map((g) => scoreRoot(g, target).join());
+  return roots.filter(
+    (root) =>
+      Object.entries(fixed).every(([i, c]) => root[i] === c) &&
+      guesses.every((g, n) => scoreRoot(g, root).join() === wanted[n])
+  );
+}
+
+// The hint ladder. Each rung unlocks after that many guesses; fewer hints, more stars.
+export const HINTS = [
+  { after: 1, kind: "english", label: "English meaning" },
+  { after: 2, kind: "other", label: "Tigrinya or Amharic meaning" },
+  { after: 3, kind: "letter", label: "Show a consonant" },
+  { after: 4, kind: "list", label: "Show the verbs that fit" },
+];
+
+export const stars = (hintsUsed) => (hintsUsed === 0 ? 3 : hintsUsed <= 2 ? 2 : 1);
+
+// The consonant a "Show a consonant" hint reveals: the first one not yet known.
+export function revealPosition(target, guesses, fixed = {}) {
+  const known = new Set(Object.keys(fixed).map(Number));
+  for (const g of guesses) g.forEach((c, i) => c === target[i] && known.add(i));
+  return [0, 1, 2].find((i) => !known.has(i)) ?? null;
+}
+
+// Easy mode: each open square offers six consonants, one of them right. The
+// others come from roots that share what's already shown, so they're plausible.
+export function easyChoices(target, roots, fixed = {}, seed = 0, size = 6) {
+  const rand = (n) => {
+    seed = (Math.imul(seed ^ (seed >>> 15), 0x2c1b3c6d) + 0x6d2b79f5) >>> 0;
+    return seed % n;
+  };
+  return target.map((c, i) => {
+    if (fixed[i] != null) return null;
+    const pool = [...new Set(roots.filter((r) => Object.entries(fixed).every(([j, f]) => r[j] === f)).map((r) => r[i]))].filter(
+      (x) => x !== c
+    );
+    const picks = [c];
+    while (picks.length < size && pool.length) picks.push(pool.splice(rand(pool.length), 1)[0]);
+    return picks.sort((a, b) => a - b);
+  });
+}
+
+const STAR = ["", "★☆☆", "★★☆", "★★★"];
+const ROOT_EMOJI = { exact: "🟩", moved: "🟦", absent: "⬜" };
+
+export function rootShareText({ date, guesses, target, won, hints }) {
+  const rows = guesses.map((g) => scoreRoot(g, target).map((m) => ROOT_EMOJI[m]).join(""));
+  return [`ቃል ${date} ${won ? guesses.length : "X"}/${MAX_GUESSES} ${won ? STAR[stars(hints)] : ""}`.trim(), ...rows].join("\n");
+}
