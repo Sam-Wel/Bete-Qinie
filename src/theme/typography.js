@@ -1,7 +1,7 @@
 export const fontFamily = {
-  latinRegular: "Inter_400Regular",
-  latinSemiBold: "Inter_600SemiBold",
-  latinBold: "Inter_700Bold",
+  latinRegular: "Menbere_400Regular",
+  latinSemiBold: "Menbere_600SemiBold",
+  latinBold: "Menbere_700Bold",
   ethiopicRegular: "Menbere_400Regular",
   ethiopicBold: "Menbere_700Bold",
 };

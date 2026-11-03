@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { THEME_CHOICES, useColorTheme } from "../../hooks/useColorTheme";
-import { colors, spacing, typography } from "../../theme";
+import { colors, fontFamily, spacing, typography } from "../../theme";
 
 // System / Light / Dark. Web only, so it renders nothing in a native build.
 export function ThemeSwitch({ large = false }) {
@@ -31,7 +31,7 @@ export function ThemeSwitch({ large = false }) {
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.xs + 2 },
-  label: { ...typography.caption, fontSize: 11, color: colors.textSecondary, letterSpacing: 1, fontFamily: "Inter_600SemiBold" },
+  label: { ...typography.caption, fontSize: 11, color: colors.textSecondary, letterSpacing: 1, fontFamily: fontFamily.latinSemiBold },
   row: {
     flexDirection: "row",
     padding: 3,
