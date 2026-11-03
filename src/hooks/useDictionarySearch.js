@@ -6,6 +6,38 @@ const SUGGESTION_DEBOUNCE_MS = 300;
 const SUGGESTION_CANDIDATE_LIMIT = 25;
 const SUGGESTION_RESULT_LIMIT = 5;
 
+const byGeez = (rows) => {
+  const entries = new Map();
+  for (const r of rows) {
+    if (!entries.has(r.geez_id)) entries.set(r.geez_id, { geezId: r.geez_id, geez: r.geez_word, meanings: {} });
+    if (r.target_language && r.translated_word) {
+      const list = (entries.get(r.geez_id).meanings[r.target_language] ??= []);
+      if (!list.includes(r.translated_word)) list.push(r.translated_word);
+    }
+  }
+  return [...entries.values()];
+};
+
+// Every search lands on Ge'ez words: a Ge'ez search finds that word, any other
+// language finds the Ge'ez words it translates. Each comes back with its own
+// Tigrinya, Amharic and English. Falls back to the older get_translations until
+// supabase/english_meanings.sql has been run.
+async function findEntries(word, language) {
+  const { data, error } = await supabase.rpc("search_dictionary", { search_word: word, language });
+  if (!error) return { entries: byGeez(data || []) };
+
+  const old = await supabase.rpc("get_translations", { search_word: word, language });
+  if (old.error) return { error: old.error };
+  const rows = old.data || [];
+  if (language === "gz") {
+    return {
+      entries: byGeez(rows.map((r) => ({ geez_id: r.word_id, geez_word: r.word, target_language: r.target_language, translated_word: r.translated_word }))),
+    };
+  }
+  const [entry] = byGeez(rows.map((r) => ({ geez_id: null, geez_word: null, target_language: r.target_language, translated_word: r.translated_word })));
+  return { entries: entry ? [entry] : [] };
+}
+
 export function useDictionarySearch() {
   const [query, setQuery] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("gz"); // Default to Ge'ez
@@ -123,32 +155,20 @@ export function useDictionarySearch() {
     setSuggestions([]);
 
     try {
-      const { data: translationData, error: translationError } =
-        await supabase.rpc("get_translations", {
-          search_word: searchQuery.trim(),
-          language: searchLanguage,
-        });
-
-      if (translationError) {
+      const found = await findEntries(searchQuery.trim(), searchLanguage);
+      if (found.error) {
         setError("Failed to fetch data. Please try again.");
-        console.error(translationError);
+        console.error(found.error);
         return;
       }
+      setResults(found.entries);
 
-      setResults(translationData);
-
-      if (
-        searchLanguage === "gz" &&
-        translationData &&
-        translationData.length > 0
-      ) {
+      const ids = found.entries.map((e) => e.geezId).filter(Boolean);
+      if (ids.length) {
         const { data: sewasewData, error: sewasewError } = await supabase
           .from("sewasew")
-          .select("sewasew_id, sewasew_text")
-          .in(
-            "word_id",
-            translationData.map((item) => item.word_id)
-          );
+          .select("sewasew_id, sewasew_text, word_id")
+          .in("word_id", ids);
 
         if (sewasewError) {
           console.error("Error fetching Sewasew examples:", sewasewError);

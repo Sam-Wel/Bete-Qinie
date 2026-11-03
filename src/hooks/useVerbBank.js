@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabaseClient";
 import { buildBank, VERB_ENDINGS } from "../lib/verbQuiz";
 
-const CACHE_KEY = "bete-qinie:verb-bank:v2";
+const CACHE_KEY = "bete-qinie:verb-bank:v3"; // v3: new English meanings
 const CACHE_MS = 24 * 3600 * 1000;
 const PAGE = 1000;
 

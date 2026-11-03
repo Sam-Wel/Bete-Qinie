@@ -85,21 +85,13 @@ export default function AddWord() {
     }
   };
 
-  const createBidirectionalMappings = async (geezId, relatedIds, existingMappings) => {
+  // Ge'ez is the anchor: each translation links to the Ge'ez word only, never to
+  // the other translations, so a search in any language lands on the Ge'ez word.
+  const createBidirectionalMappings = async (geezId, relatedIds) => {
     const { ti, am, en } = relatedIds;
-    const allTranslations = [...existingMappings, ti, am, en].filter(Boolean);
-
     for (const relatedId of [ti, am, en].filter(Boolean)) {
       await insertMappings(geezId, [relatedId]);
       await insertMappings(relatedId, [geezId]);
-    }
-
-    for (const wordA of allTranslations) {
-      for (const wordB of allTranslations) {
-        if (wordA !== wordB) {
-          await insertMappings(wordA, [wordB]);
-        }
-      }
     }
   };
 

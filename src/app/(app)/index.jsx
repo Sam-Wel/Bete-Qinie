@@ -69,9 +69,6 @@ export default function Dictionary() {
   const progress = useWordProgress();
   const due = useDueCount();
   const [searched, setSearched] = useState(null);
-  // The searched Ge'ez word's id comes back with its translations.
-  const wordId = selectedLanguage === "gz" ? results[0]?.word_id : null;
-  const saved = Boolean(wordId && progress.stats[wordId]?.saved);
   const current = languages.find((l) => l.language_code === selectedLanguage);
 
   const runSearch = async (searchQuery, searchLanguage) => {
@@ -82,14 +79,6 @@ export default function Dictionary() {
     }
   };
 
-  const groupedResults = Object.entries(
-    results.reduce((acc, result) => {
-      const lang = languageMap[result.target_language] || result.target_language;
-      if (!acc[lang]) acc[lang] = [];
-      acc[lang].push(result.translated_word);
-      return acc;
-    }, {})
-  );
 
   return (
     <ScreenContainer scroll keyboardAvoiding contentContainerStyle={styles.page}>
@@ -150,45 +139,59 @@ export default function Dictionary() {
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {groupedResults.length > 0 ? (
-        <View style={styles.card}>
-          <View style={styles.wordRow}>
-            <Text style={styles.word}>{searched}</Text>
-            {current ? <Text style={styles.wordLang}>{shortName(current.language_name)}</Text> : null}
-            {wordId ? (
-              <Pressable
-                onPress={() => (saved ? progress.unsave(wordId) : progress.save([wordId]))}
-                accessibilityRole="button"
-                accessibilityState={{ checked: saved }}
-                style={({ hovered }) => [styles.save, saved && styles.saveOn, hovered && !saved && styles.chipHover]}
-              >
-                <Icon name="bookmark-outline" size={16} color={saved ? colors.success : colors.primaryDark} />
-                <Text style={[styles.saveText, saved && { color: colors.success }]}>{saved ? "In ክለሳ" : "Save to ክለሳ"}</Text>
-              </Pressable>
-            ) : null}
-          </View>
-          <View style={styles.meanings}>
-            {groupedResults.map(([language, words]) => (
-              <View key={language} style={styles.meaning}>
-                <Text style={styles.meaningLang}>{shortName(language)}</Text>
-                <Text style={styles.meaningWords}>{words.join(/english/i.test(language) ? ", " : "፣ ")}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      ) : !loading && searched && query.trim() === searched ? (
-        <EmptyState message="No results found." icon="search-outline" />
+      {results.length > 0 && selectedLanguage !== "gz" && results[0].geez ? (
+        <Text style={styles.foundLine}>
+          {searched} · {results.length === 1 ? "1 ግዕዝ word" : `${results.length} ግዕዝ words`}
+        </Text>
       ) : null}
 
-      {sewasewExamples.length > 0 ? (
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>ሰዋሰው</Text>
-          {sewasewExamples.map((example) => (
-            <Text key={example.sewasew_id} style={styles.example}>
-              {example.sewasew_text}
-            </Text>
-          ))}
-        </View>
+      {results.map((entry, i) => {
+        const saved = Boolean(entry.geezId && progress.stats[entry.geezId]?.saved);
+        const examples = sewasewExamples.filter((x) => x.word_id === entry.geezId);
+        const tiles = ORDER.filter((code) => entry.meanings[code]?.length);
+        return (
+          <View key={entry.geezId ?? i} style={styles.card}>
+            <View style={styles.wordRow}>
+              <Text style={styles.word}>{entry.geez ?? searched}</Text>
+              <Text style={styles.wordLang}>{entry.geez ? "ግዕዝ" : current ? shortName(current.language_name) : ""}</Text>
+              {entry.geezId ? (
+                <Pressable
+                  onPress={() => (saved ? progress.unsave(entry.geezId) : progress.save([entry.geezId]))}
+                  accessibilityRole="button"
+                  accessibilityState={{ checked: saved }}
+                  style={({ hovered }) => [styles.save, saved && styles.saveOn, hovered && !saved && styles.chipHover]}
+                >
+                  <Icon name="bookmark-outline" size={16} color={saved ? colors.success : colors.primaryDark} />
+                  <Text style={[styles.saveText, saved && { color: colors.success }]}>{saved ? "In ክለሳ" : "Save to ክለሳ"}</Text>
+                </Pressable>
+              ) : null}
+            </View>
+            {tiles.length ? (
+              <View style={styles.meanings}>
+                {tiles.map((code) => (
+                  <View key={code} style={styles.meaning}>
+                    <Text style={styles.meaningLang}>{shortName(languageMap[code] || code)}</Text>
+                    <Text style={styles.meaningWords}>{entry.meanings[code].join(code === "en" ? ", " : "፣ ")}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            {examples.length ? (
+              <View style={styles.examples}>
+                <Text style={styles.cardLabel}>ሰዋሰው</Text>
+                {examples.map((example) => (
+                  <Text key={example.sewasew_id} style={styles.example}>
+                    {example.sewasew_text}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        );
+      })}
+
+      {!loading && !results.length && searched && query.trim() === searched ? (
+        <EmptyState message="No results found." icon="search-outline" />
       ) : null}
 
       {due ? (
@@ -310,6 +313,8 @@ const styles = StyleSheet.create({
   meaningLang: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, color: colors.primaryDark },
   meaningWords: { fontFamily: fontFamily.ethiopicRegular, fontSize: 16, lineHeight: 24, color: colors.textPrimary },
   cardLabel: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, letterSpacing: 1, color: colors.primaryDark },
+  foundLine: { ...typography.caption, color: colors.textSecondary, marginBottom: -spacing.sm },
+  examples: { gap: 4, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   example: { fontFamily: fontFamily.ethiopicRegular, fontSize: 16, lineHeight: 26, color: colors.textPrimary },
   review: {
     flexDirection: "row",

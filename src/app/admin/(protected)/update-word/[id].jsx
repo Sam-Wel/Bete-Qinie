@@ -89,6 +89,14 @@ export default function UpdateWord() {
             .match({ word_id: id, related_word_id: word_id });
 
           if (mappingError) throw mappingError;
+
+          // Links are kept in both directions; move the reverse one too.
+          const { error: reverseError } = await supabase
+            .from("translationmappings")
+            .update({ word_id: existingWord.word_id })
+            .match({ word_id, related_word_id: id });
+
+          if (reverseError) throw reverseError;
         } else {
           const { error: updateError } = await supabase
             .from("words")
@@ -113,7 +121,7 @@ export default function UpdateWord() {
       const { error: deleteMappingError } = await supabase
         .from("translationmappings")
         .delete()
-        .match({ word_id: id, related_word_id: translationId });
+        .or(`and(word_id.eq.${id},related_word_id.eq.${translationId}),and(word_id.eq.${translationId},related_word_id.eq.${id})`);
 
       if (deleteMappingError) throw deleteMappingError;
 
