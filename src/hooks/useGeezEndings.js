@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { findEntries } from "./useDictionarySearch";
 
 const GEEZ = "gz";
 
@@ -39,7 +40,7 @@ export function useGeezEndings() {
   const [wordsLoading, setWordsLoading] = useState(false);
 
   const [selectedWord, setSelectedWord] = useState(null);
-  const [translations, setTranslations] = useState([]);
+  const [entries, setEntries] = useState([]);
   const [sewasewExamples, setSewasewExamples] = useState([]);
   const [translationsLoading, setTranslationsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -47,7 +48,7 @@ export function useGeezEndings() {
   const selectLetter = useCallback(async (letter) => {
     setSelectedLetter(letter);
     setSelectedWord(null);
-    setTranslations([]);
+    setEntries([]);
     setSewasewExamples([]);
     setWordsLoading(true);
     setError(null);
@@ -76,32 +77,25 @@ export function useGeezEndings() {
 
   const selectWord = useCallback(async (word) => {
     setSelectedWord(word);
-    setTranslations([]);
+    setEntries([]);
     setSewasewExamples([]);
     setTranslationsLoading(true);
     setError(null);
     try {
-      const { data: translationData, error: translationError } = await supabase.rpc(
-        "get_translations",
-        { search_word: word, language: GEEZ }
-      );
-
-      if (translationError) {
-        console.error("Error fetching translations:", translationError);
+      const found = await findEntries(word, GEEZ);
+      if (found.error) {
+        console.error("Error fetching translations:", found.error);
         setError("Failed to fetch translations. Please try again.");
         return;
       }
+      setEntries(found.entries);
 
-      setTranslations(translationData || []);
-
-      if (translationData && translationData.length > 0) {
+      const ids = found.entries.map((e) => e.geezId).filter(Boolean);
+      if (ids.length) {
         const { data: sewasewData, error: sewasewError } = await supabase
           .from("sewasew")
-          .select("sewasew_id, sewasew_text")
-          .in(
-            "word_id",
-            translationData.map((item) => item.word_id)
-          );
+          .select("sewasew_id, sewasew_text, word_id")
+          .in("word_id", ids);
 
         if (sewasewError) {
           console.error("Error fetching Sewasew examples:", sewasewError);
@@ -125,7 +119,7 @@ export function useGeezEndings() {
     wordsLoading,
     selectLetter,
     selectedWord,
-    translations,
+    entries,
     sewasewExamples,
     translationsLoading,
     selectWord,

@@ -3,20 +3,14 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { router } from "expo-router";
 import { useDictionarySearch } from "../../hooks/useDictionarySearch";
 import { useRecentSearches } from "../../hooks/useRecentSearches";
-import { useWordProgress } from "../../context/WordProgressContext";
 import { useDueCount } from "../../hooks/useDueCount";
 import { Button, EmptyState, Icon, ScreenContainer, Select } from "../../components/ui";
+import { LANGUAGE_ORDER, WordCard, shortName } from "../../components/WordCard";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
 const ETHIOPIC = /[ሀ-፿]/;
-const ORDER = ["gz", "ti", "am", "en"];
+const ORDER = LANGUAGE_ORDER;
 const rank = (code) => (ORDER.includes(code) ? ORDER.indexOf(code) : ORDER.length);
-
-// "ትግርኛ - Tigrinya" → "ትግርኛ"; English keeps its Latin name.
-function shortName(name = "") {
-  const [first, second] = name.split(" - ");
-  return ETHIOPIC.test(first) && !(second && /english/i.test(second)) ? first : second || first;
-}
 
 function LanguageChips({ languages, value, onChange }) {
   if (languages.length > 6) {
@@ -66,7 +60,6 @@ export default function Dictionary() {
     handleSearch,
   } = useDictionarySearch();
   const { recentSearches, addRecentSearch } = useRecentSearches();
-  const progress = useWordProgress();
   const due = useDueCount();
   const [searched, setSearched] = useState(null);
   const current = languages.find((l) => l.language_code === selectedLanguage);
@@ -145,50 +138,17 @@ export default function Dictionary() {
         </Text>
       ) : null}
 
-      {results.map((entry, i) => {
-        const saved = Boolean(entry.geezId && progress.stats[entry.geezId]?.saved);
-        const examples = sewasewExamples.filter((x) => x.word_id === entry.geezId);
-        const tiles = ORDER.filter((code) => entry.meanings[code]?.length);
-        return (
-          <View key={entry.geezId ?? i} style={styles.card}>
-            <View style={styles.wordRow}>
-              <Text style={styles.word}>{entry.geez ?? searched}</Text>
-              <Text style={styles.wordLang}>{entry.geez ? "ግዕዝ" : current ? shortName(current.language_name) : ""}</Text>
-              {entry.geezId ? (
-                <Pressable
-                  onPress={() => (saved ? progress.unsave(entry.geezId) : progress.save([entry.geezId]))}
-                  accessibilityRole="button"
-                  accessibilityState={{ checked: saved }}
-                  style={({ hovered }) => [styles.save, saved && styles.saveOn, hovered && !saved && styles.chipHover]}
-                >
-                  <Icon name="bookmark-outline" size={16} color={saved ? colors.success : colors.primaryDark} />
-                  <Text style={[styles.saveText, saved && { color: colors.success }]}>{saved ? "In ክለሳ" : "Save to ክለሳ"}</Text>
-                </Pressable>
-              ) : null}
-            </View>
-            {tiles.length ? (
-              <View style={styles.meanings}>
-                {tiles.map((code) => (
-                  <View key={code} style={styles.meaning}>
-                    <Text style={styles.meaningLang}>{shortName(languageMap[code] || code)}</Text>
-                    <Text style={styles.meaningWords}>{entry.meanings[code].join(code === "en" ? ", " : "፣ ")}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-            {examples.length ? (
-              <View style={styles.examples}>
-                <Text style={styles.cardLabel}>ሰዋሰው</Text>
-                {examples.map((example) => (
-                  <Text key={example.sewasew_id} style={styles.example}>
-                    {example.sewasew_text}
-                  </Text>
-                ))}
-              </View>
-            ) : null}
-          </View>
-        );
-      })}
+      {results.map((entry, i) => (
+        <WordCard
+          key={entry.geezId ?? i}
+          word={entry.geez ?? searched}
+          tag={entry.geez ? "ግዕዝ" : current ? shortName(current.language_name) : null}
+          geezId={entry.geezId}
+          meanings={entry.meanings}
+          examples={sewasewExamples.filter((x) => x.word_id === entry.geezId)}
+          languageMap={languageMap}
+        />
+      ))}
 
       {!loading && !results.length && searched && query.trim() === searched ? (
         <EmptyState message="No results found." icon="search-outline" />
@@ -276,46 +236,7 @@ const styles = StyleSheet.create({
   recentText: { fontFamily: fontFamily.ethiopicBold, fontSize: 15, lineHeight: 22, color: colors.textPrimary },
   error: { ...typography.body, color: colors.danger },
   card: { ...card, gap: spacing.md },
-  wordRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, flexWrap: "wrap" },
-  word: { fontFamily: fontFamily.ethiopicBold, fontSize: 32, lineHeight: 42, color: colors.textPrimary },
-  wordLang: {
-    ...typography.caption,
-    fontFamily: fontFamily.ethiopicBold,
-    color: colors.success,
-    backgroundColor: colors.successLight,
-    borderRadius: radii.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    overflow: "hidden",
-  },
-  save: {
-    marginLeft: "auto",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    height: 40,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  saveOn: { borderColor: colors.success, backgroundColor: colors.successLight },
-  saveText: { fontFamily: fontFamily.ethiopicBold, fontSize: 14, color: colors.primaryDark },
-  meanings: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  meaning: {
-    flexGrow: 1,
-    flexBasis: 180,
-    gap: 4,
-    padding: spacing.md,
-    borderRadius: radii.md,
-    backgroundColor: colors.background,
-  },
-  meaningLang: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, color: colors.primaryDark },
-  meaningWords: { fontFamily: fontFamily.ethiopicRegular, fontSize: 16, lineHeight: 24, color: colors.textPrimary },
-  cardLabel: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, letterSpacing: 1, color: colors.primaryDark },
   foundLine: { ...typography.caption, color: colors.textSecondary, marginBottom: -spacing.sm },
-  examples: { gap: 4, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
-  example: { fontFamily: fontFamily.ethiopicRegular, fontSize: 16, lineHeight: 26, color: colors.textPrimary },
   review: {
     flexDirection: "row",
     alignItems: "center",

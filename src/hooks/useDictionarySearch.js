@@ -22,7 +22,7 @@ const byGeez = (rows) => {
 // language finds the Ge'ez words it translates. Each comes back with its own
 // Tigrinya, Amharic and English. Falls back to the older get_translations until
 // supabase/english_meanings.sql has been run.
-async function findEntries(word, language) {
+export async function findEntries(word, language) {
   const { data, error } = await supabase.rpc("search_dictionary", { search_word: word, language });
   if (!error) return { entries: byGeez(data || []) };
 

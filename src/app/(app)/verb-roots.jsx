@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useGeezEndings } from "../../hooks/useGeezEndings";
-import { useWordProgress } from "../../context/WordProgressContext";
-import { ScreenContainer, Card, Button, EmptyState, Icon } from "../../components/ui";
+import { ScreenContainer, EmptyState, Icon } from "../../components/ui";
+import { WordCard } from "../../components/WordCard";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
 export default function VerbRoots() {
@@ -14,13 +14,12 @@ export default function VerbRoots() {
     wordsLoading,
     selectLetter,
     selectedWord,
-    translations,
+    entries,
     sewasewExamples,
     translationsLoading,
     selectWord,
     error,
   } = useGeezEndings();
-  const progress = useWordProgress();
   // Picking a word folds the list down to that word; "Show all" opens it again.
   const [showAll, setShowAll] = useState(false);
   const collapsed = Boolean(selectedWord) && !showAll;
@@ -33,54 +32,44 @@ export default function VerbRoots() {
     selectWord(word);
   };
 
-  // The selected verb's id comes back with its translations.
-  const wordId = selectedWord ? translations[0]?.word_id : null;
-  const saved = Boolean(wordId && progress.stats[wordId]?.saved);
-
-  const groupedTranslations = Object.entries(
-    translations.reduce((acc, result) => {
-      const lang = languageMap[result.target_language] || result.target_language;
-      if (!acc[lang]) acc[lang] = [];
-      acc[lang].push(result.translated_word);
-      return acc;
-    }, {})
-  );
-
   return (
-    <ScreenContainer scroll contentContainerStyle={styles.container}>
-      <Text style={styles.subtitle}>
-        Browse Ge'ez words by their last letter -- tap a letter to see words ending with it.
-      </Text>
-
-      {error && <Text style={styles.error}>{error}</Text>}
-
-      <View style={styles.chipRow}>
-        {endingLetters.map((letter) => (
-          <Pressable
-            key={letter}
-            style={[styles.chip, selectedLetter === letter && styles.chipSelected]}
-            onPress={() => pickLetter(letter)}
-          >
-            <Text style={selectedLetter === letter ? styles.chipTextSelected : styles.chipText}>
-              {letter}
-            </Text>
-          </Pressable>
-        ))}
+    <ScreenContainer scroll contentContainerStyle={styles.page}>
+      <View style={styles.card}>
+        <Text style={styles.lead}>Browse Ge'ez verbs by their last letter.</Text>
+        <View style={styles.letters}>
+          {endingLetters.map((letter) => {
+            const on = selectedLetter === letter;
+            return (
+              <Pressable
+                key={letter}
+                onPress={() => pickLetter(letter)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={`Words ending with ${letter}`}
+                style={({ hovered }) => [styles.letter, hovered && !on && styles.hover, on && styles.letterOn]}
+              >
+                <Text style={[styles.letterText, on && styles.letterTextOn]}>{letter}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
-      {selectedLetter && (
-        <Card style={styles.fullWidth}>
-          <View style={styles.resultsHeader}>
-            <Text style={styles.cardTitle}>
-              Words ending with "{selectedLetter}"
-              {!wordsLoading && endingWords.length ? <Text style={styles.count}>  {endingWords.length}</Text> : null}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      {selectedLetter ? (
+        <View style={styles.card}>
+          <View style={styles.listHead}>
+            <Text style={styles.listTitle}>
+              Ending in <Text style={styles.listLetter}>{selectedLetter}</Text>
+              {!wordsLoading && endingWords.length ? <Text style={styles.count}>  ·  {endingWords.length} words</Text> : null}
             </Text>
             {selectedWord && !wordsLoading ? (
               <Pressable
                 onPress={() => setShowAll(!showAll)}
                 accessibilityRole="button"
                 hitSlop={6}
-                style={({ hovered }) => [styles.toggle, hovered && styles.toggleHover]}
+                style={({ hovered }) => [styles.toggle, hovered && styles.hover]}
               >
                 <Text style={styles.toggleText}>{collapsed ? "Show all" : "Hide list"}</Text>
                 <Icon name={collapsed ? "chevron-down" : "chevron-up"} size={16} color={colors.primaryDark} />
@@ -89,185 +78,97 @@ export default function VerbRoots() {
           </View>
 
           {wordsLoading ? (
-            <ActivityIndicator color={colors.primary} style={styles.spacingTop} />
+            <ActivityIndicator color={colors.primary} />
           ) : endingWords.length === 0 ? (
             <EmptyState message={`No words found ending with "${selectedLetter}".`} icon="search-outline" />
           ) : collapsed ? (
-            <Pressable onPress={() => setShowAll(true)} style={styles.chipRowLeft} accessibilityLabel="Show all words">
-              <View style={[styles.chipMuted, styles.chipSelected]}>
-                <Text style={styles.chipTextSelected}>{selectedWord}</Text>
+            <Pressable onPress={() => setShowAll(true)} style={styles.words} accessibilityLabel="Show all words">
+              <View style={[styles.wordChip, styles.wordChipOn]}>
+                <Text style={[styles.wordChipText, styles.wordChipTextOn]}>{selectedWord}</Text>
               </View>
             </Pressable>
           ) : (
-            <View style={styles.chipRow}>
-              {endingWords.map((word) => (
-                <Pressable
-                  key={word}
-                  style={[styles.chipMuted, selectedWord === word && styles.chipSelected]}
-                  onPress={() => pickWord(word)}
-                >
-                  <Text style={selectedWord === word ? styles.chipTextSelected : styles.chipText}>
-                    {word}
-                  </Text>
-                </Pressable>
-              ))}
+            <View style={styles.words}>
+              {endingWords.map((word) => {
+                const on = selectedWord === word;
+                return (
+                  <Pressable
+                    key={word}
+                    onPress={() => pickWord(word)}
+                    style={({ hovered }) => [styles.wordChip, hovered && !on && styles.hover, on && styles.wordChipOn]}
+                  >
+                    <Text style={[styles.wordChipText, on && styles.wordChipTextOn]}>{word}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
           )}
-        </Card>
+        </View>
+      ) : (
+        <EmptyState message="Pick a letter to see the verbs that end with it." icon="search-outline" />
       )}
 
-      {translationsLoading && <ActivityIndicator color={colors.primary} style={styles.spacingTop} />}
+      {translationsLoading ? <ActivityIndicator color={colors.primary} /> : null}
 
-      {groupedTranslations.length > 0 && (
-        <Card style={styles.fullWidth}>
-          <View style={styles.resultsHeader}>
-            <Text style={styles.cardTitle}>{selectedWord} -- Translations</Text>
-            {wordId ? (
-              <Button
-                variant={saved ? "danger" : "secondary"}
-                size="sm"
-                pill
-                onPress={() => (saved ? progress.unsave(wordId) : progress.save([wordId]))}
-              >
-                {saved ? "In ክለሳ ✓" : "Save to ክለሳ"}
-              </Button>
-            ) : null}
-          </View>
-          {groupedTranslations.map(([language, words]) => (
-            <View key={language} style={styles.resultRow}>
-              <Text style={styles.resultLanguage}>{language}</Text>
-              <Text style={styles.resultWords}>
-                {words.join(language === "ኢንግልሽ - English" ? ", " : "፣")}
-              </Text>
-            </View>
-          ))}
-        </Card>
-      )}
-
-      {sewasewExamples.length > 0 && (
-        <Card style={styles.fullWidth}>
-          <Text style={styles.cardTitle}>Sewasew:</Text>
-          {sewasewExamples.map((example) => (
-            <Text key={example.sewasew_id} style={styles.sewasewItem}>
-              • {example.sewasew_text}
-            </Text>
-          ))}
-        </Card>
-      )}
+      {selectedWord && !translationsLoading
+        ? entries.map((entry, i) => (
+            <WordCard
+              key={entry.geezId ?? i}
+              word={entry.geez ?? selectedWord}
+              geezId={entry.geezId}
+              meanings={entry.meanings}
+              examples={sewasewExamples.filter((x) => x.word_id === entry.geezId)}
+              languageMap={languageMap}
+            />
+          ))
+        : null}
     </ScreenContainer>
   );
 }
 
+const card = {
+  width: "100%",
+  backgroundColor: colors.surface,
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: radii.lg + 4,
+  padding: spacing.lg + 4,
+};
+
 const styles = StyleSheet.create({
-  container: {
+  page: { gap: spacing.lg },
+  card: { ...card, gap: spacing.md },
+  lead: { ...typography.caption, color: colors.textSecondary },
+  error: { ...typography.body, color: colors.danger },
+  letters: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: spacing.sm },
+  letter: {
+    width: 46,
+    height: 46,
     alignItems: "center",
-    gap: spacing.md,
-  },
-  fullWidth: {
-    width: "100%",
-    maxWidth: 640,
-    gap: spacing.sm,
-  },
-  subtitle: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    textAlign: "center",
-  },
-  error: {
-    ...typography.body,
-    color: colors.danger,
-    textAlign: "center",
-  },
-  spacingTop: {
-    marginTop: spacing.sm,
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "center",
-    gap: spacing.sm,
-    width: "100%",
-    maxWidth: 640,
-  },
-  chip: {
-    paddingVertical: 6,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.sm,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.md,
+    borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.background,
   },
-  chipRowLeft: {
-    flexDirection: "row",
-  },
-  count: {
-    fontFamily: fontFamily.latinRegular,
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  toggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.sm,
-  },
-  toggleHover: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  toggleText: {
-    ...typography.label,
-    color: colors.primaryDark,
-  },
-  chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipMuted: {
-    paddingVertical: 6,
+  hover: { backgroundColor: colors.surfaceMuted },
+  letterOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  letterText: { fontFamily: fontFamily.ethiopicBold, fontSize: 19, lineHeight: 26, color: colors.textPrimary },
+  letterTextOn: { color: colors.onPrimary },
+  listHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, flexWrap: "wrap" },
+  listTitle: { fontFamily: fontFamily.latinBold, fontSize: 17, lineHeight: 26, color: colors.textPrimary },
+  listLetter: { fontFamily: fontFamily.ethiopicBold, fontSize: 20, color: colors.primaryDark },
+  count: { fontFamily: fontFamily.latinRegular, fontSize: 14, color: colors.textSecondary },
+  toggle: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 4, paddingHorizontal: spacing.sm, borderRadius: radii.sm },
+  toggleText: { ...typography.label, color: colors.primaryDark },
+  words: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  wordChip: {
+    paddingVertical: 7,
     paddingHorizontal: spacing.md,
-    borderRadius: radii.sm,
+    borderRadius: radii.pill,
     backgroundColor: colors.surfaceMuted,
   },
-  chipText: {
-    color: colors.textSecondary,
-    fontFamily: fontFamily.ethiopicRegular,
-  },
-  chipTextSelected: {
-    color: colors.white,
-    fontFamily: fontFamily.ethiopicRegular,
-  },
-  resultsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  cardTitle: {
-    ...typography.h2,
-    fontSize: 18,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  resultRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  resultLanguage: {
-    ...typography.bodySemiBold,
-    color: colors.textPrimary,
-    minWidth: 120,
-  },
-  resultWords: {
-    flex: 1,
-    fontFamily: fontFamily.ethiopicRegular,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  sewasewItem: {
-    fontFamily: fontFamily.ethiopicRegular,
-    fontSize: 16,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
+  wordChipOn: { backgroundColor: colors.primary },
+  wordChipText: { fontFamily: fontFamily.ethiopicRegular, fontSize: 16, lineHeight: 22, color: colors.textPrimary },
+  wordChipTextOn: { fontFamily: fontFamily.ethiopicBold, color: colors.onPrimary },
 });
