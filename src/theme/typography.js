@@ -2,8 +2,8 @@ export const fontFamily = {
   latinRegular: "Inter_400Regular",
   latinSemiBold: "Inter_600SemiBold",
   latinBold: "Inter_700Bold",
-  ethiopicRegular: "NotoSansEthiopic_400Regular",
-  ethiopicBold: "NotoSansEthiopic_700Bold",
+  ethiopicRegular: "Menbere_400Regular",
+  ethiopicBold: "Menbere_700Bold",
 };
 
 export const typography = {
