@@ -90,10 +90,14 @@ export default function Zema() {
   const [error, setError] = useState(null);
   const [slow, setSlow] = useState(false);
   const [dragging, setDragging] = useState(null);
+  // Where the playhead is being dragged to; shown instead of the player's time until the seek lands.
+  const [scrub, setScrub] = useState(null);
   const seeking = useRef(false);
   const objectUrl = useRef(null);
 
   const player = useAudioPlayer(track?.uri ?? null, { updateInterval: POLL_MS });
+  const playerRef = useRef(player);
+  playerRef.current = player;
   const status = useAudioPlayerStatus(player);
 
   const duration = Number.isFinite(status?.duration) && status.duration > 0 ? status.duration : 0;
@@ -101,6 +105,7 @@ export default function Zema() {
   const end = endRaw == null ? duration : Math.min(endRaw, duration);
   const start = Math.min(Math.max(0, startRaw), Math.max(0, end - MIN_SPAN));
   const ready = duration > 0;
+  const shown = scrub ?? position;
   // The player reports a real decode failure; the timeout only covers a silent stall.
   const loadError =
     status?.error ?? (track && !ready && slow ? "Still no audio after 8 seconds." : null);
@@ -174,9 +179,9 @@ export default function Zema() {
 
   // A drag reads the geometry captured when the grab began, so the responders can be built
   // once without going stale as the edges move.
-  const [geometry] = useState(() => ({ start: 0, end: 0, duration: 0, barWidth: 0 }));
+  const [geometry] = useState(() => ({ start: 0, end: 0, duration: 0, barWidth: 0, position: 0 }));
   useEffect(() => {
-    Object.assign(geometry, { start, end, duration, barWidth });
+    Object.assign(geometry, { start, end, duration, barWidth, position });
   });
 
   const handles = useMemo(() => {
@@ -188,34 +193,50 @@ export default function Zema() {
         onMoveShouldSetPanResponder: () => true,
         onPanResponderTerminationRequest: () => false,
         onPanResponderGrant: () => {
-          const { start: s, end: e, duration: d, barWidth: w } = geometry;
+          const { start: s, end: e, duration: d, barWidth: w, position: p } = geometry;
           if (!d || !w) return;
-          grab = {
-            from: edge === "start" ? s : e,
-            min: edge === "start" ? 0 : s + MIN_SPAN,
-            max: edge === "start" ? e - MIN_SPAN : d,
-            perPixel: d / w,
-          };
+          // The playhead moves only inside the range; the range itself stays put.
+          grab =
+            edge === "playhead"
+              ? { from: Math.min(Math.max(p, s), e), min: s, max: e, perPixel: d / w }
+              : {
+                  from: edge === "start" ? s : e,
+                  min: edge === "start" ? 0 : s + MIN_SPAN,
+                  max: edge === "start" ? e - MIN_SPAN : d,
+                  perPixel: d / w,
+                };
+          grab.at = grab.from;
+          if (edge === "playhead") setScrub(grab.from);
           setDragging(edge);
         },
         onPanResponderMove: (_, gesture) => {
           if (!grab) return;
           const next = Math.min(Math.max(grab.from + gesture.dx * grab.perPixel, grab.min), grab.max);
-          if (edge === "start") setStartRaw(next);
+          grab.at = next;
+          if (edge === "playhead") setScrub(next);
+          else if (edge === "start") setStartRaw(next);
           else setEndRaw(next);
         },
-        onPanResponderRelease: () => {
-          grab = null;
-          setDragging(null);
-        },
-        onPanResponderTerminate: () => {
-          grab = null;
-          setDragging(null);
-        },
+        onPanResponderRelease: () => finish(),
+        onPanResponderTerminate: () => finish(),
       });
+
+      function finish() {
+        // Seek once on release; the playhead holds the dropped spot until the player catches up.
+        if (grab && edge === "playhead") {
+          const to = grab.at;
+          seeking.current = true;
+          Promise.resolve(playerRef.current?.seekTo(to)).finally(() => {
+            seeking.current = false;
+            setScrub(null);
+          });
+        }
+        grab = null;
+        setDragging(null);
+      }
     };
 
-    return { start: make("start"), end: make("end") };
+    return { start: make("start"), end: make("end"), playhead: make("playhead") };
   }, [geometry]);
 
   const nudgeStart = (delta) => setStartRaw(Math.min(Math.max(0, start + delta), end - MIN_SPAN));
@@ -258,18 +279,30 @@ export default function Zema() {
             </View>
 
             <Text style={styles.clock}>
-              {formatTime(position)}
+              {formatTime(shown)}
               <Text style={styles.clockTotal}> / {formatTime(duration)}</Text>
             </Text>
 
             <View style={styles.barWrap} onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}>
               <Pressable
-                onPress={(e) => barWidth > 0 && seek((e.nativeEvent.locationX / barWidth) * duration)}
+                onPress={(e) => {
+                  if (barWidth <= 0) return;
+                  const at = (e.nativeEvent.locationX / barWidth) * duration;
+                  seek(looping ? Math.min(Math.max(at, start), end) : at);
+                }}
                 style={styles.bar}
               >
                 <View style={[styles.region, { left: pct(start), width: pct(end - start) }]} />
-                <View style={[styles.playhead, { left: pct(position) }]} />
+                <View style={[styles.playhead, { left: pct(shown) }]} />
               </Pressable>
+
+              <View
+                {...handles.playhead.panHandlers}
+                accessibilityLabel="Drag to move the playhead within the range"
+                style={[styles.scrubHandle, { left: pct(shown) }, dragging === "playhead" && styles.handleOn]}
+              >
+                <View style={[styles.scrubKnob, dragging === "playhead" && styles.scrubKnobOn]} />
+              </View>
 
               <View
                 {...handles.start.panHandlers}
@@ -378,7 +411,8 @@ const styles = StyleSheet.create({
   clock: { fontFamily: fontFamily.latinBold, fontSize: 30, color: colors.textPrimary, textAlign: "center" },
   clockTotal: { fontFamily: fontFamily.latinRegular, fontSize: 16, color: colors.textMuted },
 
-  barWrap: { justifyContent: "center" },
+  // The top lane holds the playhead knob, clear of the range handles inside the bar.
+  barWrap: { justifyContent: "center", paddingTop: 26 },
   bar: {
     height: 56,
     borderRadius: radii.sm,
@@ -392,7 +426,7 @@ const styles = StyleSheet.create({
   playhead: { position: "absolute", top: 0, bottom: 0, width: 2, backgroundColor: colors.accent },
   handle: {
     position: "absolute",
-    top: -6,
+    top: 20,
     bottom: -6,
     width: 34,
     marginLeft: -17,
@@ -410,6 +444,26 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   gripOn: { backgroundColor: colors.accent, width: 16 },
+  scrubHandle: {
+    position: "absolute",
+    top: 0,
+    width: 40,
+    height: 28,
+    marginLeft: -20,
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "grab",
+  },
+  scrubKnob: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.accent,
+    borderWidth: 2,
+    borderColor: colors.onPrimary,
+    ...shadows.card,
+  },
+  scrubKnobOn: { width: 22, height: 22, borderRadius: 11 },
 
   transport: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   playButton: {
