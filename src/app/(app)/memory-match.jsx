@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { CrossMenuIcon } from "../../components/ui/CrossMenuIcon";
-import { DifficultyPicker, GameFrame, LanguagePicker, StartCard } from "../../components/games/GameFrame";
+import { DifficultyPicker, FocusPicker, GameFrame, LanguagePicker, StartCard } from "../../components/games/GameFrame";
 import { GameResults } from "../../components/games/GameResults";
 import { scriptFont, scriptFontBold } from "../../components/verbQuiz/shared";
 import { useVerbGame } from "../../hooks/useVerbGame";
-import { MEMORY_PAIRS, closeMisses, flipCard, memoryDeck, memoryDone, memoryScore, newMemory, verbsFor } from "../../lib/verbGames";
+import { MEMORY_PAIRS, closeMisses, flipCard, memoryDeck, memoryDone, memoryScore, newMemory } from "../../lib/verbGames";
 import { colors, radii, spacing, typography } from "../../theme";
 
 const MISS_MS = 850;
@@ -63,7 +63,7 @@ export default function MemoryMatch() {
   useEffect(() => () => clearInterval(timer.current), []);
 
   const start = () => {
-    const entries = verbsFor(game.bank, game.stats, game.lang, 60);
+    const entries = game.words(60, { min: MEMORY_PAIRS[difficulty] + 4 });
     setMemory(newMemory(memoryDeck(entries, game.lang, MEMORY_PAIRS[difficulty])));
     setSeconds(0);
     setResult(null);
@@ -161,6 +161,7 @@ export default function MemoryMatch() {
         onStart={start}
       >
         <LanguagePicker lang={game.lang} onChange={game.setLang} />
+        <FocusPicker game={game} />
         <DifficultyPicker value={difficulty} onChange={setDifficulty} />
       </StartCard>
     );

@@ -2,7 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
-import { useDueCount } from "../hooks/useDueCount";
+import { useBadges } from "../hooks/useDueCount";
 import { NAV_GROUPS, sectionOf } from "../lib/navigation";
 import { colors, fontFamily, radii, spacing, typography } from "../theme";
 import { ThemeSwitch } from "./nav/ThemeSwitch";
@@ -37,7 +37,7 @@ export function DueBadge({ count, suffix = "" }) {
   );
 }
 
-function NavItem({ item, active, due, onPress }) {
+function NavItem({ item, active, badges, onPress }) {
   return (
     <Pressable
       onPress={onPress}
@@ -48,8 +48,8 @@ function NavItem({ item, active, due, onPress }) {
       <Icon name={item.icon} size={18} color={colors.primaryDark} />
       <Text style={styles.itemTitle}>{item.title}</Text>
       <View style={styles.itemEnd}>
-        {item.badge === "due" && due ? (
-          <DueBadge count={due} />
+        {badges[item.badge] ? (
+          <DueBadge count={badges[item.badge]} />
         ) : (
           <Text style={[styles.itemEnglish, active && styles.itemEnglishActive]}>{item.english}</Text>
         )}
@@ -62,7 +62,7 @@ function NavItem({ item, active, due, onPress }) {
 // highlighted, appearance and account at the bottom.
 export function DrawerContent({ state, navigation }) {
   const { user, profile, isAdmin } = useAuth();
-  const due = useDueCount();
+  const badges = useBadges();
   const current = sectionOf(state.routes[state.index]?.name);
 
   const go = (href) => {
@@ -78,7 +78,7 @@ export function DrawerContent({ state, navigation }) {
           <View key={group.label} style={styles.group}>
             <Text style={styles.groupLabel}>{group.label}</Text>
             {group.items.map((item) => (
-              <NavItem key={item.route} item={item} active={current === item.route} due={due} onPress={() => go(item.href)} />
+              <NavItem key={item.route} item={item} active={current === item.route} badges={badges} onPress={() => go(item.href)} />
             ))}
           </View>
         ))}

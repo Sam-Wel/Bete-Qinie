@@ -52,7 +52,8 @@ export function familyOf(word) {
 
 export const PART_SIZE = 20;
 export const KNOWN_BOX = 3;
-const MAX_BOX = 5;
+export const MASTERED_BOX = 5; // passed the 21-day review
+const MAX_BOX = 6;
 const OPTION_COUNT = 4;
 
 // ---------------------------------------------------------------------
@@ -114,14 +115,31 @@ export function wordsInScope(bank, scope, lang) {
 // ---------------------------------------------------------------------
 
 // ---------------------------------------------------------------------
-// Review schedule (ክለሳ). Every answer, from any game or the quiz, moves the
-// same record: a right answer moves the word up a box and puts its next
-// review further off; a wrong one drops it to box 1, due tomorrow. Dates are
+// Study schedule. A word goes new → learning → reviewing → mastered:
+//
+// - new: never put into a daily set. Answering it in a game is practice only
+//   and saves nothing, so playing can't fill ክለሳ.
+// - learning (box 0, `study.intro` set): one of a day's new words. It is
+//   learned once answered right LEARN_RIGHT times in LEARN_KINDS different
+//   kinds of question (games, directions), the last one right; then it is due
+//   tomorrow in box 1. A miss takes one right answer back.
+// - reviewing (box 1–4) and mastered (box 5+): a right answer on a due word
+//   moves it up one box (at most once a day); a miss moves it down one box,
+//   due tomorrow (at most one step a day). A miss in a timed game doesn't move
+//   a mastered word; it only brings it back within a week.
+//
+// Words saved by hand outside a daily set start in ክለሳ at box 0. Dates are
 // whole days, so a word due "tomorrow" is ready from tomorrow morning.
 // ---------------------------------------------------------------------
 
-export const REVIEW_DAYS = [1, 1, 3, 7, 21, 60]; // by box
+export const REVIEW_DAYS = [1, 1, 3, 7, 21, 60, 120]; // by box
 export const REVIEW_SESSION = 20;
+export const LEARN_RIGHT = 3;
+export const LEARN_KINDS = 2;
+export const SKIP_BOX = 4; // "I already know this": straight to the 21-day review
+
+const TIMED = ["verb_shooter", "verb_lightning", "verb_boss"];
+export const isTimedKind = (kind) => TIMED.some((t) => (kind || "").startsWith(t));
 
 export const startOfDay = (time) => {
   const d = new Date(time);
@@ -139,21 +157,89 @@ export const addDays = (time, days) => {
 
 const dueAfter = (box, correct, now) => addDays(now, correct ? REVIEW_DAYS[Math.min(box, MAX_BOX)] : 1);
 
-export function applyAnswer(stat, correct, now = Date.now()) {
-  const s = stat || { seen: 0, correct: 0, streak: 0, box: 0 };
-  const box = correct ? Math.min(MAX_BOX, s.box + 1) : 1;
-  return {
+export const EMPTY_STAT = {
+  seen: 0,
+  correct: 0,
+  streak: 0,
+  box: 0,
+  lastCorrect: null,
+  lastSeen: null,
+  lastWrong: null,
+  due: null,
+  saved: false,
+  study: null,
+};
+
+export const isLearning = (stat) => Boolean(stat?.study?.intro) && stat.box === 0;
+const isScheduled = (stat) => Boolean(stat) && !isLearning(stat) && (stat.box >= 1 || stat.saved);
+
+// One answer. `kind` names what asked it (a game type, "review", "learn:toGeez"…).
+// Returns the same object when nothing should be saved (practice on a new word).
+export function applyAnswer(stat, correct, now = Date.now(), { kind = "quiz" } = {}) {
+  const learning = isLearning(stat);
+  if (!learning && !isScheduled(stat)) return stat;
+
+  const s = { ...EMPTY_STAT, ...stat };
+  const today = startOfDay(now);
+  const study = s.study || {};
+  const base = {
+    ...s,
     seen: s.seen + 1,
     correct: s.correct + (correct ? 1 : 0),
     streak: correct ? s.streak + 1 : 0,
-    box,
     lastCorrect: correct,
     lastSeen: now,
     lastWrong: correct ? s.lastWrong ?? null : now,
-    due: dueAfter(box, correct, now),
     saved: Boolean(s.saved),
   };
+
+  if (learning) {
+    if (!correct) return { ...base, due: today, study: { ...study, right: Math.max(0, (study.right || 0) - 1) } };
+    const right = (study.right || 0) + 1;
+    const kinds = [...new Set([...(study.kinds || []), kind])];
+    if (right >= LEARN_RIGHT && kinds.length >= LEARN_KINDS) {
+      return { ...base, box: 1, due: addDays(now, REVIEW_DAYS[1]), study: { intro: study.intro, learned: today, moved: today } };
+    }
+    return { ...base, due: today, study: { ...study, right, kinds } };
+  }
+
+  if (correct) {
+    const dueNow = s.due == null || s.due <= now;
+    if (!dueNow || study.moved === today) return base;
+    const box = Math.min(MAX_BOX, s.box + 1);
+    return { ...base, box, due: addDays(now, REVIEW_DAYS[box]), study: { ...study, moved: today } };
+  }
+
+  if (isTimedKind(kind) && s.box >= MASTERED_BOX) return { ...base, due: Math.min(s.due ?? Infinity, addDays(now, 7)) };
+  if (study.dropped === today) return { ...base, due: addDays(now, 1) };
+  return { ...base, box: Math.max(1, s.box - 1), due: addDays(now, 1), study: { ...study, dropped: today } };
 }
+
+// Into today's set: learning from now.
+export function introduce(stat, now = Date.now()) {
+  const today = startOfDay(now);
+  return { ...EMPTY_STAT, ...stat, box: 0, due: today, study: { intro: today, right: 0, kinds: [] } };
+}
+
+// "I already know this", proved by one hard question: skips the learning days.
+export function skipKnown(stat, now = Date.now()) {
+  const today = startOfDay(now);
+  const s = { ...EMPTY_STAT, ...stat };
+  return {
+    ...s,
+    seen: s.seen + 1,
+    correct: s.correct + 1,
+    streak: s.streak + 1,
+    lastCorrect: true,
+    lastSeen: now,
+    box: SKIP_BOX,
+    due: addDays(now, REVIEW_DAYS[SKIP_BOX]),
+    study: { intro: s.study?.intro ?? today, learned: today, skipped: today, moved: today },
+  };
+}
+
+// Back to new, as if never studied (the one-time clean-up of ክለሳ).
+export const resetStat = () => ({ ...EMPTY_STAT });
 
 // Records kept before review dates existed get one from their last answer.
 export function withDue(stat) {
@@ -163,14 +249,20 @@ export function withDue(stat) {
 
 // Added to ክለሳ by hand: in today's review unless it is already scheduled.
 export function markSaved(stat, now = Date.now()) {
-  const s = stat || { seen: 0, correct: 0, streak: 0, box: 0, lastCorrect: null, lastSeen: null, lastWrong: null };
+  const s = { ...EMPTY_STAT, ...stat };
   return { ...s, saved: true, due: s.due ?? now };
 }
 
 export const markUnsaved = (stat) => (stat ? { ...stat, saved: false } : stat);
 
-export const inReview = (stat) => Boolean(stat && (stat.saved || stat.seen > 0) && stat.due != null);
+export const inReview = (stat) => isScheduled(stat) && stat.due != null;
 export const isDue = (stat, now = Date.now()) => inReview(stat) && stat.due <= now;
+
+// Today's set: still learning (begun today or carried over), or learned today.
+export function inTodaySet(stat, now = Date.now()) {
+  if (!stat?.study?.intro) return false;
+  return isLearning(stat) || stat.study.learned === startOfDay(now);
+}
 
 // What ክለሳ asks today: words missed last time first, then the most overdue,
 // at most `limit` at a time so a long game can't bury the learner.
@@ -195,16 +287,23 @@ export function reviewSummary(stats, now = Date.now()) {
   return { due, week, saved };
 }
 
-// new: never asked. shaky: the last answer was wrong. learning: right lately but
-// not yet often enough. known: right KNOWN_BOX times without a slip.
+// new: not studied yet. learning: in a daily set, or in its first reviews.
+// shaky: the last answer was wrong. known: box KNOWN_BOX or more. mastered:
+// passed the 21-day review.
 export function stateOf(stat) {
-  if (!stat || !stat.seen) return "new";
+  if (!stat) return "new";
+  if (isLearning(stat)) return "learning";
+  if (!stat.seen || (!stat.box && !stat.saved)) return "new";
+  if (stat.box >= MASTERED_BOX) return "mastered";
   if (stat.lastCorrect === false) return "shaky";
   if (stat.box >= KNOWN_BOX) return "known";
   return "learning";
 }
 
+export const isKnownState = (state) => state === "known" || state === "mastered";
+
 export const STATES = [
+  { key: "mastered", label: "Mastered" },
   { key: "known", label: "Known" },
   { key: "learning", label: "Learning" },
   { key: "shaky", label: "Missed last time" },
@@ -216,6 +315,8 @@ export const STATES = [
 // ---------------------------------------------------------------------
 
 export const FILTERS = [
+  { key: "today", label: "Today's words", hint: "Only the words you're learning today (ዛሬ)." },
+  { key: "studying", label: "Today's + ክለሳ", hint: "Today's words and the ones due for review." },
   { key: "smart", label: "Smart mix", hint: "Words that are due (misses first), then new ones. Words not due yet wait their turn." },
   { key: "all", label: "All words", hint: "Every word in what you picked, in random order." },
   { key: "missed", label: "Words I've missed", hint: "Words you've answered wrong and don't know yet." },
@@ -235,12 +336,16 @@ export function shuffle(list, random = Math.random) {
 export function filterPool(pool, stats, filter) {
   const state = (entry) => stateOf(stats[entry.id]);
   switch (filter) {
+    case "today":
+      return pool.filter((e) => inTodaySet(stats[e.id]));
+    case "studying":
+      return pool.filter((e) => inTodaySet(stats[e.id]) || isDue(stats[e.id]));
     case "missed":
-      return pool.filter((e) => stats[e.id] && stats[e.id].correct < stats[e.id].seen && state(e) !== "known");
+      return pool.filter((e) => stats[e.id] && stats[e.id].correct < stats[e.id].seen && !isKnownState(state(e)));
     case "unseen":
       return pool.filter((e) => state(e) === "new");
     case "unknown":
-      return pool.filter((e) => state(e) !== "known");
+      return pool.filter((e) => !isKnownState(state(e)));
     default:
       return pool;
   }
@@ -249,6 +354,7 @@ export function filterPool(pool, stats, filter) {
 // How ready a word is to be asked: 0 due now (or missed last time), 1 never
 // seen, 2 not due yet. Records from before review dates count from their last answer.
 export function freshness(stat, now = Date.now()) {
+  if (isLearning(stat)) return 0;
   const state = stateOf(stat);
   if (state === "new") return 1;
   if (state === "shaky" || isDue(withDue(stat), now)) return 0;
@@ -282,11 +388,15 @@ function smartPick(pool, stats, count, random, now) {
   return shuffle(picked.slice(0, count), random);
 }
 
-// Same order for games with their own small word lists: due, then new, then
-// the rest, shuffled within each.
-export function freshFirst(items, stats, idOf = (x) => x.id, random = Math.random, now = Date.now()) {
-  const tiers = [[], [], []];
-  for (const item of items) tiers[freshness(stats[idOf(item)], now)].push(item);
+// Same order for games with their own small word lists: `prefer` (today's
+// words, when the game is focused on them), then due, then new, then the
+// rest, shuffled within each.
+export function freshFirst(items, stats, idOf = (x) => x.id, random = Math.random, now = Date.now(), prefer = null) {
+  const tiers = [[], [], [], []];
+  for (const item of items) {
+    const id = idOf(item);
+    tiers[prefer?.has(id) ? 0 : freshness(stats[id], now) + 1].push(item);
+  }
   return tiers.flatMap((tier) => shuffle(tier, random));
 }
 
@@ -316,7 +426,12 @@ function distractors(entry, lang, direction, bank, random, near = true) {
   const clash = (other) => other.id === entry.id || other.word === entry.word || other.tr[lang].some((m) => meanings.has(m));
   const candidates = (list) => shuffle(list.filter((o) => hasLanguage(o, lang) && !clash(o)), random);
 
-  const ordered = near ? [...candidates(bank.byFamily[entry.family]), ...candidates(bank.words)] : candidates(bank.words);
+  // Same last letter first, then the rest of its family (ሀ·ሐ·ኃ·ኀ…), then anything.
+  const last = (word) => [...word].pop();
+  const family = candidates(bank.byFamily[entry.family]);
+  const ordered = near
+    ? [...family.filter((o) => last(o.word) === last(entry.word)), ...family, ...candidates(bank.words)]
+    : candidates(bank.words);
   const texts = [];
   const answerText = direction === "toGeez" ? entry.word : null;
   for (const other of ordered) {
@@ -329,9 +444,12 @@ function distractors(entry, lang, direction, bank, random, near = true) {
 }
 
 // near: wrong options from the same ending family first (look-alikes, harder);
-// false draws them from the whole dictionary (easier).
+// false draws them from the whole dictionary (easier). Meaning → ግዕዝ always
+// uses look-alikes: with other endings among the options, a learner studying
+// one ending would spot the answer by its last letter alone.
 export function buildQuestion(entry, lang, direction, bank, random = Math.random, { near = true } = {}) {
   const dir = direction === "mixed" ? (random() < 0.5 ? "toMeaning" : "toGeez") : direction;
+  if (dir === "toGeez") near = true;
   const answer =
     dir === "toGeez" ? entry.word : entry.ask[lang][Math.floor(random() * entry.ask[lang].length)];
   const options = shuffle([answer, ...distractors(entry, lang, dir, bank, random, near)], random);
@@ -396,7 +514,7 @@ export function overview(bank, stats, runs, now = Date.now()) {
   for (const entry of bank.words) {
     const state = stateOf(stats[entry.id]);
     if (state !== "new") seen += 1;
-    if (state === "known") known += 1;
+    if (isKnownState(state)) known += 1;
   }
   return {
     quizzes: runs.length,
@@ -410,7 +528,7 @@ export function overview(bank, stats, runs, now = Date.now()) {
 }
 
 export function familyProgress(bank, stats, familyId) {
-  const counts = { known: 0, learning: 0, shaky: 0, new: 0 };
+  const counts = { mastered: 0, known: 0, learning: 0, shaky: 0, new: 0 };
   let seen = 0;
   let right = 0;
   for (const entry of bank.byFamily[familyId] || []) {
@@ -424,13 +542,13 @@ export function familyProgress(bank, stats, familyId) {
 
 export function partProgress(stats, part) {
   if (!part.length) return 0;
-  return part.filter((e) => stateOf(stats[e.id]) === "known").length / part.length;
+  return part.filter((e) => isKnownState(stateOf(stats[e.id]))).length / part.length;
 }
 
 export function hardestWords(bank, stats, limit = 10) {
   return Object.entries(stats)
     .map(([id, s]) => ({ entry: bank.byId[id], stat: s, wrong: s.seen - s.correct }))
-    .filter((row) => row.entry && row.wrong > 0 && stateOf(row.stat) !== "known")
+    .filter((row) => row.entry && row.wrong > 0 && !isKnownState(stateOf(row.stat)))
     .sort((a, b) => b.wrong - a.wrong || a.stat.correct / a.stat.seen - b.stat.correct / b.stat.seen)
     .slice(0, limit);
 }
@@ -456,6 +574,7 @@ export function mergeStats(base, extra) {
       lastWrong: Math.max(a.lastWrong ?? 0, b.lastWrong ?? 0) || null,
       due: newer.due ?? a.due ?? b.due ?? null,
       saved: Boolean(a.saved || b.saved),
+      study: newer.study ?? a.study ?? b.study ?? null,
     };
   }
   return out;
@@ -473,10 +592,12 @@ export function statFromRow(row) {
     lastWrong: row.last_wrong_at ? Date.parse(row.last_wrong_at) : null,
     due: row.due_at ? Date.parse(row.due_at) : null,
     saved: Boolean(row.saved),
+    study: row.study ?? null,
   };
 }
 
-export function rowFromStat(userId, wordId, s) {
+// withStudy: false until supabase/daily_study.sql has added the column.
+export function rowFromStat(userId, wordId, s, { withStudy = true } = {}) {
   return {
     user_id: userId,
     word_id: Number(wordId),
@@ -489,5 +610,6 @@ export function rowFromStat(userId, wordId, s) {
     last_wrong_at: s.lastWrong ? new Date(s.lastWrong).toISOString() : null,
     due_at: s.due ? new Date(s.due).toISOString() : null,
     saved: Boolean(s.saved),
+    ...(withStudy ? { study: s.study ?? null } : {}),
   };
 }

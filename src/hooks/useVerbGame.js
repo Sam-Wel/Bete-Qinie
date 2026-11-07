@@ -1,27 +1,28 @@
-import { useCallback, useRef } from "react";
-import { useVerbBank } from "./useVerbBank";
+import { useCallback, useMemo, useRef } from "react";
 import { useGameScores } from "./useGameScores";
-import { useGameLanguage } from "./useGameLanguage";
-import { useWordProgress } from "../context/WordProgressContext";
+import { useToday } from "./useToday";
+import { focusWords, inFocus } from "../lib/daily";
+import { setGameLanguage } from "./useGameLanguage";
 
 // Everything a verb game needs, in one place: the dictionary's verbs, the
 // shared meaning language, per-word progress (the same record ግሲ ፈተና, ቀስት,
-// ቃል and ክለሳ use) and best/last scores. A game only supplies its rules.
+// ቃል and ክለሳ use), today's study focus and best/last scores. A game only
+// supplies its rules.
 export function useVerbGame(gameType) {
-  const { bank, loading, error } = useVerbBank();
-  const [lang, setLang] = useGameLanguage();
-  const progress = useWordProgress();
+  const today = useToday();
+  const { bank, lang, plan, setPlan, progress } = today;
   const scores = useGameScores(gameType);
   const missed = useRef(new Set());
+  const focus = plan.focus;
 
-  // One answer about one verb: moves its review schedule and remembers misses
+  // One answer about one verb: moves its study record and remembers misses
   // for the end-of-game list.
   const record = useCallback(
     (wordId, correct) => {
-      progress.recordAnswer(wordId, correct);
+      progress.recordAnswer(wordId, correct, { kind: gameType });
       if (!correct) missed.current.add(wordId);
     },
-    [progress]
+    [progress, gameType]
   );
 
   const start = useCallback(() => {
@@ -32,18 +33,34 @@ export function useVerbGame(gameType) {
   const finish = useCallback(
     async ({ score, rounds, state = {} }) => {
       progress.flush();
-      return scores.saveScore({ score, rounds, state: { ...state, lang, missed: [...missed.current] } });
+      return scores.saveScore({ score, rounds, state: { ...state, lang, focus, missed: [...missed.current] } });
     },
-    [progress, scores, lang]
+    [progress, scores, lang, focus]
   );
+
+  // Verbs for a round, kept to the focus (topped up from all verbs to `min`).
+  const words = useCallback(
+    (count, opts = {}) => focusWords(bank, progress.stats, lang, focus, count, opts),
+    [bank, progress.stats, lang, focus]
+  );
+
+  // Ids in focus, for games that order their own lists (today's words first).
+  const focusIds = useMemo(() => {
+    if (focus === "free" || !bank) return null;
+    return new Set(bank.words.filter((e) => inFocus(progress.stats[e.id], focus)).map((e) => e.id));
+  }, [bank, progress.stats, focus]);
 
   return {
     bank,
-    error,
-    ready: Boolean(bank) && progress.ready && scores.ready,
-    loading,
+    error: today.error,
+    ready: today.ready && scores.ready,
+    loading: !today.ready,
     lang,
-    setLang,
+    setLang: setGameLanguage,
+    focus,
+    setFocus: (next) => setPlan({ focus: next }),
+    focusIds,
+    todayCounts: today.counts,
     stats: progress.stats,
     signedIn: progress.mode === "account",
     best: scores.best,
@@ -51,6 +68,7 @@ export function useVerbGame(gameType) {
     record,
     start,
     finish,
+    words,
     missedIds: () => [...missed.current],
   };
 }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, ZoomIn } from "react-native-reanimated";
 import { Button } from "../../components/ui";
-import { DifficultyPicker, GameFrame, LanguagePicker, ProgressBar, StartCard } from "../../components/games/GameFrame";
+import { DifficultyPicker, FocusPicker, GameFrame, LanguagePicker, ProgressBar, StartCard } from "../../components/games/GameFrame";
 import { Choices } from "../../components/games/Choices";
 import { GameResults } from "../../components/games/GameResults";
 import { Meanings } from "../../components/verbQuiz/QuizPlay";
@@ -41,8 +41,11 @@ export default function GuessAction() {
   }, [left]);
 
   const start = () => {
-    // Verbs due for review first, then ones not seen yet, then the rest.
-    const targets = freshFirst(illustrated, game.stats, (x) => x.entry.id).slice(0, Math.min(ROUND, illustrated.length));
+    // Words in focus first (today's), then due ones, then ones not seen yet, then the rest.
+    const targets = freshFirst(illustrated, game.stats, (x) => x.entry.id, Math.random, Date.now(), game.focusIds).slice(
+      0,
+      Math.min(ROUND, illustrated.length)
+    );
     setRound({
       questions: targets.map((t) => actionQuestion(t, illustrated, difficulty)),
       index: 0,
@@ -161,6 +164,7 @@ export default function GuessAction() {
         note={illustrated.length < 4 ? "Not enough pictured verbs have a meaning in this language yet." : null}
       >
         <LanguagePicker lang={game.lang} onChange={game.setLang} />
+        <FocusPicker game={game} />
         <DifficultyPicker value={difficulty} onChange={setDifficulty} />
       </StartCard>
     );

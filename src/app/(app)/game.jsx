@@ -3,7 +3,9 @@ import { router } from "expo-router";
 import { ScreenContainer, Icon } from "../../components/ui";
 import { CrossMenuIcon } from "../../components/ui/CrossMenuIcon";
 import { useGameScores } from "../../hooks/useGameScores";
-import { useDueCount } from "../../hooks/useDueCount";
+import { useBadges } from "../../hooks/useDueCount";
+import { useWordProgress } from "../../context/WordProgressContext";
+import { todayProgress } from "../../lib/daily";
 import { useKalHistory } from "../../hooks/useKalHistory";
 import { dateKey, stats as kalStats } from "../../lib/kal";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
@@ -84,7 +86,9 @@ function Section({ label, children }) {
 // toward the same word progress as ግሲ ፈተና and ክለሳ.
 export default function Games() {
   const kal = useKalHistory();
-  const due = useDueCount();
+  const badges = useBadges();
+  const { stats } = useWordProgress();
+  const today = todayProgress(stats);
   const kalDone = kal.ready && kal.history.some((h) => h.date === dateKey());
   const streak = kal.ready ? kalStats(kal.history).current : 0;
   const kalLine = kalDone
@@ -95,7 +99,9 @@ export default function Games() {
 
   return (
     <ScreenContainer scroll contentContainerStyle={styles.page}>
-      <Text style={styles.lead}>Every answer counts toward your progress, so playing is studying.</Text>
+      <Text style={styles.lead}>
+        Games start on today's words, so playing is studying. Switch a game to Free play for any word (practice only).
+      </Text>
 
       <View style={styles.topRow}>
         <Pressable
@@ -115,23 +121,18 @@ export default function Games() {
         </Pressable>
 
         <Pressable
-          onPress={() => router.push(due ? "/review" : "/verb-quiz")}
+          onPress={() => router.push("/today")}
           accessibilityRole="link"
           style={({ hovered, pressed }) => [styles.side, (hovered || pressed) && styles.tileHover]}
         >
-          {due ? (
-            <>
-              <Text style={styles.eyebrow}>DUE IN ክለሳ</Text>
-              <Text style={styles.dueCount}>{due}</Text>
-              <Text style={styles.tileLine}>Review them before you play ›</Text>
-            </>
-          ) : (
-            <>
-              <Text style={styles.eyebrow}>THE FULL QUIZ</Text>
-              <Text style={styles.featureTitle}>ግሲ ፈተና</Text>
-              <Text style={styles.tileLine}>Pick groups, see what you know ›</Text>
-            </>
-          )}
+          <Text style={styles.eyebrow}>ዛሬ · TODAY'S WORDS</Text>
+          <Text style={styles.dueCount}>
+            {today.learned + today.skipped}/{today.total}
+          </Text>
+          <Text style={styles.tileLine}>
+            {badges.due ? `${badges.due} due in ክለሳ · ` : ""}
+            {today.total && !today.left ? "All learned ›" : "Learn them, then play ›"}
+          </Text>
         </Pressable>
       </View>
 

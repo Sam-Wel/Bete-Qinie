@@ -72,7 +72,7 @@ export function QuizPlay({ quiz, bank, onChange, onFirstAnswer, onFinish, onQuit
     const correct = index === question.answerIndex;
     const record = { wordId: question.wordId, family: question.family, chosen: index, correct };
     const nextRound = { ...round, answers: [...round.answers, record] };
-    if (!inRetry) onFirstAnswer(question.wordId, correct);
+    if (!inRetry) onFirstAnswer(question.wordId, correct, { kind: `quiz:${question.dir}` });
     onChange(inRetry ? { ...quiz, retry: nextRound } : { ...quiz, ...nextRound });
   };
 

@@ -12,13 +12,13 @@ import Animated, {
 } from "react-native-reanimated";
 import { Button } from "../../components/ui";
 import { CrossMenuIcon } from "../../components/ui/CrossMenuIcon";
-import { GameFrame, LanguagePicker, StartCard } from "../../components/games/GameFrame";
+import { FocusPicker, GameFrame, LanguagePicker, StartCard } from "../../components/games/GameFrame";
 import { Choices } from "../../components/games/Choices";
 import { GameResults } from "../../components/games/GameResults";
 import { Meanings } from "../../components/verbQuiz/QuizPlay";
 import { scriptFontBold } from "../../components/verbQuiz/shared";
 import { useVerbGame } from "../../hooks/useVerbGame";
-import { BOSSES, PLAYER_HP, attack, battleState, newBattle, nextBoss, questionFor, verbsFor } from "../../lib/verbGames";
+import { BOSSES, PLAYER_HP, attack, battleState, newBattle, nextBoss, questionFor } from "../../lib/verbGames";
 import { LANGUAGE_LABEL, pickWords, wordsInScope } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
@@ -101,10 +101,11 @@ export default function BossBattle() {
   };
 
   const start = () => {
-    // Missed verbs first, then the usual weakest-first mix.
+    // Free play: missed verbs first, then the usual weakest-first mix.
+    // Focused: today's words (and due ones), weakest first.
     const pool = wordsInScope(game.bank, { mode: "all" }, game.lang);
-    const missed = pickWords(pool, game.stats, "missed", 40);
-    const rest = verbsFor(game.bank, game.stats, game.lang, 200).filter((e) => !missed.includes(e));
+    const missed = game.focus === "free" ? pickWords(pool, game.stats, "missed", 40) : [];
+    const rest = game.words(200, { min: 8 }).filter((e) => !missed.includes(e));
     const q = [...missed, ...rest];
     const b = newBattle(0);
     stats.current = { right: 0, asked: 0, bossesBeaten: 0, bestCombo: 0 };
@@ -275,6 +276,7 @@ export default function BossBattle() {
         onStart={start}
       >
         <LanguagePicker lang={game.lang} onChange={game.setLang} />
+        <FocusPicker game={game} />
       </StartCard>
     );
   }

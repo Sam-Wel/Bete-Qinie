@@ -49,7 +49,7 @@ export function FamilyGrid({ bank, stats, mode, lang, selected = [], onPress }) 
                 ? empty
                   ? "none"
                   : available
-                : `${progress.counts.known}/${progress.total}`}
+                : `${progress.counts.known + progress.counts.mastered}/${progress.total}`}
             </Text>
             <StackedBar counts={progress.counts} total={progress.total} height={4} style={styles.bar} />
             {mode === "progress" ? <Text style={styles.accuracy}>{touched ? percent(progress.accuracy) : " "}</Text> : null}

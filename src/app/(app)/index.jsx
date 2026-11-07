@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { router } from "expo-router";
 import { useDictionarySearch } from "../../hooks/useDictionarySearch";
 import { useRecentSearches } from "../../hooks/useRecentSearches";
-import { useDueCount } from "../../hooks/useDueCount";
+import { useBadges } from "../../hooks/useDueCount";
 import { Button, EmptyState, Icon, ScreenContainer, Select } from "../../components/ui";
 import { LANGUAGE_ORDER, WordCard, shortName } from "../../components/WordCard";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
@@ -60,7 +60,9 @@ export default function Dictionary() {
     handleSearch,
   } = useDictionarySearch();
   const { recentSearches, addRecentSearch } = useRecentSearches();
-  const due = useDueCount();
+  const badges = useBadges();
+  const due = badges.due;
+  const toLearn = badges.today - badges.due;
   const [searched, setSearched] = useState(null);
   const current = languages.find((l) => l.language_code === selectedLanguage);
 
@@ -154,19 +156,21 @@ export default function Dictionary() {
         <EmptyState message="No results found." icon="search-outline" />
       ) : null}
 
-      {due ? (
+      {badges.today ? (
         <Pressable
-          onPress={() => router.navigate("/review")}
+          onPress={() => router.navigate("/today")}
           accessibilityRole="link"
           style={({ hovered }) => [styles.review, hovered && shadows.raised]}
         >
           <View style={styles.reviewCount}>
-            <Text style={styles.reviewCountText}>{due}</Text>
+            <Text style={styles.reviewCountText}>{badges.today}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.reviewTitle}>ክለሳ today</Text>
+            <Text style={styles.reviewTitle}>ዛሬ: today's study</Text>
             <Text style={styles.reviewLine}>
-              {due} word{due === 1 ? "" : "s"} due for review
+              {[due ? `${due} due for review` : null, toLearn ? `${toLearn} new word${toLearn === 1 ? "" : "s"} to learn` : null]
+                .filter(Boolean)
+                .join(" · ")}
             </Text>
           </View>
           <Icon name="chevron-forward" size={18} color={colors.primaryLight} />

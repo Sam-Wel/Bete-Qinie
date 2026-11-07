@@ -9,7 +9,9 @@ import { useWordProgress } from "../../context/WordProgressContext";
 import { useGameScores } from "../../hooks/useGameScores";
 import { useGameLanguage } from "../../hooks/useGameLanguage";
 import { newGame } from "../../lib/shooter";
-import { stateOf, wordsInScope } from "../../lib/verbQuiz";
+import { isKnownState, stateOf } from "../../lib/verbQuiz";
+import { useVerbGame } from "../../hooks/useVerbGame";
+import { FocusPicker } from "../../components/games/GameFrame";
 import { colors, spacing, typography } from "../../theme";
 
 const GAME_TYPE = "verb_shooter";
@@ -24,18 +26,20 @@ export default function ShooterScreen() {
   const [over, setOver] = useState(null); // { game, isBest, previousBest, nowKnown }
   const [knownBefore, setKnownBefore] = useState(() => new Set());
 
-  const pool = useMemo(() => (bank ? wordsInScope(bank, { mode: "all" }, lang) : []), [bank, lang]);
+  const focused = useVerbGame(GAME_TYPE);
+  // Today's words (or today's and due ones) unless playing freely; at least 12 so a game can run.
+  const pool = useMemo(() => (focused.ready ? focused.words("all", { min: 12 }) : []), [focused.ready, focused.words]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const play = () => {
     setOver(null);
-    setKnownBefore(new Set(Object.keys(progress.stats).filter((id) => stateOf(progress.stats[id]) === "known").map(Number)));
+    setKnownBefore(new Set(Object.keys(progress.stats).filter((id) => isKnownState(stateOf(progress.stats[id]))).map(Number)));
     setPlaying(newGame({ bank, pool, stats: progress.stats, lang }));
   };
 
   const finish = async (game) => {
     const previousBest = scores.best;
     // Verbs this game took over the line into "known" (right three times running).
-    const nowKnown = game.practised.filter((id) => !knownBefore.has(id) && stateOf(progress.stats[id]) === "known").length;
+    const nowKnown = game.practised.filter((id) => !knownBefore.has(id) && isKnownState(stateOf(progress.stats[id]))).length;
     setPlaying(null);
     setOver({ game, isBest: false, previousBest, nowKnown });
     const isBest = await scores.saveScore({
@@ -48,13 +52,13 @@ export default function ShooterScreen() {
 
   let body;
   if (error) body = <Text style={{ ...typography.body, color: colors.danger }}>{error}</Text>;
-  else if (loading || !progress.ready || !scores.ready) body = <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />;
+  else if (loading || !progress.ready || !scores.ready || !focused.ready) body = <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />;
   else if (playing)
     body = (
       <Shooter
         initialGame={playing}
         bank={bank}
-        onAnswer={({ wordId, correct }) => progress.recordAnswer(wordId, correct)}
+        onAnswer={({ wordId, correct }) => progress.recordAnswer(wordId, correct, { kind: GAME_TYPE })}
         onOver={finish}
       />
     );
@@ -80,7 +84,9 @@ export default function ShooterScreen() {
         best={scores.best}
         last={scores.last}
         onPlay={play}
-      />
+      >
+        <FocusPicker game={focused} />
+      </ShooterStart>
     );
 
   return (

@@ -14,6 +14,7 @@ export const NAV_GROUPS = [
   {
     label: "PRACTISE",
     items: [
+      { route: "today", href: "/today", title: "ዛሬ", english: "Today", icon: "today-outline", badge: "today" },
       { route: "review", href: "/review", title: "ክለሳ", english: "Review", icon: "refresh-outline", badge: "due" },
       { route: "verb-quiz", href: "/verb-quiz", title: "ግሲ ፈተና", english: "Quiz", icon: "quiz-outline" },
       { route: "game", href: "/game", title: "ጨዋታዎች", english: "Games", icon: "game-controller-outline" },
@@ -29,7 +30,7 @@ export const NAV_GROUPS = [
 export const TABS = [
   { route: "index", href: "/", label: "መዝገበ", icon: "book-outline" },
   { route: "verb-roots", href: "/verb-roots", label: "ግሲ", icon: "list-outline" },
-  { route: "review", href: "/review", label: "ክለሳ", icon: "refresh-outline", badge: "due" },
+  { route: "today", href: "/today", label: "ዛሬ", icon: "today-outline", badge: "today" },
   { route: "game", href: "/game", label: "ጨዋታ", icon: "game-controller-outline" },
   { route: "more", href: "/more", label: "More", icon: "more-horizontal", latin: true },
 ];

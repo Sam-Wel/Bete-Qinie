@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { Button, ScreenContainer } from "../ui";
 import { DIFFICULTIES } from "../../lib/verbGames";
 import { LANGUAGES } from "../../lib/verbQuiz";
+import { FOCUSES } from "../../lib/daily";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 import { Chip, shared } from "../verbQuiz/shared";
 
@@ -31,6 +32,30 @@ export function LanguagePicker({ lang, onChange }) {
           <Chip key={l.code} label={l.label} active={lang === l.code} onPress={() => onChange(l.code)} />
         ))}
       </View>
+    </View>
+  );
+}
+
+// Which words the game asks: today's, today's plus due reviews, or any (practice).
+export function FocusPicker({ game }) {
+  const { focus, todayCounts: c } = game;
+  const hint = FOCUSES.find((f) => f.key === focus)?.hint;
+  const status =
+    focus === "free"
+      ? null
+      : c.total
+        ? `Today: ${c.learned + c.skipped} of ${c.total} learned${c.left ? `, ${c.left} to go` : " · all done"}`
+        : "No words for today yet. Open ዛሬ to see why.";
+  return (
+    <View style={styles.pickerRow}>
+      <Text style={styles.pickerLabel}>WORDS</Text>
+      <View style={shared.row}>
+        {FOCUSES.map((f) => (
+          <Chip key={f.key} label={f.label} active={focus === f.key} onPress={() => game.setFocus(f.key)} />
+        ))}
+      </View>
+      <Text style={shared.hint}>{hint}</Text>
+      {status ? <Text style={styles.focusStatus}>{status}</Text> : null}
     </View>
   );
 }
@@ -91,6 +116,7 @@ const styles = StyleSheet.create({
   error: { ...typography.body, color: colors.danger, marginTop: spacing.lg },
   pickerRow: { gap: spacing.xs },
   pickerLabel: { ...typography.label, color: colors.textMuted, letterSpacing: 1 },
+  focusStatus: { ...typography.caption, color: colors.primaryDark },
   start: { gap: spacing.md },
   startHead: { flexDirection: "row", alignItems: "center", gap: spacing.lg },
   art: {

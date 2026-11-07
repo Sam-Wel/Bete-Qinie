@@ -201,8 +201,13 @@ test("boss battle: damage, combos, defeat and the next boss", () => {
 test("progress: missed verbs come back first in the next round", () => {
   const pool = verbsFor(bank, {}, "am", 40, seeded(31));
   const stats = {};
-  pool.slice(0, 5).forEach((e) => (stats[e.id] = applyAnswer(null, false)));
-  pool.slice(5, 30).forEach((e) => (stats[e.id] = applyAnswer(applyAnswer(applyAnswer(null, true), true), true)));
+  const now = Date.now();
+  const studied = (box, dueIn, lastCorrect) => ({
+    seen: 3, correct: 2, streak: 0, box, lastCorrect, lastSeen: now, lastWrong: null, due: now + dueIn * 864e5, saved: false,
+    study: { intro: now - 9 * 864e5, learned: now - 8 * 864e5 },
+  });
+  pool.slice(0, 5).forEach((e) => (stats[e.id] = applyAnswer(studied(2, 0, true), false, now)));
+  pool.slice(5, 30).forEach((e) => (stats[e.id] = studied(3, 7, true)));
   const next = verbsFor(bank, stats, "am", 8, seeded(32));
   const missed = next.filter((e) => stateOf(stats[e.id]) === "shaky");
   assert.equal(missed.length, 5, "all five missed verbs are asked again");

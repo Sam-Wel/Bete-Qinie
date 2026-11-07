@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useDueCount } from "../../hooks/useDueCount";
+import { useBadges } from "../../hooks/useDueCount";
 import { NAV_GROUPS, TABS } from "../../lib/navigation";
 import { colors, fontFamily, radii } from "../../theme";
 import { Icon } from "../ui/Icon";
@@ -12,7 +12,7 @@ const SECTION_ROUTES = new Set(NAV_GROUPS.flatMap((g) => g.items.map((i) => i.ro
 // Phone navigation. `section` is the current page's section; sections without
 // a tab of their own (መዐቀኒ, ዜማ, ...) light up More, where they live.
 export function BottomTabs({ section }) {
-  const due = useDueCount();
+  const badges = useBadges();
   const active = IN_TABS.has(section) ? section : SECTION_ROUTES.has(section) || section === "account" ? "more" : section;
 
   return (
@@ -26,14 +26,14 @@ export function BottomTabs({ section }) {
               onPress={() => router.navigate(tab.href)}
               accessibilityRole="tab"
               accessibilityState={{ selected: on }}
-              accessibilityLabel={tab.badge === "due" && due ? `${tab.label}, ${due} due` : tab.label}
+              accessibilityLabel={badges[tab.badge] ? `${tab.label}, ${badges[tab.badge]} to do` : tab.label}
               style={styles.tab}
             >
               <View style={[styles.pill, on && styles.pillOn]}>
                 <Icon name={tab.icon} size={20} color={on ? colors.primaryDark : colors.textSecondary} strokeWidth={on ? 2.2 : 1.9} />
-                {tab.badge === "due" && due ? (
+                {badges[tab.badge] ? (
                   <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{due > 99 ? "99+" : due}</Text>
+                    <Text style={styles.badgeText}>{badges[tab.badge] > 99 ? "99+" : badges[tab.badge]}</Text>
                   </View>
                 ) : null}
               </View>

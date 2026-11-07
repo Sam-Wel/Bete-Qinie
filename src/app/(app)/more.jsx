@@ -4,7 +4,7 @@ import { DueBadge } from "../../components/DrawerContent";
 import { ThemeSwitch } from "../../components/nav/ThemeSwitch";
 import { Icon, ScreenContainer } from "../../components/ui";
 import { useAuth } from "../../context/AuthContext";
-import { useDueCount } from "../../hooks/useDueCount";
+import { useBadges } from "../../hooks/useDueCount";
 import { NAV_GROUPS } from "../../lib/navigation";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
@@ -21,7 +21,7 @@ function Row({ icon, title, english, badge, last, onPress, latin }) {
 // Phones: every section of the app in its group, plus account and appearance.
 export default function More() {
   const { user, profile, isAdmin } = useAuth();
-  const due = useDueCount();
+  const badges = useBadges();
 
   return (
     <ScreenContainer scroll contentContainerStyle={styles.page}>
@@ -46,7 +46,7 @@ export default function More() {
                 icon={item.icon}
                 title={item.title}
                 english={item.english}
-                badge={item.badge === "due" && due ? <DueBadge count={due} suffix=" due" /> : null}
+                badge={badges[item.badge] ? <DueBadge count={badges[item.badge]} suffix={item.badge === "due" ? " due" : " to do"} /> : null}
                 last={i === group.items.length - 1}
                 onPress={() => router.navigate(item.href)}
               />

@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSequence, withTiming, ZoomIn } from "react-native-reanimated";
 import { Button } from "../../components/ui";
-import { DifficultyPicker, GameFrame, LanguagePicker, ProgressBar, StartCard } from "../../components/games/GameFrame";
+import { DifficultyPicker, FocusPicker, GameFrame, LanguagePicker, ProgressBar, StartCard } from "../../components/games/GameFrame";
 import { GameResults } from "../../components/games/GameResults";
 import { Meanings } from "../../components/verbQuiz/QuizPlay";
 import { scriptFont, shared } from "../../components/verbQuiz/shared";
 import { useVerbGame } from "../../hooks/useVerbGame";
 import { graphemes, hintTile, isUnscrambled, scramble, unscramblePoints, unscrambleWords } from "../../lib/verbGames";
-import { LANGUAGES, LANGUAGE_LABEL, pickWords } from "../../lib/verbQuiz";
+import { LANGUAGES, LANGUAGE_LABEL } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
 const ROUND = 8;
@@ -30,7 +30,7 @@ export default function Unscramble() {
   const pool = game.ready ? unscrambleWords(game.bank, game.lang, difficulty) : [];
 
   const start = () => {
-    const words = pickWords(pool, game.stats, "smart", ROUND);
+    const words = game.words(ROUND, { pool, min: 5 });
     setRound({ words, index: 0, current: newWord(words[0]), score: 0, streak: 0, best: 0, solved: 0 });
     setResult(null);
     game.start();
@@ -233,6 +233,7 @@ export default function Unscramble() {
         disabled={pool.length < 1}
       >
         <LanguagePicker lang={game.lang} onChange={game.setLang} />
+        <FocusPicker game={game} />
         <DifficultyPicker value={difficulty} onChange={setDifficulty} />
       </StartCard>
     );

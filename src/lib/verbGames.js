@@ -178,9 +178,9 @@ export const lightningPoints = (combo) => 10 * lightningMultiplier(combo);
 export const SORT_SHAPE = { easy: { bins: 2, per: 3 }, medium: { bins: 3, per: 3 }, hard: { bins: 4, per: 3 } };
 
 // Bins are categories that have enough verbs; each verb card belongs to at
-// least one bin on the table (a verb may fit several). Within a bin, verbs due
-// for review come first, then new ones.
-export function sortingRound(bank, lang, difficulty, random = Math.random, stats = {}) {
+// least one bin on the table (a verb may fit several). Within a bin, `prefer`
+// (today's words) come first, then verbs due for review, then new ones.
+export function sortingRound(bank, lang, difficulty, random = Math.random, stats = {}, prefer = null) {
   const { bins, per } = SORT_SHAPE[difficulty];
   const tagged = withMeta(bank).filter(({ entry, meta }) => meta.categories.length && hasLanguage(entry, lang));
   const byCategory = Object.fromEntries(
@@ -191,7 +191,7 @@ export function sortingRound(bank, lang, difficulty, random = Math.random, stats
   const cards = [];
   const taken = new Set();
   for (const category of chosen) {
-    for (const item of freshFirst(byCategory[category.key], stats, (x) => x.entry.id, random)) {
+    for (const item of freshFirst(byCategory[category.key], stats, (x) => x.entry.id, random, Date.now(), prefer)) {
       if (cards.filter((c) => c.home === category.key).length >= per) break;
       if (taken.has(item.entry.id)) continue;
       taken.add(item.entry.id);

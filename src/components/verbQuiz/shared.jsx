@@ -44,8 +44,9 @@ export function Chip({ label, active, disabled, onPress, style, ethiopic }) {
   );
 }
 
-// Shares of a whole as one bar: known, learning, missed, new.
+// Shares of a whole as one bar: mastered, known, learning, missed, new.
 export const STATE_COLORS = {
+  mastered: colors.mastered,
   known: colors.success,
   learning: colors.primary,
   shaky: colors.accent,
@@ -56,7 +57,7 @@ export function StackedBar({ counts, total, height = 6, style }) {
   return (
     <View style={[styles.bar, { height }, style]}>
       {total
-        ? ["known", "learning", "shaky"].map((key) =>
+        ? ["mastered", "known", "learning", "shaky"].map((key) =>
             counts[key] ? (
               <View key={key} style={{ flex: counts[key] / total, backgroundColor: STATE_COLORS[key] }} />
             ) : null
@@ -70,6 +71,7 @@ export function Legend() {
   return (
     <View style={styles.legend}>
       {[
+        ["mastered", "Mastered"],
         ["known", "Known"],
         ["learning", "Learning"],
         ["shaky", "Missed last time"],

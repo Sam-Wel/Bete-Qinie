@@ -14,6 +14,7 @@ import {
   isDue,
   partProgress,
   partsOf,
+  isKnownState,
   stateOf,
   wordsInScope,
 } from "../../lib/verbQuiz";
@@ -78,7 +79,7 @@ export function QuizSetup({ bank, stats, settings, onChange, onStart, paused, on
     for (const entry of pool) {
       const state = stateOf(stats[entry.id]);
       if (state === "new") t.new += 1;
-      else if (state === "known") t.known += 1;
+      else if (isKnownState(state)) t.known += 1;
       if (isDue(stats[entry.id])) t.review += 1;
     }
     return t;

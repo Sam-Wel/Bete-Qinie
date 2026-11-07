@@ -200,7 +200,7 @@ export default function Kal() {
     update({ guesses });
     const nowWon = byRoot ? sameRoot(guess, targetRoot) : guess === target.word;
     if (nowWon || guesses.length >= MAX_GUESSES) {
-      progress.recordAnswer(target.id, nowWon);
+      progress.recordAnswer(target.id, nowWon, { kind: "kal" });
       if (mode === "daily") {
         kal.finishDaily({ date: today, won: nowWon, guesses: guesses.length, hint: playing.hints > 0, hints: playing.hints, wordId: target.id });
       }

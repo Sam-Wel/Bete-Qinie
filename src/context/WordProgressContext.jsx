@@ -58,13 +58,41 @@ const sessionFromRun = (userId, run) => ({
   updated_at: new Date(run.at).toISOString(),
 });
 
+// Until supabase/daily_study.sql adds word_progress.study, each word's study
+// record (daily set, learning steps) is kept on this device per account.
+const studyKey = (userId) => `bete-qinie:study:${userId}`;
+
+async function readStudy(userId) {
+  try {
+    return JSON.parse((await AsyncStorage.getItem(studyKey(userId))) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+const isMissingStudyColumn = (error) => /study/.test(`${error?.message || ""} ${error?.details || ""}`);
+
 async function fetchAccount(userId) {
   const stats = {};
+  let hasStudyColumn = null;
   for (let from = 0; ; from += 1000) {
     const { data, error } = await supabase.from(TABLE).select("*").eq("user_id", userId).range(from, from + 999);
     if (error) throw error;
-    for (const row of data) stats[row.word_id] = statFromRow(row);
+    for (const row of data) {
+      if (hasStudyColumn == null) hasStudyColumn = "study" in row;
+      stats[row.word_id] = statFromRow(row);
+    }
     if (data.length < 1000) break;
+  }
+
+  // Study records kept on the device fill in what the account doesn't have yet.
+  const kept = await readStudy(userId);
+  const pending = [];
+  for (const [id, study] of Object.entries(kept)) {
+    if (stats[id] && !stats[id].study && study) {
+      stats[id] = { ...stats[id], study };
+      pending.push(id);
+    }
   }
 
   const { data: sessions, error } = await supabase
@@ -80,6 +108,8 @@ async function fetchAccount(userId) {
     stats: normalize(stats),
     runs: sessions.filter((s) => s.status === "completed").map(runFromSession),
     inProgress: [...sessions].reverse().find((s) => s.status === "in_progress") ?? null,
+    hasStudyColumn: hasStudyColumn ?? true,
+    pending,
   };
 }
 
@@ -104,6 +134,31 @@ export function WordProgressProvider({ children }) {
   const dirty = useRef(new Set());
   const sessionId = useRef(null);
   const queue = useRef(Promise.resolve());
+  const studyColumn = useRef(true);
+
+  // Upsert these words' records, without the study column if it isn't there
+  // yet (then the study records go to this device instead).
+  const upsert = useCallback(async (uid, ids, all) => {
+    const rows = (withStudy) => ids.map((id) => rowFromStat(uid, id, all[id], { withStudy }));
+    if (studyColumn.current) {
+      const { error } = await supabase.from(TABLE).upsert(rows(true), { onConflict: "user_id,word_id" });
+      if (!error) return;
+      if (!isMissingStudyColumn(error)) throw error;
+      studyColumn.current = false;
+      console.warn("word_progress.study is missing (run supabase/daily_study.sql); keeping study records on this device.");
+    }
+    const { error } = await supabase.from(TABLE).upsert(rows(false), { onConflict: "user_id,word_id" });
+    if (error) throw error;
+    const kept = await readStudy(uid);
+    ids.forEach((id) => {
+      kept[id] = all[id]?.study ?? null;
+    });
+    try {
+      await AsyncStorage.setItem(studyKey(uid), JSON.stringify(kept));
+    } catch (err) {
+      console.error("Error saving study records on this device:", err);
+    }
+  }, []);
 
   // Supabase writes go one at a time so an in-progress row is never inserted twice.
   const enqueue = useCallback((task) => {
@@ -134,18 +189,21 @@ export function WordProgressProvider({ children }) {
           const guestIds = Object.keys(device.stats);
           if (guestIds.length || device.runs.length) {
             merged = mergeStats(account.stats, normalize(device.stats));
-            if (guestIds.length) {
-              const { error } = await supabase
-                .from(TABLE)
-                .upsert(guestIds.map((id) => rowFromStat(userId, id, merged[id])), { onConflict: "user_id,word_id" });
-              if (error) throw error;
-            }
+            studyColumn.current = account.hasStudyColumn;
+            if (guestIds.length) await upsert(userId, guestIds, merged);
             if (device.runs.length) {
               const { error } = await supabase.from("game_sessions").insert(device.runs.map((run) => sessionFromRun(userId, run)));
               if (error) throw error;
               allRuns = [...account.runs, ...device.runs].sort((a, b) => a.at - b.at);
             }
             await writeDevice({ stats: {}, runs: [] });
+          }
+
+          studyColumn.current = account.hasStudyColumn;
+          // Study records that waited on this device reach the account once it has the column.
+          if (account.hasStudyColumn && account.pending.length) {
+            await upsert(userId, account.pending, merged);
+            await AsyncStorage.removeItem(studyKey(userId)).catch(() => {});
           }
 
           if (cancelled) return;
@@ -180,15 +238,14 @@ export function WordProgressProvider({ children }) {
     const ids = [...dirty.current];
     dirty.current = new Set();
     return enqueue(async () => {
-      const { error } = await supabase
-        .from(TABLE)
-        .upsert(ids.map((id) => rowFromStat(userId, id, statsRef.current[id])), { onConflict: "user_id,word_id" });
-      if (error) {
+      try {
+        await upsert(userId, ids, statsRef.current);
+      } catch (error) {
         ids.forEach((id) => dirty.current.add(id));
         throw error;
       }
     });
-  }, [userId, enqueue]);
+  }, [userId, enqueue, upsert]);
 
   // Answers are sent in small batches; send what's left when the page is hidden.
   useEffect(() => {
@@ -213,8 +270,23 @@ export function WordProgressProvider({ children }) {
     [flush]
   );
 
+  // opts.kind: what asked it (game type, "review", "learn:toGeez"...). An answer
+  // on a word not being studied is practice and changes nothing.
   const recordAnswer = useCallback(
-    (wordId, correct) => update({ [wordId]: applyAnswer(statsRef.current[wordId], correct) }),
+    (wordId, correct, opts) => {
+      const before = statsRef.current[wordId];
+      const after = applyAnswer(before, correct, Date.now(), opts);
+      if (after && after !== before) update({ [wordId]: after });
+    },
+    [update]
+  );
+
+  // Several records at once (today's set, the clean-up), saved straight away.
+  const updateWords = useCallback(
+    (fn) => {
+      const changes = fn(statsRef.current);
+      if (Object.keys(changes).length) update(changes, { now: true });
+    },
     [update]
   );
 
@@ -307,6 +379,7 @@ export function WordProgressProvider({ children }) {
       stats,
       runs,
       recordAnswer,
+      updateWords,
       save,
       unsave,
       isSaved,
@@ -316,7 +389,7 @@ export function WordProgressProvider({ children }) {
       discardInProgress,
       finishRun,
     }),
-    [ready, mode, userId, stats, runs, recordAnswer, save, unsave, isSaved, flush, saveInProgress, loadInProgress, discardInProgress, finishRun]
+    [ready, mode, userId, stats, runs, recordAnswer, updateWords, save, unsave, isSaved, flush, saveInProgress, loadInProgress, discardInProgress, finishRun]
   );
 
   return <WordProgressContext.Provider value={value}>{children}</WordProgressContext.Provider>;

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { Animated as RNAnimated, PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
-import { DifficultyPicker, GameFrame, LanguagePicker, ProgressBar, StartCard } from "../../components/games/GameFrame";
+import { DifficultyPicker, FocusPicker, GameFrame, LanguagePicker, ProgressBar, StartCard } from "../../components/games/GameFrame";
 import { GameResults } from "../../components/games/GameResults";
 import { scriptFont, shared } from "../../components/verbQuiz/shared";
 import { useVerbGame } from "../../hooks/useVerbGame";
@@ -60,7 +60,7 @@ export default function VerbSort() {
   const binViews = useRef({});
 
   const start = () => {
-    const { bins, cards } = sortingRound(game.bank, game.lang, difficulty, Math.random, game.stats);
+    const { bins, cards } = sortingRound(game.bank, game.lang, difficulty, Math.random, game.stats, game.focusIds);
     setRound({ bins, cards, placed: {}, tries: {}, selected: null, flash: null });
     setResult(null);
     game.start();
@@ -204,6 +204,7 @@ export default function VerbSort() {
         onStart={start}
       >
         <LanguagePicker lang={game.lang} onChange={game.setLang} />
+        <FocusPicker game={game} />
         <DifficultyPicker value={difficulty} onChange={setDifficulty} />
       </StartCard>
     );

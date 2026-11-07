@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, ZoomIn } from "react-native-reanimated";
-import { DifficultyPicker, GameFrame, LanguagePicker, ProgressBar, StartCard } from "../../components/games/GameFrame";
+import { DifficultyPicker, FocusPicker, GameFrame, LanguagePicker, ProgressBar, StartCard } from "../../components/games/GameFrame";
 import { Choices } from "../../components/games/Choices";
 import { GameResults } from "../../components/games/GameResults";
 import { shared } from "../../components/verbQuiz/shared";
 import { useVerbGame } from "../../hooks/useVerbGame";
-import { LIGHTNING_MODES, lightningMultiplier, lightningPoints, questionFor, verbsFor } from "../../lib/verbGames";
+import { LIGHTNING_MODES, lightningMultiplier, lightningPoints, questionFor } from "../../lib/verbGames";
 import { LANGUAGE_LABEL } from "../../lib/verbQuiz";
 import { colors, fontFamily, spacing, typography } from "../../theme";
 
@@ -38,7 +38,7 @@ export default function Lightning() {
   };
 
   const start = () => {
-    const queue = verbsFor(game.bank, game.stats, game.lang, 300);
+    const queue = game.words(300, { min: 8 });
     const endsAt = Date.now() + mode * 1000;
     setRun(ask({ queue, score: 0, combo: 0, best: 0, right: 0, asked: 0, endsAt }, 0));
     setResult(null);
@@ -140,6 +140,7 @@ export default function Lightning() {
         onStart={start}
       >
         <LanguagePicker lang={game.lang} onChange={game.setLang} />
+        <FocusPicker game={game} />
         <DifficultyPicker value={mode} onChange={setMode} options={MODE_OPTIONS} label="ROUND LENGTH" />
       </StartCard>
     );

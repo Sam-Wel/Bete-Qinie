@@ -4,13 +4,14 @@ import { router } from "expo-router";
 import { useWordProgress } from "../../context/WordProgressContext";
 import { useVerbBank } from "../../hooks/useVerbBank";
 import { supabase } from "../../lib/supabaseClient";
-import { REVIEW_DAYS, applyAnswer, dueQueue, reviewSummary, startOfDay, stateOf } from "../../lib/verbQuiz";
+import { REVIEW_DAYS, applyAnswer, dueQueue, inReview, reviewSummary, startOfDay, stateOf } from "../../lib/verbQuiz";
 import { ScreenContainer, Button } from "../../components/ui";
+import { CleanupCard } from "../../components/today/CleanupCard";
 import { STATE_COLORS, scriptFont, shared } from "../../components/verbQuiz/shared";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
 const DAY = 24 * 3600 * 1000;
-const STATE_LABEL = { new: "New", learning: "Learning", shaky: "Missed last time", known: "Known" };
+const STATE_LABEL = { new: "New", learning: "Learning", shaky: "Missed last time", known: "Known", mastered: "Mastered" };
 
 function whenLabel(time, now = Date.now()) {
   if (time == null) return "—";
@@ -169,7 +170,7 @@ export default function Review() {
 
   const answer = (correct) => {
     const id = session.queue[session.index];
-    progress.recordAnswer(id, correct);
+    progress.recordAnswer(id, correct, { kind: "review" });
     const next = { ...session, index: session.index + 1, right: session.right + (correct ? 1 : 0) };
     if (next.index >= next.queue.length) {
       progress.flush();
@@ -209,11 +210,14 @@ export default function Review() {
   }
 
   const nextDue = Object.values(stats)
-    .filter((s) => s && (s.saved || s.seen > 0) && s.due != null && s.due > Date.now())
+    .filter((s) => inReview(s) && s.due > Date.now())
     .reduce((min, s) => Math.min(min, s.due), Infinity);
 
   return (
     <ScreenContainer scroll>
+      <View style={{ marginBottom: spacing.lg }}>
+        <CleanupCard progress={progress} />
+      </View>
 
       <View style={[shared.card, styles.hero]}>
         {done ? (
@@ -245,18 +249,19 @@ export default function Review() {
               {Number.isFinite(nextDue) ? `All caught up. Next review ${whenLabel(nextDue)}.` : "Nothing to review yet."}
             </Text>
             <View style={shared.row}>
-              <Button size="sm" onPress={() => router.push("/shooter")}>
-                Play ቀስት
+              <Button size="sm" onPress={() => router.push("/today")}>
+                Go to ዛሬ
               </Button>
-              <Button size="sm" variant="secondary" onPress={() => router.push("/verb-quiz")}>
-                Open ግሲ ፈተና
+              <Button size="sm" variant="secondary" onPress={() => router.push("/game")}>
+                Play a game
               </Button>
             </View>
           </View>
         )}
         <Text style={shared.muted}>
-          Words come here from ቀስት, ግሲ ፈተና and anything you save from the Dictionary or ግሲ. Right answers push a word
-          further off ({REVIEW_DAYS.slice(1).join(", ")} days); a miss brings it back tomorrow.
+          Words come here once you've learned them in ዛሬ, and when you save one from the Dictionary or ግሲ. Right
+          answers push a word further off ({REVIEW_DAYS.slice(1).join(", ")} days); a miss moves it back one step and
+          brings it back tomorrow. After the 3-week review a word is mastered and only returns every few months.
           {progress.mode === "account" ? "" : " Kept on this device until you sign in."}
         </Text>
       </View>

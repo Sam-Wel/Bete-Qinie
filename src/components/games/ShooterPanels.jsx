@@ -41,7 +41,7 @@ function RankCard({ best, rankedUp }) {
   );
 }
 
-export function ShooterStart({ lang, onLang, available, best, last, onPlay }) {
+export function ShooterStart({ lang, onLang, available, best, last, onPlay, children }) {
   return (
     <View style={[shared.card, styles.card]}>
       <Text style={styles.lead}>
@@ -68,6 +68,7 @@ export function ShooterStart({ lang, onLang, available, best, last, onPlay }) {
           <Chip key={l.code} label={l.label} active={lang === l.code} onPress={() => onLang(l.code)} />
         ))}
       </View>
+      {children}
       <Text style={shared.muted}>{available} verbs to play with. Your weakest come first.</Text>
 
       <Button onPress={onPlay} disabled={!available} style={styles.play}>

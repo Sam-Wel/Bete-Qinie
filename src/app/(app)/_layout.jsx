@@ -37,6 +37,7 @@ export default function AppLayout() {
         <Drawer.Screen name="verb-roots" options={{ title: "ግሲ" }} />
         <Drawer.Screen name="meaqeni" options={{ title: "መዐቀኒ" }} />
         <Drawer.Screen name="zema" options={{ title: "ዜማ" }} />
+        <Drawer.Screen name="today" options={{ title: "ዛሬ" }} />
         <Drawer.Screen name="review" options={{ title: "ክለሳ" }} />
         <Drawer.Screen name="game" options={{ title: "ጨዋታዎች" }} />
         <Drawer.Screen name="shooter" options={{ title: "ቀስት" }} />

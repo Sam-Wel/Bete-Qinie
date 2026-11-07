@@ -31,6 +31,7 @@ export const palettes = {
 
     success: "#4a5d3a",
     successLight: "#dbe4cf",
+    mastered: "#22331c",
 
     warning: "#f3dfa0",
     warningText: "#7a5609",
@@ -71,6 +72,7 @@ export const palettes = {
 
     success: "#9DBB7C",
     successLight: "#26301C",
+    mastered: "#CDE6AE",
 
     warning: "#3F3211",
     warningText: "#EBC96C",
