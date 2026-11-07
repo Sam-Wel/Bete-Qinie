@@ -59,7 +59,7 @@ export function useGeezEndings() {
         .eq("language_code", GEEZ)
         .ilike("word", `%${letter}`)
         .order("word")
-        .limit(200);
+        .limit(1000); // ረ alone has over 200
 
       if (error) {
         console.error("Error loading words ending with letter:", error);

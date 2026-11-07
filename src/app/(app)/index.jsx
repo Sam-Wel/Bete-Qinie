@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { useDictionarySearch } from "../../hooks/useDictionarySearch";
 import { useRecentSearches } from "../../hooks/useRecentSearches";
 import { useBadges } from "../../hooks/useDueCount";
 import { Button, EmptyState, Icon, ScreenContainer, Select } from "../../components/ui";
-import { LANGUAGE_ORDER, WordCard, shortName } from "../../components/WordCard";
+import { LANGUAGE_ORDER, WordCard, languageName } from "../../components/WordCard";
+import { useVerbBank } from "../../hooks/useVerbBank";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
 const ETHIOPIC = /[ሀ-፿]/;
@@ -18,7 +19,7 @@ function LanguageChips({ languages, value, onChange }) {
       <Select
         value={value}
         onValueChange={onChange}
-        items={languages.map((l) => ({ label: l.language_name, value: l.language_code }))}
+        items={languages.map((l) => ({ label: languageName(l.language_code, l.language_name), value: l.language_code }))}
       />
     );
   }
@@ -26,7 +27,7 @@ function LanguageChips({ languages, value, onChange }) {
     <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel="Search in">
       {[...languages].sort((a, b) => rank(a.language_code) - rank(b.language_code)).map((l) => {
         const on = l.language_code === value;
-        const label = shortName(l.language_name);
+        const label = languageName(l.language_code, l.language_name);
         return (
           <Pressable
             key={l.language_code}
@@ -66,11 +67,22 @@ export default function Dictionary() {
   const [searched, setSearched] = useState(null);
   const current = languages.find((l) => l.language_code === selectedLanguage);
 
+  // One verb a day, the same for everyone that day: one with a meaning in every language.
+  const { bank } = useVerbBank();
+  const wordOfDay = useMemo(() => {
+    if (!bank) return null;
+    const full = bank.words.filter((e) => e.tr.ti.length && e.tr.am.length && e.tr.en.length);
+    if (!full.length) return null;
+    const d = new Date();
+    const day = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5);
+    return full[(day * 7919) % full.length];
+  }, [bank]);
+
   const runSearch = async (searchQuery, searchLanguage) => {
     const result = await handleSearch(searchQuery, searchLanguage);
     if (result) {
       setSearched(result.query);
-      addRecentSearch(result.query, result.language, languageMap[result.language] || result.language);
+      addRecentSearch(result.query, result.language, languageName(result.language, languageMap[result.language]));
     }
   };
 
@@ -88,7 +100,7 @@ export default function Dictionary() {
               onChangeText={onQueryChange}
               onSubmitEditing={() => runSearch()}
               returnKeyType="search"
-              placeholder={current ? `Search in ${shortName(current.language_name)}…` : "Search a word…"}
+              placeholder={current ? `Search in ${languageName(current.language_code, current.language_name)}…` : "Search a word…"}
               placeholderTextColor={colors.textMuted}
               accessibilityLabel="Search a word"
               style={styles.input}
@@ -144,7 +156,7 @@ export default function Dictionary() {
         <WordCard
           key={entry.geezId ?? i}
           word={entry.geez ?? searched}
-          tag={entry.geez ? "ግዕዝ" : current ? shortName(current.language_name) : null}
+          tag={entry.geez ? "ግዕዝ" : current ? languageName(current.language_code, current.language_name) : null}
           geezId={entry.geezId}
           meanings={entry.meanings}
           examples={sewasewExamples.filter((x) => x.word_id === entry.geezId)}
@@ -154,6 +166,13 @@ export default function Dictionary() {
 
       {!loading && !results.length && searched && query.trim() === searched ? (
         <EmptyState message="No results found." icon="search-outline" />
+      ) : null}
+
+      {!loading && !results.length && !searched && wordOfDay ? (
+        <View style={styles.dayWord}>
+          <Text style={styles.dayWordLabel}>WORD OF THE DAY</Text>
+          <WordCard word={wordOfDay.word} geezId={wordOfDay.id} meanings={wordOfDay.tr} languageMap={languageMap} />
+        </View>
       ) : null}
 
       {badges.today ? (
@@ -190,6 +209,8 @@ const card = {
 };
 
 const styles = StyleSheet.create({
+  dayWord: { gap: spacing.xs },
+  dayWordLabel: { fontFamily: fontFamily.latinSemiBold, fontSize: 11, letterSpacing: 1, color: colors.textMuted },
   page: { gap: spacing.lg },
   searchCard: { ...card, gap: spacing.md + 2 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },

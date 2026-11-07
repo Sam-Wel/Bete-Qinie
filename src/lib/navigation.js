@@ -15,7 +15,7 @@ export const NAV_GROUPS = [
     label: "PRACTISE",
     items: [
       { route: "today", href: "/today", title: "ዛሬ", english: "Today", icon: "today-outline", badge: "today" },
-      { route: "review", href: "/review", title: "ክለሳ", english: "Review", icon: "refresh-outline", badge: "due" },
+      { route: "review", href: "/review", title: "ክለሳ", english: "Review", icon: "refresh-outline" },
       { route: "verb-quiz", href: "/verb-quiz", title: "ግሲ ፈተና", english: "Quiz", icon: "quiz-outline" },
       { route: "game", href: "/game", title: "ጨዋታዎች", english: "Games", icon: "game-controller-outline" },
     ],

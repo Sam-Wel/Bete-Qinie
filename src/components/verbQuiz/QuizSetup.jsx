@@ -14,6 +14,7 @@ import {
   isDue,
   partProgress,
   partsOf,
+  inTodaySet,
   isKnownState,
   stateOf,
   wordsInScope,
@@ -75,10 +76,10 @@ export function QuizSetup({ bank, stats, settings, onChange, onStart, paused, on
   const asked = count === "all" ? matching : Math.min(count, matching);
 
   const tally = useMemo(() => {
-    const t = { new: 0, review: 0, known: 0 };
+    const t = { today: 0, review: 0, known: 0 };
     for (const entry of pool) {
       const state = stateOf(stats[entry.id]);
-      if (state === "new") t.new += 1;
+      if (inTodaySet(stats[entry.id])) t.today += 1;
       else if (isKnownState(state)) t.known += 1;
       if (isDue(stats[entry.id])) t.review += 1;
     }
@@ -146,8 +147,8 @@ export function QuizSetup({ bank, stats, settings, onChange, onStart, paused, on
             <Text style={styles.tallyLabel}>due for review</Text>
           </View>
           <View style={styles.tallyItem}>
-            <Text style={styles.tallyValue}>{tally.new}</Text>
-            <Text style={styles.tallyLabel}>new</Text>
+            <Text style={styles.tallyValue}>{tally.today}</Text>
+            <Text style={styles.tallyLabel}>today's words</Text>
           </View>
           <View style={styles.tallyItem}>
             <Text style={[styles.tallyValue, { color: colors.success }]}>{tally.known}</Text>
@@ -161,7 +162,7 @@ export function QuizSetup({ bank, stats, settings, onChange, onStart, paused, on
         {tally.review ? (
           <Pressable onPress={() => router.push("/review")}>
             <Text style={styles.reviewLink}>
-              Smart mix asks due words first, or review them as flashcards in ክለሳ ›
+              Or review the due words as flashcards in ክለሳ ›
             </Text>
           </Pressable>
         ) : null}

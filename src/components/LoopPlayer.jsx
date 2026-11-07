@@ -1,47 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
-import * as DocumentPicker from "expo-document-picker";
-import { Button, Card, Icon, ScreenContainer } from "../../components/ui";
-import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
+import { Card } from "./ui";
+import { colors, fontFamily, radii, shadows, spacing, typography } from "../theme";
 
 // Tight enough that the loop turns over without an audible overshoot.
 const POLL_MS = 50;
 const MIN_SPAN = 0.3;
 const SPEEDS = [0.5, 0.75, 1];
-
-// m4a and friends often arrive with an odd mime type or none at all, so the web picker is
-// given extensions alongside the wildcard — otherwise the file dialog greys them out.
-const AUDIO_EXTENSIONS = [
-  ".mp3", ".m4a", ".m4b", ".aac", ".wav", ".wave", ".ogg", ".oga", ".opus",
-  ".flac", ".webm", ".mp4", ".aiff", ".aif", ".caf", ".wma", ".amr", ".3gp",
-];
-const WEB_TYPES = ["audio/*", "audio/mpeg", "audio/mp4", "audio/x-m4a", "audio/aac", ...AUDIO_EXTENSIONS];
-
-// A blob URL carries the file's own mime type, and browsers pick their decoder from it.
-// macOS labels AAC-in-MP4 as audio/x-m4a, which Chrome does not recognise and refuses
-// before reading a byte — so the type is restated from the extension.
-const MIME_BY_EXTENSION = {
-  mp3: "audio/mpeg",
-  m4a: "audio/mp4",
-  m4b: "audio/mp4",
-  mp4: "audio/mp4",
-  aac: "audio/aac",
-  wav: "audio/wav",
-  wave: "audio/wav",
-  ogg: "audio/ogg",
-  oga: "audio/ogg",
-  opus: "audio/ogg",
-  flac: "audio/flac",
-  webm: "audio/webm",
-};
-
-function playableUri(file, name) {
-  const extension = (name ?? "").split(".").pop()?.toLowerCase();
-  const type = MIME_BY_EXTENSION[extension] ?? file.type;
-  const blob = type && type !== file.type ? new Blob([file], { type }) : file;
-  return { uri: URL.createObjectURL(blob), type: type || "unknown" };
-}
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00.0";
@@ -73,29 +39,30 @@ function Boundary({ title, value, onNudge, onSetHere, disabled }) {
         <Nudge label="+.1" onPress={() => onNudge(0.1)} disabled={disabled} />
         <Nudge label="+1" onPress={() => onNudge(1)} disabled={disabled} />
         <Pressable onPress={onSetHere} disabled={disabled} style={[styles.here, disabled && styles.nudgeDisabled]}>
-          <Text style={styles.hereText}>አሁን</Text>
+          <Text style={styles.hereText}>Now</Text>
         </Pressable>
       </View>
     </View>
   );
 }
 
-export default function Zema() {
-  const [track, setTrack] = useState(null);
+// A player for one recording with a repeat range: drag or nudge the start and
+// end to hear just that part over and over, slower if needed. `region`
+// ({ start, end, key }) sets the range from outside, e.g. one line of a ቅኔ;
+// a new key applies it and jumps to its start.
+export function LoopPlayer({ source, region }) {
   const [looping, setLooping] = useState(true);
   const [startRaw, setStartRaw] = useState(0);
   const [endRaw, setEndRaw] = useState(null);
   const [speed, setSpeed] = useState(1);
   const [barWidth, setBarWidth] = useState(0);
-  const [error, setError] = useState(null);
   const [slow, setSlow] = useState(false);
   const [dragging, setDragging] = useState(null);
   // Where the playhead is being dragged to; shown instead of the player's time until the seek lands.
   const [scrub, setScrub] = useState(null);
   const seeking = useRef(false);
-  const objectUrl = useRef(null);
 
-  const player = useAudioPlayer(track?.uri ?? null, { updateInterval: POLL_MS });
+  const player = useAudioPlayer(source, { updateInterval: POLL_MS });
   const playerRef = useRef(player);
   playerRef.current = player;
   const status = useAudioPlayerStatus(player);
@@ -107,8 +74,7 @@ export default function Zema() {
   const ready = duration > 0;
   const shown = scrub ?? position;
   // The player reports a real decode failure; the timeout only covers a silent stall.
-  const loadError =
-    status?.error ?? (track && !ready && slow ? "Still no audio after 8 seconds." : null);
+  const loadError = status?.error ?? (!ready && slow ? "Still no audio after 8 seconds." : null);
 
   // Turn the loop over at the B edge. seekTo is async, so guard against stacking seeks.
   useEffect(() => {
@@ -123,41 +89,27 @@ export default function Zema() {
 
   // A file the browser cannot decode never reports a duration, so say so rather than
   // leaving "Loading audio…" up forever.
+  // The wait only counts while the page is on screen: a browser holds back audio in a tab
+  // in the background, and the message would otherwise be waiting there on return.
   useEffect(() => {
-    if (!track || ready) return;
-    const timer = setTimeout(() => setSlow(true), 8000);
-    return () => clearTimeout(timer);
-  }, [track, ready]);
-
-  const pick = async (allowAll = false) => {
-    setError(null);
-    setSlow(false);
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: allowAll ? "*/*" : Platform.OS === "web" ? WEB_TYPES : "audio/*",
-        copyToCacheDirectory: true,
-        base64: false,
-        multiple: false,
-      });
-      if (result.canceled || !result.assets?.length) return;
-
-      const asset = result.assets[0];
-      const web = Platform.OS === "web" && asset.file ? playableUri(asset.file, asset.name) : null;
-      if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
-      objectUrl.current = web?.uri ?? null;
-
-      setTrack({
-        uri: web?.uri ?? asset.uri,
-        name: asset.name,
-        mimeType: web?.type ?? asset.mimeType ?? "unknown",
-      });
-      setStartRaw(0);
-      setEndRaw(null);
-      setSpeed(1);
-    } catch (e) {
-      setError(e?.message ?? "Could not open that file.");
+    if (ready) return undefined;
+    let timer = null;
+    const start = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => setSlow(true), 8000);
+    };
+    if (Platform.OS !== "web" || typeof document === "undefined") {
+      start();
+      return () => clearTimeout(timer);
     }
-  };
+    const onVisibility = () => (document.visibilityState === "visible" ? start() : clearTimeout(timer));
+    onVisibility();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [ready]);
 
   const seek = (seconds) => {
     if (!ready) return;
@@ -169,6 +121,16 @@ export default function Zema() {
   };
 
   const toggle = () => (status?.playing ? player.pause() : player.play());
+
+  // A range handed in from outside (a line of the text): loop it from its start.
+  useEffect(() => {
+    if (!region || !ready) return;
+    setStartRaw(region.start);
+    setEndRaw(region.end);
+    setLooping(true);
+    seek(region.start);
+    if (!status?.playing) player.play();
+  }, [region?.key, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Without "high" the player sets preservesPitch to false, which drops the singer's pitch
   // along with the tempo. The melody has to stay where it is to be worth studying.
@@ -249,35 +211,8 @@ export default function Zema() {
   const pct = (seconds) => (duration > 0 ? `${Math.min(100, Math.max(0, (seconds / duration) * 100))}%` : "0%");
 
   return (
-    <ScreenContainer scroll>
-
-      {!track ? (
-        <Card style={styles.intro}>
-          <Icon name="musical-notes-outline" size={30} color={colors.primary} />
-          <Text style={styles.introTitle}>ድምፅ ይጫኑ</Text>
-          <Text style={styles.introBody}>
-            Load an audio file, then mark a start and an end to hear just that part over and over. Widen or shorten the
-            range as you go — the file itself is never changed.
-          </Text>
-          <Button onPress={() => pick(false)}>ድምፅ ይምረጡ</Button>
-          <Text style={styles.formats}>mp3 · m4a · wav · aac · ogg · flac</Text>
-          <Pressable onPress={() => pick(true)} hitSlop={8}>
-            <Text style={styles.allFiles}>ፋይሉ ካልታየ — ሁሉንም ፋይል ያሳዩ</Text>
-          </Pressable>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-        </Card>
-      ) : (
-        <>
+    <>
           <Card style={styles.player}>
-            <View style={styles.trackRow}>
-              <Text style={styles.trackName} numberOfLines={1}>
-                {track.name}
-              </Text>
-              <Pressable onPress={() => pick(false)} hitSlop={8}>
-                <Text style={styles.change}>ይቀይሩ</Text>
-              </Pressable>
-            </View>
-
             <Text style={styles.clock}>
               {formatTime(shown)}
               <Text style={styles.clockTotal}> / {formatTime(duration)}</Text>
@@ -320,48 +255,40 @@ export default function Zema() {
 
             <View style={styles.transport}>
               <Pressable onPress={() => seek(start)} disabled={!ready} style={styles.secondaryButton}>
-                <Text style={styles.secondaryText}>ወደ መጀመሪያ</Text>
+                <Text style={styles.secondaryText}>To start</Text>
               </Pressable>
 
               <Pressable onPress={toggle} disabled={!ready} style={[styles.playButton, !ready && styles.nudgeDisabled]}>
-                <Text style={styles.playText}>{status?.playing ? "አቁም" : "አጫውት"}</Text>
+                <Text style={styles.playText}>{status?.playing ? "Pause" : "Play"}</Text>
               </Pressable>
 
               <Pressable
                 onPress={() => setLooping((on) => !on)}
                 style={[styles.secondaryButton, looping && styles.secondaryOn]}
               >
-                <Text style={[styles.secondaryText, looping && styles.secondaryTextOn]}>ድገማ</Text>
+                <Text style={[styles.secondaryText, looping && styles.secondaryTextOn]}>Loop</Text>
               </Pressable>
             </View>
 
             {!ready && !loadError ? <Text style={styles.loading}>Loading audio…</Text> : null}
-            {loadError ? (
-              <View style={styles.failed}>
-                <Text style={styles.failedText}>{loadError}</Text>
-                <Text style={styles.loading}>Read as {track.mimeType}</Text>
-                <Pressable onPress={() => pick(true)} hitSlop={8}>
-                  <Text style={styles.allFiles}>ሌላ ፋይል ይምረጡ</Text>
-                </Pressable>
-              </View>
-            ) : null}
+            {loadError ? <Text style={styles.failedText}>{loadError}</Text> : null}
           </Card>
 
           <Card style={styles.rangeCard}>
             <View style={styles.rangeHead}>
-              <Text style={styles.rangeTitle}>የሚደገመው ክፍል</Text>
+              <Text style={styles.rangeTitle}>Loop range</Text>
               <Text style={styles.rangeSpan}>{formatTime(Math.max(0, end - start))}</Text>
             </View>
 
             <Boundary
-              title="መጀመሪያ"
+              title="Start"
               value={start}
               disabled={!ready}
               onNudge={nudgeStart}
               onSetHere={() => setStartRaw(Math.min(position, end - MIN_SPAN))}
             />
             <Boundary
-              title="መጨረሻ"
+              title="End"
               value={end}
               disabled={!ready}
               onNudge={nudgeEnd}
@@ -369,12 +296,12 @@ export default function Zema() {
             />
 
             <Pressable onPress={wholeTrack} disabled={!ready} style={styles.whole}>
-              <Text style={styles.wholeText}>ሙሉውን ይያዙ</Text>
+              <Text style={styles.wholeText}>Whole recording</Text>
             </Pressable>
           </Card>
 
           <Card style={styles.speedCard}>
-            <Text style={styles.rangeTitle}>ፍጥነት</Text>
+            <Text style={styles.rangeTitle}>Speed</Text>
             <View style={styles.speedRow}>
               {SPEEDS.map((rate) => (
                 <Pressable
@@ -387,26 +314,14 @@ export default function Zema() {
               ))}
             </View>
           </Card>
-        </>
-      )}
-    </ScreenContainer>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  intro: { alignItems: "center", gap: spacing.md },
-  introTitle: { fontFamily: fontFamily.ethiopicBold, fontSize: 20, color: colors.primary },
-  introBody: { ...typography.caption, color: colors.textSecondary, textAlign: "center", lineHeight: 19 },
-  error: { ...typography.caption, color: colors.dangerDark },
-  formats: { ...typography.caption, color: colors.textMuted },
-  allFiles: { ...typography.caption, color: colors.primary, fontFamily: fontFamily.ethiopicRegular },
-  failed: { gap: spacing.xs, alignItems: "center" },
   failedText: { ...typography.caption, color: colors.dangerDark, textAlign: "center" },
 
   player: { gap: spacing.md, marginBottom: spacing.lg },
-  trackRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  trackName: { flex: 1, fontFamily: fontFamily.ethiopicRegular, fontSize: 15, color: colors.textPrimary },
-  change: { ...typography.caption, color: colors.primary, fontFamily: fontFamily.ethiopicRegular },
 
   clock: { fontFamily: fontFamily.latinBold, fontSize: 30, color: colors.textPrimary, textAlign: "center" },
   clockTotal: { fontFamily: fontFamily.latinRegular, fontSize: 16, color: colors.textMuted },

@@ -56,6 +56,10 @@ export default function SignIn() {
           autoComplete="password"
         />
 
+        <Link href="/auth/forgot-password" style={{ alignSelf: "flex-end", marginTop: -spacing.xs }}>
+          <Text style={[typography.caption, { color: colors.primaryDark }]}>Forgot password?</Text>
+        </Link>
+
         <Button variant="primary" loading={loading} onPress={handleSubmit} style={{ marginTop: spacing.sm }}>
           Sign in
         </Button>

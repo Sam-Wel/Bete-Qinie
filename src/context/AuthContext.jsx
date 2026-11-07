@@ -23,6 +23,7 @@ async function fetchProfile(userId) {
 }
 
 export const AuthProvider = ({ children }) => {
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [initialising, setInitialising] = useState(true);
@@ -54,10 +55,13 @@ export const AuthProvider = ({ children }) => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
       setSession(session);
       loadProfile(session?.user?.id);
+      // Opened from a "set a new password" email: the app takes the person to that form,
+      // even if Supabase sent the link to the home page.
+      if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
     });
 
     return () => {
@@ -76,7 +80,16 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, profile, isAdmin, loading, signOut }}
+      value={{
+        session,
+        user: session?.user ?? null,
+        profile,
+        isAdmin,
+        loading,
+        signOut,
+        passwordRecovery,
+        clearPasswordRecovery: () => setPasswordRecovery(false),
+      }}
     >
       {children}
     </AuthContext.Provider>

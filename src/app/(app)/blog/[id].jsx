@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { router, Stack, useLocalSearchParams } from "expo-router";
+import { Link, router, Stack, useLocalSearchParams } from "expo-router";
+import { QINE } from "../../../data/qine";
 import { supabase } from "../../../lib/supabaseClient";
 import { BlogContent } from "../../../components/BlogContent";
 import { useAuth } from "../../../context/AuthContext";
@@ -77,6 +78,9 @@ export default function BlogPostDetail() {
     );
   }
 
+  // A ቅኔ that also has a recording in ዜማ links to it.
+  const chanted = QINE.find((q) => q.blogId === Number(post.id));
+
   return (
     <ScreenContainer scroll>
       <Stack.Screen options={{ title: post.title }} />
@@ -86,8 +90,18 @@ export default function BlogPostDetail() {
         <Badge label="Draft (only visible to you)" tone="warning" />
       )}
       <Text style={styles.meta}>
-        By {post.written_by} | {new Date(post.created_date).toLocaleDateString()}
+        {[
+          post.written_by?.trim() ? `By ${post.written_by.trim()}` : null,
+          new Date(post.created_date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
+        ]
+          .filter(Boolean)
+          .join("  ·  ")}
       </Text>
+      {chanted ? (
+        <Link href={`/zema/${chanted.id}`} style={styles.listen}>
+          ♪ Listen to it chanted in ዜማ ›
+        </Link>
+      ) : null}
       <BlogContent content={post.content} baseStyle={styles.content} />
 
       {isAdmin && (
@@ -129,11 +143,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
   },
+  // Large enough to read a ቅኔ comfortably, like the text on the ዜማ page.
   content: {
     fontFamily: fontFamily.ethiopicRegular,
-    fontSize: 15,
-    color: colors.textSecondary,
+    fontSize: 19,
+    lineHeight: 34,
+    color: colors.textPrimary,
   },
+  listen: { ...typography.label, color: colors.primaryDark, marginBottom: spacing.md },
   actionsRow: {
     flexDirection: "row",
     gap: spacing.sm,

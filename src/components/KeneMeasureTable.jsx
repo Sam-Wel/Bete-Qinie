@@ -54,7 +54,7 @@ export function KeneMeasureTable({ title, rowGroupLabel, receivingLabel, houseLa
 
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.title}>{title}</Text>
+      {title ? <Text style={styles.title}>{title}</Text> : null}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator
@@ -158,9 +158,10 @@ export function KeneMeasureTable({ title, rowGroupLabel, receivingLabel, houseLa
 const styles = StyleSheet.create({
   wrapper: { marginBottom: spacing.xl },
   title: {
-    fontFamily: fontFamily.ethiopicBold,
-    fontSize: 20,
-    color: colors.primary,
+    fontFamily: fontFamily.latinSemiBold,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
   scrollContent: { flexGrow: 1 },

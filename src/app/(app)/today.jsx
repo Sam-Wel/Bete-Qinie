@@ -223,9 +223,11 @@ export default function Today() {
       <View style={[shared.card, styles.goals]}>
         <Text style={styles.label}>MASTERED</Text>
         <Text style={shared.hint}>
-          {milestone
-            ? `${mastered} mastered: ${milestone - mastered} to go to ${milestone}. A word is mastered once it passes its 3-week review.`
-            : `${mastered} mastered. Every milestone reached!`}
+          {!milestone
+            ? `${mastered} mastered. Every milestone reached!`
+            : mastered
+              ? `${mastered} mastered, ${milestone - mastered} more to reach ${milestone}. A word is mastered once it passes its 3-week review.`
+              : `Master ${milestone} words to reach your first milestone. A word is mastered once it passes its 3-week review.`}
         </Text>
         {milestone ? <ProgressBar value={(mastered - prevMilestone) / (milestone - prevMilestone)} color={colors.mastered} /> : null}
         {ahead.length ? (

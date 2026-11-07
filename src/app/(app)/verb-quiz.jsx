@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { setGameLanguage, useGameLanguage } from "../../hooks/useGameLanguage";
-import { ScreenContainer } from "../../components/ui";
+import { ScreenContainer, Tabs } from "../../components/ui";
+import { useToday } from "../../hooks/useToday";
 import { QuizSetup } from "../../components/verbQuiz/QuizSetup";
 import { QuizPlay } from "../../components/verbQuiz/QuizPlay";
 import { QuizResults } from "../../components/verbQuiz/QuizResults";
@@ -11,38 +12,23 @@ import { QuizProgress } from "../../components/verbQuiz/QuizProgress";
 import { useVerbBank } from "../../hooks/useVerbBank";
 import { useWordProgress } from "../../context/WordProgressContext";
 import { buildQuiz, hasLanguage, pickWords, summarizeRun, wordsInScope } from "../../lib/verbQuiz";
-import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
+import { colors, spacing, typography } from "../../theme";
 
 const SETTINGS_KEY = "bete-qinie:verb-quiz-settings:v1";
 
 const DEFAULT_SETTINGS = {
   lang: "am",
   scope: { mode: "all", picks: {} },
-  filter: "smart",
+  filter: "studying",
   count: 20,
   direction: "mixed",
   alsoShow: ["ti", "en"],
 };
 
 const TABS = [
-  { key: "practice", label: "ልምምድ" },
-  { key: "progress", label: "ዕቤት" },
+  { key: "practice", label: "Practice" },
+  { key: "progress", label: "Progress" },
 ];
-
-function TabSwitch({ value, onChange }) {
-  return (
-    <View style={styles.tabs}>
-      {TABS.map((tab) => {
-        const active = tab.key === value;
-        return (
-          <Pressable key={tab.key} onPress={() => onChange(tab.key)} style={[styles.tab, active && styles.tabActive]}>
-            <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
 
 const newQuiz = (questions, settings) => ({
   settings,
@@ -56,6 +42,7 @@ const newQuiz = (questions, settings) => ({
 export default function VerbQuiz() {
   const { bank, loading, error } = useVerbBank();
   const progress = useWordProgress();
+  useToday(); // fills today's set, which the default filter asks from
 
   const [tab, setTab] = useState("practice");
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -63,9 +50,20 @@ export default function VerbQuiz() {
   const [result, setResult] = useState(null);
   const [paused, setPaused] = useState(null);
 
+  // Settings saved before the daily plan default to Smart mix over every verb, where most
+  // answers are now practice only; they move once to today's words and due reviews.
   useEffect(() => {
     AsyncStorage.getItem(SETTINGS_KEY)
-      .then((raw) => raw && setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) }))
+      .then((raw) => {
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (saved.filterVersion !== 2) {
+          if (saved.filter === "smart" || !saved.filter) saved.filter = "studying";
+          saved.filterVersion = 2;
+          AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(saved)).catch(() => {});
+        }
+        setSettings({ ...DEFAULT_SETTINGS, ...saved });
+      })
       .catch(() => {});
   }, []);
 
@@ -214,25 +212,12 @@ export default function VerbQuiz() {
   return (
     <ScreenContainer scroll>
       {/* A quiz in progress gets the screen to itself; Pause leads back out. */}
-      {quiz && tab === "practice" ? null : <TabSwitch value={tab} onChange={setTab} />}
+      {quiz && tab === "practice" ? null : <Tabs tabs={TABS} value={tab} onChange={setTab} />}
       {body}
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  tabs: {
-    flexDirection: "row",
-    alignSelf: "flex-start",
-    padding: 3,
-    gap: 3,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surfaceMuted,
-    marginBottom: spacing.lg,
-  },
-  tab: { paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radii.pill },
-  tabActive: { backgroundColor: colors.surface, ...shadows.card },
-  tabText: { fontFamily: fontFamily.ethiopicRegular, fontSize: 14, color: colors.textSecondary },
-  tabTextActive: { fontFamily: fontFamily.ethiopicBold, color: colors.primary },
   error: { ...typography.body, color: colors.danger, marginTop: spacing.lg },
 });

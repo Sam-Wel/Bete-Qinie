@@ -26,7 +26,7 @@ export function QuizProgress({ bank, stats, runs, lang, onPractiseFamily, onPrac
     return (
       <EmptyState
         icon="stats-chart-outline"
-        message="No quizzes yet. Take one from ልምምድ and your progress will show up here."
+        message="No quizzes yet. Take one from Practice and your progress will show up here."
       />
     );
   }

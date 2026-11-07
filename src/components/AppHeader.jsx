@@ -7,6 +7,12 @@ import { colors, fontFamily, spacing } from "../theme";
 import { Brand } from "./DrawerContent";
 import { Icon } from "./ui/Icon";
 
+// Sections with pages inside them (a blog post, a chanted ቅኔ): Back returns to the list.
+const NESTED = {
+  blog: { back: "/blog", section: "ቅኔ አበው", english: "Blog" },
+  zema: { back: "/zema", section: "ዜማ", english: "Chant" },
+};
+
 // Matches ScreenContainer's content column, so the title lines up with the page.
 const COLUMN = 760;
 
@@ -16,10 +22,11 @@ export function AppHeader({ route }) {
   const wide = useIsWide();
   const pathname = usePathname();
   const info = pageInfo(route.name);
-  const inPost = route.name === "blog" && /^\/blog\/.+/.test(pathname);
-  const backTo = inPost ? "/blog" : info.backTo;
-  const section = inPost ? "ቅኔ አበው" : info.section;
-  const english = inPost ? "Blog" : info.english;
+  const nest = NESTED[route.name];
+  const inPost = Boolean(nest) && pathname.startsWith(`${nest.back}/`);
+  const backTo = inPost ? nest.back : info.backTo;
+  const section = inPost ? nest.section : info.section;
+  const english = inPost ? nest.english : info.english;
   const titleFont = isEthiopic(info.title) ? styles.titleEthiopic : styles.titleLatin;
 
   const back = backTo ? (
@@ -42,7 +49,7 @@ export function AppHeader({ route }) {
           <View style={{ flex: 1, minWidth: 0 }}>
             {backTo && section ? <Text style={styles.phoneSection}>{section}</Text> : null}
             <Text style={[titleFont, styles.phoneTitle]} numberOfLines={1}>
-              {inPost ? "ቅኔ አበው" : info.title}
+              {inPost ? nest.section : info.title}
             </Text>
             {!backTo && english ? <Text style={styles.phoneEnglish}>{english}</Text> : null}
           </View>
@@ -59,7 +66,7 @@ export function AppHeader({ route }) {
           {section ? <Text style={styles.section}>{isEthiopic(section) ? section : section.toUpperCase()}</Text> : null}
           <View style={styles.titleRow}>
             <Text style={[titleFont, styles.title]} numberOfLines={1}>
-              {inPost ? "ቅኔ አበው" : info.title}
+              {inPost ? nest.section : info.title}
             </Text>
             {english && !inPost ? <Text style={styles.english}>{english}</Text> : null}
           </View>

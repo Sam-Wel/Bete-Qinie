@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { ScreenContainer, Button } from "../../components/ui";
+import { ScreenContainer, Button, Tabs } from "../../components/ui";
 import { KalBoard, KalLegend, MARK_COLORS, consonantsOf } from "../../components/games/KalBoard";
 import { KalRootBoard, KalRootLegend } from "../../components/games/KalRootBoard";
 import { Meanings } from "../../components/verbQuiz/QuizPlay";
@@ -33,7 +33,7 @@ import {
   stats as kalStats,
 } from "../../lib/kal";
 import { LANGUAGES, LANGUAGE_LABEL } from "../../lib/verbQuiz";
-import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
+import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
 const LEVELS = [
   { key: "easy", label: "Easy", line: "Six consonants to choose from in each square" },
@@ -235,23 +235,19 @@ export default function Kal() {
 
   return (
     <ScreenContainer scroll keyboardAvoiding>
-      <View style={[styles.modes, narrow && styles.modesCompact]}>
-        {[
-          ["daily", `Today's ቃል`],
-          ["practice", "Practice"],
-        ].map(([key, label]) => (
-          <Pressable
-            key={key}
-            onPress={() => {
-              setMode(key);
-              if (key === "practice" && !practice) setPractice(newPractice());
-            }}
-            style={[styles.mode, mode === key && styles.modeActive]}
-          >
-            <Text style={[styles.modeText, mode === key && styles.modeTextActive]}>{label}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <Tabs
+        center
+        tabs={[
+          { key: "daily", label: "Today's ቃል" },
+          { key: "practice", label: "Practice" },
+        ]}
+        value={mode}
+        onChange={(key) => {
+          setMode(key);
+          if (key === "practice" && !practice) setPractice(newPractice());
+        }}
+        style={narrow ? styles.modesCompact : null}
+      />
 
       {mode === "practice" ? (
         <View style={styles.levels}>
@@ -378,20 +374,7 @@ export default function Kal() {
 }
 
 const styles = StyleSheet.create({
-  modes: {
-    flexDirection: "row",
-    alignSelf: "center",
-    padding: 3,
-    gap: 3,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surfaceMuted,
-    marginBottom: spacing.md,
-  },
-  mode: { paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radii.pill },
   modesCompact: { marginBottom: spacing.sm },
-  modeActive: { backgroundColor: colors.surface, ...shadows.card },
-  modeText: { ...typography.label, color: colors.textSecondary },
-  modeTextActive: { color: colors.primary },
   levels: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: spacing.sm, marginBottom: spacing.sm },
   level: { paddingVertical: 6, paddingHorizontal: spacing.md, borderRadius: radii.pill, borderWidth: 1, borderColor: colors.border },
   levelOn: { backgroundColor: colors.primaryLight, borderColor: colors.primary },

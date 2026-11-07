@@ -12,6 +12,11 @@ export function shortName(name = "") {
   return ETHIOPIC.test(first) && !(second && /english/i.test(second)) ? first : second || first;
 }
 
+// One spelling of each language's name everywhere in the app, whatever the database's
+// languages table says (it spells Amharic አምሓርኛ, the games አማርኛ).
+export const LANGUAGE_NAMES = { gz: "ግዕዝ", ti: "ትግርኛ", am: "አማርኛ", en: "English" };
+export const languageName = (code, name) => LANGUAGE_NAMES[code] ?? shortName(name || code);
+
 // One Ge'ez word with its meanings in each language and its ሰዋሰው examples,
 // as shown by the Dictionary and ግሲ. `meanings` maps a language code to a list.
 export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples = [], languageMap = {} }) {
@@ -41,7 +46,7 @@ export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples =
         <View style={styles.meanings}>
           {tiles.map((code) => (
             <View key={code} style={styles.meaning}>
-              <Text style={styles.meaningLang}>{shortName(languageMap[code] || code)}</Text>
+              <Text style={styles.meaningLang}>{languageName(code, languageMap[code])}</Text>
               <Text style={code === "en" ? styles.meaningLatin : styles.meaningWords}>
                 {meanings[code].join(code === "en" ? ", " : "፣ ").replace(/፣\s*/g, "፣ ")}
               </Text>

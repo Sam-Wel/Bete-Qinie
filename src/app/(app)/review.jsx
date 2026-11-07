@@ -6,6 +6,7 @@ import { useVerbBank } from "../../hooks/useVerbBank";
 import { supabase } from "../../lib/supabaseClient";
 import { REVIEW_DAYS, applyAnswer, dueQueue, inReview, reviewSummary, startOfDay, stateOf } from "../../lib/verbQuiz";
 import { ScreenContainer, Button } from "../../components/ui";
+import { languageName } from "../../components/WordCard";
 import { CleanupCard } from "../../components/today/CleanupCard";
 import { STATE_COLORS, scriptFont, shared } from "../../components/verbQuiz/shared";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
@@ -113,7 +114,7 @@ function Card({ word, onAnswer, stat }) {
             {grouped.length ? (
               grouped.map(([code, words]) => (
                 <Text key={code} style={styles.answerLine}>
-                  <Text style={styles.answerLang}>{languageNames[code] || code}  </Text>
+                  <Text style={styles.answerLang}>{languageName(code, languageNames[code])}  </Text>
                   <Text style={scriptFont(words[0])}>{words.join(", ")}</Text>
                 </Text>
               ))

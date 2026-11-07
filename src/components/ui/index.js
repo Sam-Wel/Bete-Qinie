@@ -11,3 +11,4 @@ export { OrnamentDivider } from "./OrnamentDivider";
 export { CrossMenuIcon } from "./CrossMenuIcon";
 export { Select } from "./Select";
 export { Icon } from "./Icon";
+export { Tabs } from "./Tabs";

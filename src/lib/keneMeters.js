@@ -384,7 +384,7 @@ export const METER_DEFS = [
   {
     id: "geez",
     contentType: "ግዕዝ",
-    title: "ግእዝ ጉባኤ ቃና",
+    title: "ግዕዝ ጉባኤ ቃና",
     lines: [
       { parts: [medebPair({ sourceChoice: false }), mewqePair()] },
       { parts: [medebPair(), mewqePair()] },

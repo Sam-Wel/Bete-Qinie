@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWin
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { OrnamentDivider } from "./ui/OrnamentDivider";
+import { MeterPicker, rememberMeter } from "./MeterPicker";
 import { colors, fontFamily, gradients, radii, shadows, spacing, typography } from "../theme";
 import {
   LINE_TYPES,
@@ -25,8 +26,11 @@ import { clearDraft, draftFits, hasContent, loadDraft, saveDraft } from "../lib/
 
 const SPRING = { damping: 15, stiffness: 300 };
 const EMPTY = { type: null, count: null, text: "", skipped: false };
-const CELL_WIDTH = 132;
-const CELL_GAP = spacing.sm;
+// Segments hug their words: never narrower than CELL_MIN, and past CELL_MAX the words
+// wrap onto another line.
+const CELL_MIN = 72;
+const CELL_MAX = 280;
+const CELL_GAP = 20;
 // Past this width a long line wraps onto a second row instead of scrolling sideways.
 const WRAP_LINES_AT = 720;
 
@@ -117,52 +121,65 @@ function Toggle({ hint, options, activeKey, onSelect }) {
   );
 }
 
-// One cell per segment, read across as the line reads. The words are typed in the cell;
-// the pill beneath opens the measure picker and then shows what was chosen.
-function SlotCell({ slot, value, active, broken, unused, onFocus, onMeasure, onChangeText }) {
-  const filled = !unused && Boolean(value.type) && value.count != null && !value.skipped;
-  const measure = unused
-    ? "—"
-    : value.skipped
-      ? "የለም"
-      : filled
-        ? `${TYPE_LABEL[value.type]} ${value.count}`
-        : "ልኬት ይምረጡ";
+// One segment of the line, written on an underline like a verse on ruled paper: the
+// words are the only large thing. Beneath them one small caption names the segment and,
+// once measured, shows the measure; tapping it opens the measure picker. The underline
+// carries the state at a glance: bright while being written, gold once measured, red if
+// the measure does not fit.
+const LINE_HEIGHT = 28;
+
+function SlotCell({ slot, value, active, broken, unused, onFocus, onMeasure, onChangeText, onLayout }) {
+  const measured = !unused && Boolean(value.type) && value.count != null && !value.skipped;
+  const result = unused ? null : value.skipped ? "none" : measured ? `${TYPE_LABEL[value.type]} ${value.count}` : null;
 
   return (
-    <View style={[styles.cell, active && styles.cellActive]}>
-      <Text style={styles.cellLabel} numberOfLines={1}>
-        {slot.short}
-      </Text>
-
-      <TextInput
-        value={value.text}
-        onChangeText={onChangeText}
-        onFocus={onFocus}
-        placeholder="ቃላቱን ይጻፉ"
-        placeholderTextColor={colors.textMuted}
-        style={styles.cellInput}
-        multiline
-      />
+    <View onLayout={onLayout} style={[styles.cell, unused && styles.cellUnused]}>
+      {/* An invisible copy of the words sets the segment's size and the input lies over
+          it, so the line fits whatever is typed. */}
+      <View
+        style={[
+          styles.cellField,
+          measured && styles.cellFieldMeasured,
+          broken && styles.cellFieldBroken,
+          active && styles.cellFieldActive,
+        ]}
+      >
+        <Text style={[styles.cellInput, styles.cellCopy]} aria-hidden>
+          {`${value.text}\u200b`}
+        </Text>
+        <TextInput
+          value={value.text}
+          onChangeText={onChangeText}
+          onFocus={onFocus}
+          accessibilityLabel={slot.label}
+          style={[styles.cellInput, styles.cellInputOver]}
+          multiline
+        />
+      </View>
 
       <Pressable
         onPress={onMeasure}
-        style={[
-          styles.measure,
-          filled && !broken && styles.measureFilled,
-          broken && styles.measureBroken,
-          !filled && !value.skipped && !unused && styles.measureEmpty,
-        ]}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={`${slot.label}: measure`}
+        style={({ hovered, focused }) => [styles.caption, (hovered || focused) && styles.captionHover]}
       >
-        <Text
-          style={[
-            styles.measureText,
-            filled && !broken && styles.measureTextFilled,
-            broken && styles.measureTextBroken,
-          ]}
-          numberOfLines={1}
-        >
-          {measure}
+        <Text style={styles.captionName} numberOfLines={1}>
+          {slot.short}
+          {result ? (
+            <Text
+              style={[
+                styles.captionResult,
+                broken && styles.captionBroken,
+                value.skipped && styles.captionSkipped,
+              ]}
+            >{`  ·  ${result}`}</Text>
+          ) : active && !unused ? (
+            <>
+              {"  ·  "}
+              <Text style={styles.captionAction}>measure</Text>
+            </>
+          ) : null}
         </Text>
       </Pressable>
     </View>
@@ -185,6 +202,8 @@ export function MeterChecker() {
   const [hydrated, setHydrated] = useState(false);
   const [restored, setRestored] = useState(false);
   const scrollers = useRef({});
+  useEffect(() => rememberMeter(meterId), [meterId]);
+  const cellX = useRef({});
   const wrapLines = useWindowDimensions().width >= WRAP_LINES_AT;
   const { user, profile } = useAuth();
 
@@ -222,11 +241,12 @@ export function MeterChecker() {
   }, [hydrated, meterId, state, title]);
 
   // Advancing can land on a cell that is scrolled off the side, so bring it into view.
+  // Cells are as wide as their words, so each one's position is read from its layout.
   useEffect(() => {
-    const index = slotsByLine[active.line]?.findIndex((s) => s.key === active.slot) ?? -1;
     const scroller = scrollers.current[active.line];
-    if (!scroller || index < 0) return;
-    scroller.scrollTo({ x: Math.max(0, index * (CELL_WIDTH + CELL_GAP) - 24), animated: true });
+    const x = cellX.current[`${active.line}:${active.slot}`];
+    if (!scroller || x == null) return;
+    scroller.scrollTo({ x: Math.max(0, x - 24), animated: true });
   }, [active.line, active.slot, meterId]);
 
   const optionsOf = (lineIndex, slot) => slotOptions(meter.lines[lineIndex], slot, state[lineIndex]);
@@ -359,7 +379,7 @@ export function MeterChecker() {
       setSaved({ tone: "error", text: saveError.message });
       return;
     }
-    setSaved({ tone: "ok", text: "ተቀምጧል።" });
+    setSaved({ tone: "ok", text: "Saved." });
     setRestored(false);
     clearDraft();
   };
@@ -391,32 +411,23 @@ export function MeterChecker() {
 
   return (
     <View style={styles.wrapper}>
-      <View style={styles.meterTabs}>
-        {meters.map((option) => {
-          const on = option.id === meterId;
-          return (
-            <Pressable
-              key={option.id}
-              onPress={() => (on ? null : switchMeter(option))}
-              style={[styles.meterTab, on && styles.meterTabActive]}
-            >
-              <Text style={[styles.meterTabText, on && styles.meterTabTextActive]}>{option.title}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <MeterPicker
+        meters={meters}
+        meterId={meterId}
+        onPick={switchMeter}
+        right={
+          <Text style={styles.progress}>
+            {settledCount}/{required.length}
+          </Text>
+        }
+      />
 
-      <View style={styles.meterHeader}>
-        <Text style={styles.meterSubtitle}>
-          Type each segment in its cell, then tap ልኬት to measure it.
-          {optionalCount ? ` ${optionalCount} optional.` : ""}
-        </Text>
-        <Text style={styles.progress}>
-          {settledCount}/{required.length}
-        </Text>
-      </View>
+      <Text style={styles.meterSubtitle}>
+        Write each segment on its line, then tap measure beneath it.
+        {optionalCount ? ` ${optionalCount} optional.` : ""}
+      </Text>
 
-      {restored ? <Text style={styles.restored}>ያልተጠናቀቀ ስራዎ ተመልሷል።</Text> : null}
+      {restored ? <Text style={styles.restored}>Your unfinished work is back.</Text> : null}
 
       {slotsByLine.map((slots, lineIndex) => {
         const cells = slots.map((slot) => {
@@ -435,6 +446,9 @@ export function MeterChecker() {
               onFocus={() => setActive({ line: lineIndex, slot: slot.key })}
               onMeasure={() => openMeasure(lineIndex, slot.key)}
               onChangeText={(text) => patchSlot(lineIndex, slot.key, { text })}
+              onLayout={(e) => {
+                cellX.current[`${lineIndex}:${slot.key}`] = e.nativeEvent.layout.x;
+              }}
             />
           );
         });
@@ -468,27 +482,24 @@ export function MeterChecker() {
       {complete ? (
         <Animated.View entering={FadeIn.duration(320)} style={styles.finale}>
           <OrnamentDivider />
-          <Text style={styles.finaleTitle}>ተስማምቷል</Text>
+          <Text style={styles.finaleTitle}>It fits</Text>
           <Text style={styles.finaleSubtitle}>All lines fit {meter.title}.</Text>
 
           {slotsByLine.map((slots, index) => {
             const used = slots.filter((slot) => state[index].slots[slot.key].type && neededOf(index, slot));
             return (
               <View key={index} style={styles.finaleLine}>
-                <Text style={styles.finaleWords}>
-                  {used
-                    .map((slot) => state[index].slots[slot.key].text.trim())
-                    .filter(Boolean)
-                    .join("  ") || `ቤት ${ORDINALS[index]}`}
-                </Text>
-                <Text style={styles.finalePattern}>
-                  {used
-                    .map((slot) => {
-                      const value = state[index].slots[slot.key];
-                      return `${TYPE_LABEL[value.type]} ${value.count}`;
-                    })
-                    .join("  ·  ")}
-                </Text>
+                {/* Each segment's words with its measure beneath, as they were written. */}
+                {used.map((slot) => {
+                  const value = state[index].slots[slot.key];
+                  const words = value.text.trim();
+                  return (
+                    <View key={slot.key} style={styles.finaleSegment}>
+                      {words ? <Text style={styles.finaleWords}>{words}</Text> : null}
+                      <Text style={styles.finalePattern}>{`${TYPE_LABEL[value.type]} ${value.count}`}</Text>
+                    </View>
+                  );
+                })}
               </View>
             );
           })}
@@ -499,7 +510,7 @@ export function MeterChecker() {
               <TextInput
                 value={title}
                 onChangeText={setTitle}
-                placeholder="ርእስ"
+                placeholder="Title"
                 placeholderTextColor={colors.textMuted}
                 style={styles.saveTitle}
               />
@@ -511,11 +522,11 @@ export function MeterChecker() {
                   (saving || !title.trim() || !poemText()) && styles.saveButtonOff,
                 ]}
               >
-                <Text style={styles.saveButtonText}>{saving ? "..." : "ያስቀምጡ"}</Text>
+                <Text style={styles.saveButtonText}>{saving ? "..." : "Save"}</Text>
               </Pressable>
             </View>
           ) : (
-            <Text style={styles.saveHint}>ቅኔውን ለማስቀመጥ ይግቡ።</Text>
+            <Text style={styles.saveHint}>Sign in to save this ቅኔ.</Text>
           )}
 
           {!poemText() && user ? (
@@ -529,7 +540,7 @@ export function MeterChecker() {
 
       {touched ? (
         <Pressable onPress={reset} style={styles.resetButton}>
-          <Text style={styles.resetText}>እንደገና ጀምር</Text>
+          <Text style={styles.resetText}>Start over</Text>
         </Pressable>
       ) : null}
 
@@ -562,7 +573,7 @@ export function MeterChecker() {
 
                 {sheet.part.kind === "medeb" && sheet.part.sourceChoice && !sheet.measure.fixed ? (
                   <Toggle
-                    hint="ይለኩ በ"
+                    hint="Measure by"
                     options={MEASURE_SOURCES}
                     activeKey={sheet.measure.source}
                     onSelect={(source) => patchPart(measuring.line, sheet.slot.part, { source })}
@@ -571,7 +582,7 @@ export function MeterChecker() {
 
                 {sheet.part.kind !== "hareg" && sheet.part.tables.length > 1 ? (
                   <Toggle
-                    hint="ይለኩ በ"
+                    hint="Measure by"
                     options={sheet.part.tables.map((table, i) => ({ key: i, label: table.name }))}
                     activeKey={sheet.config.table}
                     onSelect={(table) => patchPart(measuring.line, sheet.slot.part, { table })}
@@ -587,7 +598,7 @@ export function MeterChecker() {
                     options={sheet.options}
                     value={sheet.value}
                     optional={Boolean(sheet.slot.optional)}
-                    skipLabel={sheet.slot.kind === "hareg" ? "ሐረግ የለም" : "የለም"}
+                    skipLabel={sheet.slot.kind === "hareg" ? "No ሐረግ" : "None"}
                     onPick={(type, count) => pick(measuring.line, sheet.slot.key, type, count)}
                     onSkip={() => skip(measuring.line, sheet.slot.key, sheet.value.skipped)}
                   />
@@ -606,71 +617,50 @@ export function MeterChecker() {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { gap: spacing.lg },
+  wrapper: { gap: spacing.md },
 
-  meterTabs: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  meterTab: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  meterTabActive: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
-  meterTabText: { fontFamily: fontFamily.ethiopicRegular, fontSize: 14, color: colors.textSecondary },
-  meterTabTextActive: { fontFamily: fontFamily.ethiopicBold, color: colors.primaryDark },
+  meterSubtitle: { fontFamily: fontFamily.latinRegular, fontSize: 12, lineHeight: 18, color: colors.textMuted },
+  progress: { fontFamily: fontFamily.latinRegular, fontSize: 12, lineHeight: 18, color: colors.textMuted, paddingTop: 6 },
 
-  meterHeader: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  meterSubtitle: { ...typography.caption, color: colors.textSecondary, flex: 1 },
-  progress: { ...typography.label, color: colors.textMuted },
-
-  lineBlock: { gap: spacing.sm },
+  lineBlock: { gap: spacing.xs },
   lineHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  lineLabel: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, color: colors.textMuted, letterSpacing: 0.5 },
-  lineRule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
-  lineRow: { flexDirection: "row", gap: CELL_GAP, paddingVertical: 2, paddingRight: spacing.sm },
+  lineLabel: { fontFamily: fontFamily.ethiopicRegular, fontSize: 11, color: colors.textMuted, letterSpacing: 0.5, opacity: 0.7 },
+  lineRule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border, opacity: 0.6 },
+  lineRow: { flexDirection: "row", alignItems: "flex-start", columnGap: CELL_GAP, rowGap: 16, paddingVertical: 4, paddingRight: spacing.sm },
   lineRowWrapped: { flexWrap: "wrap", paddingRight: 0 },
 
-  cell: {
-    width: CELL_WIDTH,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: spacing.sm,
-    gap: spacing.xs,
+  cell: { minWidth: CELL_MIN, maxWidth: CELL_MAX, gap: 3 },
+  cellUnused: { opacity: 0.35 },
+  cellField: {
+    minHeight: LINE_HEIGHT,
+    borderBottomWidth: 1.5,
+    borderBottomColor: colors.border,
+    paddingBottom: 2,
   },
-  cellActive: { borderColor: colors.accent, borderWidth: 2, ...shadows.raised },
-  cellLabel: {
-    fontFamily: fontFamily.ethiopicBold,
-    fontSize: 11,
-    color: colors.textMuted,
-    letterSpacing: 0.3,
-  },
+  cellFieldMeasured: { borderBottomColor: colors.primary },
+  cellFieldBroken: { borderBottomColor: colors.danger },
+  // Bright and neutral, so red only ever means a measure that does not fit.
+  cellFieldActive: { borderBottomColor: colors.textPrimary, borderBottomWidth: 2, paddingBottom: 1.5 },
+  // What the learner writes is the point of the line, so it is the largest thing on it.
   cellInput: {
-    fontFamily: fontFamily.ethiopicRegular,
-    fontSize: 16,
+    fontFamily: fontFamily.latinSemiBold,
+    fontSize: 18,
+    lineHeight: LINE_HEIGHT,
     color: colors.textPrimary,
-    minHeight: 52,
+    padding: 0,
     textAlignVertical: "top",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderMuted,
-    paddingBottom: spacing.xs,
+    outlineStyle: "none",
   },
-  measure: {
-    paddingVertical: 5,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surfaceMuted,
-    alignItems: "center",
-  },
-  measureEmpty: { borderWidth: 1, borderStyle: "dashed", borderColor: colors.borderGold, backgroundColor: "transparent" },
-  measureFilled: { backgroundColor: colors.primaryLight },
-  measureBroken: { backgroundColor: colors.dangerLight },
-  measureText: { fontFamily: fontFamily.ethiopicRegular, fontSize: 12, color: colors.primaryDark },
-  measureTextFilled: { fontFamily: fontFamily.ethiopicBold, color: colors.primaryDark },
-  measureTextBroken: { fontFamily: fontFamily.ethiopicBold, color: colors.dangerDark },
+  cellCopy: { opacity: 0, paddingRight: 4, pointerEvents: "none" },
+  cellInputOver: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, resize: "none", overflow: "hidden" },
+  caption: { alignSelf: "flex-start", outlineStyle: "none" },
+  captionHover: { opacity: 0.75 },
+  // Labels stay small and quiet; colour, not weight, marks a measure.
+  captionName: { fontFamily: fontFamily.ethiopicRegular, fontSize: 10.5, lineHeight: 14, color: colors.textMuted, opacity: 0.8 },
+  captionResult: { color: colors.primaryDark },
+  captionBroken: { color: colors.dangerDark },
+  captionSkipped: { fontFamily: fontFamily.ethiopicRegular, color: colors.textMuted },
+  captionAction: { color: colors.primaryDark, textDecorationLine: "underline" },
 
   backdrop: {
     flex: 1,
@@ -742,9 +732,17 @@ const styles = StyleSheet.create({
   finale: { gap: spacing.sm, paddingVertical: spacing.md, alignItems: "center" },
   finaleTitle: { fontFamily: fontFamily.ethiopicBold, fontSize: 20, color: colors.primary },
   finaleSubtitle: { ...typography.caption, color: colors.textSecondary },
-  finaleLine: { alignItems: "center", gap: 2, marginTop: spacing.sm },
-  finaleWords: { fontFamily: fontFamily.ethiopicRegular, fontSize: 18, color: colors.textPrimary, textAlign: "center" },
-  finalePattern: { ...typography.caption, color: colors.textMuted },
+  finaleLine: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    columnGap: CELL_GAP,
+    rowGap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  finaleSegment: { alignItems: "center", gap: 2 },
+  finaleWords: { fontFamily: fontFamily.latinSemiBold, fontSize: 18, lineHeight: 28, color: colors.textPrimary, textAlign: "center" },
+  finalePattern: { fontFamily: fontFamily.ethiopicRegular, fontSize: 10.5, lineHeight: 14, color: colors.primaryDark },
 
   save: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.md, width: "100%" },
   saveTitle: {
