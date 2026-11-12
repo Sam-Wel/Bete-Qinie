@@ -48,6 +48,7 @@ export default function AppLayout() {
         <Drawer.Screen name="lightning" options={{ title: "Lightning Round" }} />
         <Drawer.Screen name="verb-sort" options={{ title: "Sorting Challenge" }} />
         <Drawer.Screen name="boss-battle" options={{ title: "Boss Battle" }} />
+        <Drawer.Screen name="heads" options={{ title: "ርእስ" }} />
         <Drawer.Screen name="verb-quiz" options={{ title: "ግሲ ፈተና" }} />
         <Drawer.Screen name="blog" options={{ title: "ቅኔ አበው" }} />
         <Drawer.Screen name="account" options={{ title: "Account" }} />

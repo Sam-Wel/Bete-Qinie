@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useWordProgress } from "../context/WordProgressContext";
+import { LexiconSection } from "./LexiconSection";
 import { Icon } from "./ui/Icon";
 import { colors, fontFamily, radii, spacing, typography } from "../theme";
 
@@ -56,6 +57,8 @@ export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples =
       ) : (
         <Text style={styles.none}>No translations yet.</Text>
       )}
+
+      {tag === "ግዕዝ" ? <LexiconSection word={word} /> : null}
 
       {examples.length ? (
         <View style={styles.examples}>

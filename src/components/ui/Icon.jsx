@@ -21,6 +21,7 @@ import {
   LogIn,
   LogOut,
   Music,
+  Network,
   Newspaper,
   Pencil,
   PlusCircle,
@@ -73,6 +74,7 @@ const ICONS = {
   shuffle: Shuffle,
   swords: Swords,
   zap: Zap,
+  network: Network,
 };
 
 export function Icon({ name, size = 20, color = colors.textPrimary, strokeWidth = 1.75, style }) {

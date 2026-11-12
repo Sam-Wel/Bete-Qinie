@@ -47,6 +47,7 @@ const EXTRA_PAGES = {
   lightning: GAME("Lightning Round"),
   "verb-sort": GAME("Sorting Challenge"),
   "boss-battle": GAME("Boss Battle"),
+  heads: GAME("ርእስ", "Heads"),
   account: { title: "Account" },
   more: { title: "ቤተ ቅኔ", english: "Everything in the app" },
 };

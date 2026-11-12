@@ -19,7 +19,9 @@ function Stat({ value, label, tone }) {
 // The end of any verb game: the score and whether it's a new best, a few
 // game-specific numbers, then every verb that was missed with its meanings,
 // so the round ends on learning. Missed verbs can go to ክለሳ or ግሲ ፈተና.
-export function GameResults({ title, score, isBest, stats = [], missedIds = [], bank, lang, signedIn, onAgain, children }) {
+// `progressNote` replaces the line about word progress (null hides it), for games
+// that don't change study records.
+export function GameResults({ title, score, isBest, stats = [], missedIds = [], bank, lang, signedIn, onAgain, children, progressNote }) {
   const review = useSavedToReview();
   const missed = missedIds.map((id) => bank.byId[id]).filter(Boolean);
   const unsaved = missed.filter((e) => !review.saved(e.id)).map((e) => e.id);
@@ -37,9 +39,13 @@ export function GameResults({ title, score, isBest, stats = [], missedIds = [], 
             ))}
           </View>
         ) : null}
-        <Text style={[shared.muted, { textAlign: "center" }]}>
-          Saved to your word progress{signedIn ? "" : " on this device"}. Missed verbs come back in ክለሳ.
-        </Text>
+        {progressNote === undefined ? (
+          <Text style={[shared.muted, { textAlign: "center" }]}>
+            Saved to your word progress{signedIn ? "" : " on this device"}. Missed verbs come back in ክለሳ.
+          </Text>
+        ) : progressNote ? (
+          <Text style={[shared.muted, { textAlign: "center" }]}>{progressNote}</Text>
+        ) : null}
         {children}
         <View style={styles.actions}>
           <Button size="sm" onPress={onAgain}>

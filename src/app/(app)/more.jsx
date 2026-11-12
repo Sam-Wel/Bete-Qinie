@@ -5,6 +5,7 @@ import { ThemeSwitch } from "../../components/nav/ThemeSwitch";
 import { Icon, ScreenContainer } from "../../components/ui";
 import { useAuth } from "../../context/AuthContext";
 import { useBadges } from "../../hooks/useDueCount";
+import { useLexicon } from "../../hooks/useLexicon";
 import { NAV_GROUPS } from "../../lib/navigation";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
@@ -22,6 +23,7 @@ function Row({ icon, title, english, badge, last, onPress, latin }) {
 export default function More() {
   const { user, profile, isAdmin } = useAuth();
   const badges = useBadges();
+  const { release } = useLexicon();
 
   return (
     <ScreenContainer scroll contentContainerStyle={styles.page}>
@@ -62,6 +64,12 @@ export default function More() {
       ) : null}
 
       <ThemeSwitch large />
+
+      {release ? (
+        <Text style={styles.dataVersion}>
+          Dictionary data · {release.tag} · released {release.released_on}
+        </Text>
+      ) : null}
     </ScreenContainer>
   );
 }
@@ -84,4 +92,5 @@ const styles = StyleSheet.create({
   rowTitleLatin: { ...typography.bodySemiBold, color: colors.textPrimary },
   rowEnd: { marginLeft: "auto" },
   rowEnglish: { ...typography.caption, color: colors.textSecondary },
+  dataVersion: { ...typography.caption, color: colors.textSecondary, textAlign: "center" },
 });

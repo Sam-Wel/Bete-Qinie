@@ -7,6 +7,7 @@ import { useBadges } from "../../hooks/useDueCount";
 import { useWordProgress } from "../../context/WordProgressContext";
 import { todayProgress } from "../../lib/daily";
 import { useKalHistory } from "../../hooks/useKalHistory";
+import { useLexicon } from "../../hooks/useLexicon";
 import { dateKey, stats as kalStats } from "../../lib/kal";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
@@ -26,6 +27,9 @@ const CALM = [
   { route: "/unscramble", type: "verb_unscramble", title: "Unscramble", line: "Put the letters back in order", icon: "shuffle" },
   { route: "/verb-sort", type: "verb_sort", title: "Sorting", line: "Group verbs by what they mean", icon: "folders" },
 ];
+
+// Needs the book's verb list (a lexicon release) in the database; hidden until then.
+const HEADS = { route: "/heads", type: "verb_heads", title: "ርእስ", line: "Which head (ርእስ) does the verb follow?", icon: "network" };
 
 function Art({ game, size = 52 }) {
   return (
@@ -86,6 +90,8 @@ function Section({ label, children }) {
 // toward the same word progress as ግሲ ፈተና and ክለሳ.
 export default function Games() {
   const kal = useKalHistory();
+  const { available: lexiconReady } = useLexicon();
+  const calm = lexiconReady ? [...CALM, HEADS] : CALM;
   const badges = useBadges();
   const { stats } = useWordProgress();
   const today = todayProgress(stats);
@@ -143,7 +149,7 @@ export default function Games() {
       </Section>
 
       <Section label="CALM · NO TIMER">
-        {CALM.map((g) => (
+        {calm.map((g) => (
           <GameTile key={g.route} game={g} basis={300} />
         ))}
       </Section>

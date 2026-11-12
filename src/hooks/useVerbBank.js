@@ -1,23 +1,13 @@
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabaseClient";
+import { fetchAll } from "../lib/fetchAll";
 import { buildBank, VERB_ENDINGS } from "../lib/verbQuiz";
 
 const CACHE_KEY = "bete-qinie:verb-bank:v4"; // v4: new Tigrinya and Amharic
 const CACHE_MS = 24 * 3600 * 1000;
-const PAGE = 1000;
 
 let memory = null;
-
-async function fetchAll(query) {
-  const rows = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await query().range(from, from + PAGE - 1);
-    if (error) throw error;
-    rows.push(...data);
-    if (data.length < PAGE) return rows;
-  }
-}
 
 // Before supabase/verb_quiz.sql has been run there is no verb_quiz_bank view, so
 // the same rows are put together here from words and translationmappings.
