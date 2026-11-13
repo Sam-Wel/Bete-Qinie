@@ -19,9 +19,11 @@ const STAGES = [
   { key: "new", label: "New" },
 ];
 
-// Simple bars with a label under each; the tallest bar fills the height.
-function Bars({ items, label, highlightLast }) {
+// Simple bars on a baseline, with a label under each; the tallest bar fills the height.
+// With nothing to show yet, a short line says so instead of a row of empty bars.
+function Bars({ items, label, highlightLast, empty }) {
   const max = Math.max(1, ...items.map((i) => i.count));
+  if (!items.some((i) => i.count)) return <Text style={styles.empty}>{empty}</Text>;
   return (
     <View style={styles.bars}>
       {items.map((item, i) => (
@@ -31,7 +33,7 @@ function Bars({ items, label, highlightLast }) {
             <View
               style={[
                 styles.barFill,
-                { height: `${(item.count / max) * 100}%` },
+                { height: item.count ? `${Math.max(4, (item.count / max) * 100)}%` : 0 },
                 highlightLast && i === items.length - 1 && { backgroundColor: colors.primaryDark },
               ]}
             />
@@ -88,7 +90,7 @@ export default function Progress() {
             <Text style={styles.heroLabel}>verbs you know</Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={styles.heroSide}>{streak ? `${streak} day${streak === 1 ? "" : "s"}` : "—"}</Text>
+            <Text style={styles.heroSide}>{`${streak} day${streak === 1 ? "" : "s"}`}</Text>
             <Text style={styles.heroLabel}>study streak</Text>
           </View>
         </View>
@@ -106,11 +108,11 @@ export default function Progress() {
       </View>
 
       <Section title="Words learned · last 8 weeks">
-        <Bars items={weeks} label={(w) => shortDate(w.start)} highlightLast />
+        <Bars items={weeks} label={(w) => shortDate(w.start)} highlightLast empty="Words you learn in ዛሬ will show here, week by week." />
       </Section>
 
       <Section title="Reviews coming up">
-        <Bars items={forecast} label={(d, i) => weekday(d.day, i)} />
+        <Bars items={forecast} label={(d, i) => weekday(d.day, i)} empty="No reviews this week yet. Words come here once you've learned them." />
       </Section>
 
       {hardest.length ? (
@@ -164,8 +166,9 @@ const styles = StyleSheet.create({
   bars: { flexDirection: "row", alignItems: "flex-end", gap: spacing.sm, height: 130 },
   barCol: { flex: 1, alignItems: "center", gap: 4, height: "100%" },
   barValue: { ...typography.caption, fontSize: 11, color: colors.textSecondary, height: 14 },
-  barTrack: { flex: 1, width: "100%", maxWidth: 28, justifyContent: "flex-end", borderRadius: radii.sm, backgroundColor: colors.surfaceMuted, overflow: "hidden" },
-  barFill: { width: "100%", backgroundColor: colors.primary, borderRadius: radii.sm },
+  barTrack: { flex: 1, width: "100%", maxWidth: 28, justifyContent: "flex-end", borderBottomWidth: 2, borderBottomColor: colors.border },
+  barFill: { width: "100%", backgroundColor: colors.primary, borderTopLeftRadius: radii.sm, borderTopRightRadius: radii.sm },
+  empty: { ...typography.body, color: colors.textSecondary },
   barLabel: { ...typography.caption, fontSize: 11, color: colors.textMuted },
   hardRow: {
     flexDirection: "row",

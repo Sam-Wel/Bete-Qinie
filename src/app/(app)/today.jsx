@@ -11,6 +11,9 @@ import { DAILY_SIZES, BACKLOG_PAUSE, masteredCount, nextMilestone, reviewPlan, s
 import { FAMILIES, LEARN_RIGHT, isLearning, startOfDay, stateOf } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
+// Today's words shown before "+N more": about two rows on a phone.
+const FOLDED_WORDS = 6;
+
 const PLAY = [
   { route: "/memory-match", title: "Memory Match", line: "Easy start: pair each word with its meaning" },
   { route: "/lightning", title: "Lightning Round", line: "Quick recall against the clock" },
@@ -40,6 +43,7 @@ export default function Today() {
   const [learning, setLearning] = useState(null); // ids in the current session
   const [lastSession, setLastSession] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [allWords, setAllWords] = useState(false);
 
   const todayIds = useMemo(
     () => (info ? info.ids.filter((id) => bank.byId[id]).sort((a, b) => a - b) : []),
@@ -102,7 +106,7 @@ export default function Today() {
             <Text style={styles.heroLabel}>{finished ? "learned today, all done 🎉" : "learned today"}</Text>
           </View>
           <View style={styles.heroStat}>
-            <Text style={styles.heroSmall}>{streak ? `🔥 ${streak}` : "—"}</Text>
+            <Text style={styles.heroSmall}>{streak ? `🔥 ${streak}` : "0"}</Text>
             <Text style={styles.heroLabel}>day streak</Text>
           </View>
           <View style={styles.heroStat}>
@@ -174,11 +178,7 @@ export default function Today() {
           <Text style={shared.hint}>You've studied every verb with a meaning in this language. 🎉</Text>
         ) : (
           <>
-            <View style={styles.words}>
-              {todayIds.map((id) => (
-                <WordChip key={id} entry={bank.byId[id]} stat={stats[id]} lang={lang} />
-              ))}
-            </View>
+            {/* The main action first; the words fold to two rows so it stays in view. */}
             {learnIds.length ? (
               <Button style={styles.wide} onPress={() => setLearning(learnIds)}>
                 {learnIds.length === counts.total ? "Start learning" : `Keep learning (${learnIds.length} left)`}
@@ -186,6 +186,20 @@ export default function Today() {
             ) : (
               <Text style={styles.doneLine}>All of today's words are learned. They come back tomorrow in ክለሳ.</Text>
             )}
+            <View style={styles.words}>
+              {(allWords ? todayIds : todayIds.slice(0, FOLDED_WORDS)).map((id) => (
+                <WordChip key={id} entry={bank.byId[id]} stat={stats[id]} lang={lang} />
+              ))}
+              {todayIds.length > FOLDED_WORDS ? (
+                <Pressable
+                  onPress={() => setAllWords(!allWords)}
+                  accessibilityRole="button"
+                  style={({ hovered, pressed }) => [styles.moreChip, (hovered || pressed) && styles.moreChipOn]}
+                >
+                  <Text style={styles.moreChipText}>{allWords ? "Show fewer" : `+${todayIds.length - FOLDED_WORDS} more`}</Text>
+                </Pressable>
+              ) : null}
+            </View>
           </>
         )}
       </Step>
@@ -304,6 +318,16 @@ const styles = StyleSheet.create({
   wide: { alignSelf: "stretch" },
   doneLine: { ...typography.bodySemiBold, color: colors.success },
   words: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, alignItems: "center" },
+  moreChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: colors.border,
+  },
+  moreChipOn: { backgroundColor: colors.surfaceMuted },
+  moreChipText: { ...typography.label, color: colors.primaryDark },
   wordChip: {
     flexDirection: "row",
     alignItems: "center",

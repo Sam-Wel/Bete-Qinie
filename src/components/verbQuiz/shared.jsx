@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: colors.borderMuted,
   },
-  legend: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  legend: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, flexShrink: 1, maxWidth: "100%" },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   legendDot: { width: 9, height: 9, borderRadius: 5 },
   legendText: { ...typography.caption, color: colors.textSecondary },

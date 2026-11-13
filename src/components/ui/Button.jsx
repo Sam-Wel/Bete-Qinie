@@ -38,6 +38,7 @@ export function Button({
   const scale = useSharedValue(1);
   const lift = useSharedValue(0);
   const [hovered, setHovered] = useState(false);
+  const [pressed, setPressed] = useState(false);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }, { translateY: lift.value }],
@@ -45,10 +46,12 @@ export function Button({
 
   const handlePressIn = () => {
     if (isDisabled) return;
+    setPressed(true);
     scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
   };
 
   const handlePressOut = () => {
+    setPressed(false);
     scale.value = withSpring(1, { damping: 15, stiffness: 300 });
   };
 
@@ -98,7 +101,7 @@ export function Button({
     >
       {gradient ? (
         <LinearGradient
-          colors={hovered ? gradients.goldButtonPressed : gradient}
+          colors={hovered || pressed ? gradients.goldButtonPressed : gradient}
           style={StyleSheet.absoluteFillObject}
           pointerEvents="none"
         />
@@ -106,7 +109,7 @@ export function Button({
       {/* The Pressable fills the whole button, so a tap anywhere on it counts. */}
       <Pressable
         {...pressableProps}
-        style={[styles.base, paddingStyle, !gradient && { backgroundColor: hovered ? hoverBg ?? bg : bg }]}
+        style={[styles.base, paddingStyle, !gradient && { backgroundColor: hovered || pressed ? hoverBg ?? bg : bg }]}
       >
         {content}
       </Pressable>

@@ -30,11 +30,11 @@ export function Choices({ options, answerIndex, chosen, onPick, geez = false, da
             onPress={() => !locked && onPick(i)}
             accessibilityRole="button"
             accessibilityLabel={`${i + 1}. ${text}`}
-            style={({ hovered }) => [
+            style={({ hovered, pressed }) => [
               styles.option,
               wide && styles.optionWide,
               dark && styles.optionDark,
-              hovered && !locked && (dark ? styles.hoverDark : styles.hover),
+              (hovered || pressed) && !locked && (dark ? styles.hoverDark : styles.hover),
               state === "right" && styles.right,
               state === "wrong" && styles.wrong,
               state === "dim" && styles.dim,
