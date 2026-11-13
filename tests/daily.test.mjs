@@ -180,3 +180,14 @@ test("next day: unfinished words stay, then the next new words of the family, ne
   assert.ok(plan.add.every((id) => bank.byId[id].family === "ለ"));
   for (const id of day1.slice(6)) assert.ok(plan.ids.includes(id), "unfinished words carry over");
 });
+
+test("a new learner: today's words set out or a saved word don't count as studying; one answer does", () => {
+  const plan = D.planToday(bank, {}, "am", { size: 20 }, NOW);
+  const stats = fill({}, plan);
+  assert.equal(D.hasStudied({}), false);
+  assert.equal(D.hasStudied(stats), false);
+  const [first, second] = plan.add;
+  assert.equal(D.hasStudied({ ...stats, [second]: Q.markSaved(stats[second], NOW) }), false);
+  assert.equal(D.hasStudied({ ...stats, [first]: Q.applyAnswer(stats[first], false, NOW, { kind: "learn:toMeaning" }) }), true);
+  assert.equal(D.hasStudied({ ...stats, [first]: Q.skipKnown(stats[first], NOW) }), true);
+});

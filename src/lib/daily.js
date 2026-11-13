@@ -142,6 +142,10 @@ export function studyStreak(stats, now = Date.now()) {
   return streak;
 }
 
+// Has the learner answered anything yet, anywhere? Setting out today's words or
+// saving one from the Dictionary doesn't count. Until then ዛሬ welcomes them.
+export const hasStudied = (stats) => Object.values(stats).some((s) => s?.seen > 0);
+
 export const MILESTONES = [25, 100, 250, 500, 1000, 2000];
 
 export function masteredCount(stats) {

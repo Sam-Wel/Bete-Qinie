@@ -7,8 +7,9 @@ import { DEFAULT_DAILY } from "../lib/daily";
 // size: new words a day. family: "auto" or a family id to learn first.
 // override: the day the learner chose to add new words despite a backlog.
 // keptPile: true once the learner chose to keep the old ክለሳ pile.
+// welcomed: true once the learner closed the first-visit welcome on ዛሬ.
 const KEY = "bete-qinie:study-plan:v1";
-const DEFAULTS = { focus: "today", size: DEFAULT_DAILY, family: "auto", override: null, keptPile: false };
+const DEFAULTS = { focus: "today", size: DEFAULT_DAILY, family: "auto", override: null, keptPile: false, welcomed: false };
 
 let current = DEFAULTS;
 let loaded = false;
