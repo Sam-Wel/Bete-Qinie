@@ -8,6 +8,7 @@ import { REVIEW_DAYS, applyAnswer, dueQueue, inReview, reviewSummary, startOfDay
 import { ScreenContainer, Button } from "../../components/ui";
 import { languageName } from "../../components/WordCard";
 import { CleanupCard } from "../../components/today/CleanupCard";
+import { reviewPlan } from "../../lib/daily";
 import { STATE_COLORS, scriptFont, shared } from "../../components/verbQuiz/shared";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
@@ -94,6 +95,7 @@ function Card({ word, onAnswer, stat }) {
 
   // What each answer would do to the next review, so the choice is concrete.
   const ifRight = whenLabel(applyAnswer(stat, true).due);
+  const ifEasy = whenLabel(applyAnswer(stat, true, Date.now(), { easy: true }).due);
   const ifWrong = whenLabel(applyAnswer(stat, false).due);
 
   return (
@@ -136,6 +138,10 @@ function Card({ word, onAnswer, stat }) {
               <Text style={[styles.choiceTitle, { color: colors.success }]}>Got it</Text>
               <Text style={styles.choiceSub}>next {ifRight}</Text>
             </Pressable>
+            <Pressable style={[styles.choice, styles.choiceEasy]} onPress={() => onAnswer(true, true)}>
+              <Text style={[styles.choiceTitle, { color: colors.primaryDark }]}>Easy</Text>
+              <Text style={styles.choiceSub}>next {ifEasy}</Text>
+            </Pressable>
           </View>
         </>
       )}
@@ -161,7 +167,9 @@ export default function Review() {
         .map(([id]) => Number(id)),
     [stats]
   );
-  const queueNow = useMemo(() => dueQueue(stats), [stats]);
+  const plan = reviewPlan(stats);
+  // Today's share first; once it is done, "Review more" takes the next 20 anyway.
+  const queueNow = useMemo(() => dueQueue(stats, Date.now(), Math.min(20, reviewPlan(stats).left || 20)), [stats]);
   const textOf = useWordTexts(useMemo(() => [...new Set([...savedIds, ...queueNow])], [savedIds, queueNow]), bank);
 
   const start = () => {
@@ -169,9 +177,9 @@ export default function Review() {
     setSession({ queue: queueNow.filter((id) => textOf(id)), index: 0, right: 0 });
   };
 
-  const answer = (correct) => {
+  const answer = (correct, easy = false) => {
     const id = session.queue[session.index];
-    progress.recordAnswer(id, correct, { kind: "review" });
+    progress.recordAnswer(id, correct, { kind: "review", easy });
     const next = { ...session, index: session.index + 1, right: session.right + (correct ? 1 : 0) };
     if (next.index >= next.queue.length) {
       progress.flush();
@@ -228,8 +236,8 @@ export default function Review() {
         ) : null}
         <View style={styles.heroRow}>
           <View>
-            <Text style={styles.heroNumber}>{summary.due}</Text>
-            <Text style={styles.heroLabel}>due today</Text>
+            <Text style={styles.heroNumber}>{plan.left || summary.due}</Text>
+            <Text style={styles.heroLabel}>{plan.left ? (plan.later ? `for today · ${plan.later} later` : "due today") : summary.due ? "more, if you want" : "due today"}</Text>
           </View>
           <View>
             <Text style={[styles.heroNumber, styles.heroSmall]}>{summary.week}</Text>
@@ -242,7 +250,7 @@ export default function Review() {
         </View>
         {summary.due ? (
           <Button onPress={start} style={styles.wide}>
-            {`Review ${Math.min(summary.due, queueNow.length)}${summary.due > queueNow.length ? ` of ${summary.due}` : ""}`}
+            {plan.left ? `Review ${queueNow.length}${plan.left > queueNow.length ? ` of ${plan.left}` : ""}` : `Review ${queueNow.length} more`}
           </Button>
         ) : (
           <View style={{ gap: spacing.sm }}>
@@ -261,8 +269,9 @@ export default function Review() {
         )}
         <Text style={shared.muted}>
           Words come here once you've learned them in ዛሬ, and when you save one from the Dictionary or ግሲ. Right
-          answers push a word further off ({REVIEW_DAYS.slice(1).join(", ")} days); a miss moves it back one step and
-          brings it back tomorrow. After the 3-week review a word is mastered and only returns every few months.
+          answers push a word further off ({REVIEW_DAYS.slice(1).join(", ")} days); Easy skips a step, and a word you
+          still know after a break jumps to the wait that matches it. A miss moves it back one step and brings it back
+          tomorrow. With a backlog you get a day's share at a time. After the 3-week review a word is mastered and only returns every few months.
           {progress.mode === "account" ? "" : " Kept on this device until you sign in."}
         </Text>
       </View>
@@ -332,6 +341,7 @@ const styles = StyleSheet.create({
   choice: { flex: 1, alignItems: "center", paddingVertical: spacing.md, borderRadius: radii.md, borderWidth: 1 },
   choiceWrong: { borderColor: colors.accent, backgroundColor: colors.accentLight },
   choiceRight: { borderColor: colors.success, backgroundColor: colors.successLight },
+  choiceEasy: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
   choiceTitle: { ...typography.bodySemiBold },
   choiceSub: { ...typography.caption, color: colors.textSecondary },
 });

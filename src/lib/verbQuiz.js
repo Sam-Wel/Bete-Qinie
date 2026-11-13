@@ -124,7 +124,9 @@ export function wordsInScope(bank, scope, lang) {
 //   kinds of question (games, directions), the last one right; then it is due
 //   tomorrow in box 1. A miss takes one right answer back.
 // - reviewing (box 1–4) and mastered (box 5+): a right answer on a due word
-//   moves it up one box (at most once a day); a miss moves it down one box,
+//   moves it up one box (two with Easy, at most once a day), or further after a
+//   gap: right N days after it was last seen, it goes to the box that waits N
+//   days or more (boxForGap); a miss moves it down one box,
 //   due tomorrow (at most one step a day). A miss in a timed game doesn't move
 //   a mastered word; it only brings it back within a week.
 //
@@ -157,6 +159,19 @@ export const addDays = (time, days) => {
 
 const dueAfter = (box, correct, now) => addDays(now, correct ? REVIEW_DAYS[Math.min(box, MAX_BOX)] : 1);
 
+const DAY_MS = 24 * 3600 * 1000;
+
+// Credit for remembering after a gap: a word answered right N days after it was
+// last seen goes at least to the box whose wait is N days or more, so a word you
+// still know after a break leaves the pile at once instead of climbing one day at a time.
+export function boxForGap(days) {
+  if (!(days > 1)) return 0;
+  const box = REVIEW_DAYS.findIndex((wait, i) => i >= 1 && wait >= days);
+  return box === -1 ? MAX_BOX : box;
+}
+
+export const daysBetween = (from, to) => Math.max(0, Math.round((startOfDay(to) - startOfDay(from)) / DAY_MS));
+
 export const EMPTY_STAT = {
   seen: 0,
   correct: 0,
@@ -175,7 +190,8 @@ const isScheduled = (stat) => Boolean(stat) && !isLearning(stat) && (stat.box >=
 
 // One answer. `kind` names what asked it (a game type, "review", "learn:toGeez"…).
 // Returns the same object when nothing should be saved (practice on a new word).
-export function applyAnswer(stat, correct, now = Date.now(), { kind = "quiz" } = {}) {
+// `easy` (ክለሳ's Easy button) moves a right answer up two boxes instead of one.
+export function applyAnswer(stat, correct, now = Date.now(), { kind = "quiz", easy = false } = {}) {
   const learning = isLearning(stat);
   if (!learning && !isScheduled(stat)) return stat;
 
@@ -206,7 +222,8 @@ export function applyAnswer(stat, correct, now = Date.now(), { kind = "quiz" } =
   if (correct) {
     const dueNow = s.due == null || s.due <= now;
     if (!dueNow || study.moved === today) return base;
-    const box = Math.min(MAX_BOX, s.box + 1);
+    const gap = s.lastSeen ? daysBetween(s.lastSeen, now) : 0;
+    const box = Math.min(MAX_BOX, Math.max(s.box + (easy ? 2 : 1), boxForGap(gap)));
     return { ...base, box, due: addDays(now, REVIEW_DAYS[box]), study: { ...study, moved: today } };
   }
 

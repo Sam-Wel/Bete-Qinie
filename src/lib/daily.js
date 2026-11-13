@@ -5,6 +5,7 @@
 
 import {
   FAMILIES,
+  addDays,
   MASTERED_BOX,
   hasLanguage,
   inTodaySet,
@@ -20,6 +21,13 @@ export const DAILY_SIZES = [5, 10, 20];
 export const DEFAULT_DAILY = 20;
 // New words wait while this many reviews are due: catch up first.
 export const BACKLOG_PAUSE = 60;
+// A word carried over this many days without a single right answer goes back to new,
+// so unfinished words can't pile up in today's set.
+export const STALE_DAYS = 2;
+// With a backlog, ክለሳ asks for a day's share instead of everything: at least
+// CATCHUP_MIN reviews, or a fifth of the backlog if that is more.
+export const CATCHUP_MIN = 40;
+export const CATCHUP_SHARE = 5;
 
 export const FOCUSES = [
   { key: "today", label: "Today's words", hint: "Only the words you're learning today." },
@@ -53,15 +61,24 @@ export const isUntouched = (stat, now = Date.now()) =>
 // learned, skipped, carried over) always stay; untouched ones are the first
 // `size - started` words in teaching order, so changing the size or the family
 // takes effect at once: `add` joins the set, `remove` goes back to new.
+// Carried over for STALE_DAYS or more without one right answer: back to new.
+export function isStale(stat, now = Date.now()) {
+  return isLearning(stat) && stat.study.intro <= addDays(startOfDay(now), -STALE_DAYS) && !(stat.study.right > 0);
+}
+
 export function planToday(bank, stats, lang, settings = {}, now = Date.now()) {
   const today = startOfDay(now);
   const size = settings.size || DEFAULT_DAILY;
-  const ids = Object.keys(stats).filter((id) => inTodaySet(stats[id], now)).map(Number);
+  const stale = Object.keys(stats).filter((id) => isStale(stats[id], now)).map(Number);
+  const staleSet = new Set(stale);
+  const ids = Object.keys(stats)
+    .filter((id) => inTodaySet(stats[id], now) && !staleSet.has(Number(id)))
+    .map(Number);
   const untouched = ids.filter((id) => isUntouched(stats[id], now));
   const counted = ids.filter((id) => !untouched.includes(id) && stats[id].study?.skipped !== today).length;
   const due = reviewSummary(stats, now).due;
   const paused = due > BACKLOG_PAUSE && settings.override !== today;
-  if (paused) return { ids, add: [], remove: [], paused, due, size };
+  if (paused) return { ids, add: [], remove: stale, paused, due, size };
 
   const want = Math.max(0, size - counted);
   const target = want
@@ -75,7 +92,7 @@ export function planToday(bank, stats, lang, settings = {}, now = Date.now()) {
   return {
     ids,
     add: target.filter((id) => !inSet.has(id)),
-    remove: untouched.filter((id) => !keep.has(id)),
+    remove: [...stale, ...untouched.filter((id) => !keep.has(id))],
     paused,
     due,
     size,
@@ -174,4 +191,18 @@ export function requeue(queue, id, gap = 3) {
   const rest = queue.filter((x) => x !== id);
   const at = Math.min(gap, rest.length);
   return [...rest.slice(0, at), id, ...rest.slice(at)];
+}
+
+// Today's share of ክለሳ. Without a backlog it is everything due. With one (more than
+// BACKLOG_PAUSE at the start of the day) it is CATCHUP_MIN, or a fifth of the backlog if
+// that is more; the rest waits for the coming days instead of showing as one big number.
+// { due, target, done, left, later }: done = due words already reviewed today.
+export function reviewPlan(stats, now = Date.now()) {
+  const today = startOfDay(now);
+  const due = reviewSummary(stats, now).due;
+  const done = Object.values(stats).filter((s) => s?.study && (s.study.moved === today || s.study.dropped === today)).length;
+  const backlog = due + done;
+  const target = backlog > BACKLOG_PAUSE ? Math.max(CATCHUP_MIN, Math.ceil(backlog / CATCHUP_SHARE)) : backlog;
+  const left = Math.max(0, Math.min(due, target - done));
+  return { due, target, done, left, later: due - left };
 }

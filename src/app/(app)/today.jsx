@@ -7,7 +7,7 @@ import { CleanupCard } from "../../components/today/CleanupCard";
 import { ProgressBar } from "../../components/games/GameFrame";
 import { Chip, STATE_COLORS, shared } from "../../components/verbQuiz/shared";
 import { useToday } from "../../hooks/useToday";
-import { DAILY_SIZES, BACKLOG_PAUSE, masteredCount, nextMilestone, studyStreak, upcoming } from "../../lib/daily";
+import { DAILY_SIZES, BACKLOG_PAUSE, masteredCount, nextMilestone, reviewPlan, studyStreak, upcoming } from "../../lib/daily";
 import { FAMILIES, LEARN_RIGHT, isLearning, startOfDay, stateOf } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
@@ -81,6 +81,7 @@ export default function Today() {
   }
 
   const due = info.due;
+  const reviews = reviewPlan(stats);
   const streak = studyStreak(stats);
   const mastered = masteredCount(stats);
   const milestone = nextMilestone(mastered);
@@ -139,18 +140,22 @@ export default function Today() {
 
       <CleanupCard progress={progress} />
 
-      <Step n="1" title="ክለሳ: words due for review" done={due === 0}>
-        {due ? (
+      <Step n="1" title="ክለሳ: words due for review" done={reviews.left === 0}>
+        {reviews.left ? (
           <>
             <Text style={shared.hint}>
-              {due} due. Reviews keep what you've learned; up to 20 at a time.
+              {reviews.later
+                ? `Today: ${reviews.left} reviews. The other ${reviews.later} are spread over the coming days, so a backlog never has to be cleared at once. Words you still know jump ahead.`
+                : `${reviews.left} due today. Reviews keep what you've learned; up to 20 at a time.`}
             </Text>
             <Button style={styles.wide} onPress={() => router.push("/review")}>
-              {`Review ${Math.min(due, 20)}${due > 20 ? ` of ${due}` : ""}`}
+              {`Review ${Math.min(reviews.left, 20)}${reviews.left > 20 ? ` of ${reviews.left}` : ""}`}
             </Button>
           </>
         ) : (
-          <Text style={shared.hint}>Nothing due. Well kept.</Text>
+          <Text style={shared.hint}>
+            {reviews.later ? `Today's reviews are done. ${reviews.later} more are waiting for the coming days.` : "Nothing due. Well kept."}
+          </Text>
         )}
       </Step>
 
