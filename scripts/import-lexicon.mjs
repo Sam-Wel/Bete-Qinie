@@ -46,12 +46,19 @@ async function askHidden(question) {
   if (process.env.LEXICON_ADMIN_PASSWORD) return process.env.LEXICON_ADMIN_PASSWORD;
   if (!process.stdin.isTTY) fail("No terminal to ask for the password in: run this in your own terminal.");
   const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-  process.stdout.write(question);
-  rl._writeToOutput = () => {}; // don't echo the password
-  const answer = await new Promise((done) => rl.question("", done));
+  // readline redraws the whole line (prompt + what was typed) on every key; once the
+  // prompt is up, let only the prompt through, so the password never shows.
+  let muted = false;
+  rl._writeToOutput = (text) => {
+    if (!muted) rl.output.write(text);
+    else if (text.startsWith(question)) rl.output.write(question);
+  };
+  const answer = new Promise((done) => rl.question(question, done));
+  muted = true;
+  const password = await answer;
   rl.close();
   process.stdout.write("\n");
-  return answer;
+  return password;
 }
 
 async function ask(question) {
