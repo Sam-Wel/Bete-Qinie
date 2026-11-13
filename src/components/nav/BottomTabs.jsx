@@ -13,7 +13,7 @@ const SECTION_ROUTES = new Set(NAV_GROUPS.flatMap((g) => g.items.map((i) => i.ro
 // a tab of their own (መዐቀኒ, ዜማ, ...) light up More, where they live.
 export function BottomTabs({ section }) {
   const badges = useBadges();
-  const active = IN_TABS.has(section) ? section : SECTION_ROUTES.has(section) || section === "account" ? "more" : section;
+  const active = IN_TABS.has(section) ? section : SECTION_ROUTES.has(section) || section === "account" || section === "about" ? "more" : section;
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.bar}>

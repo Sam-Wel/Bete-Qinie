@@ -20,6 +20,8 @@ import {
   List,
   LogIn,
   LogOut,
+  Info,
+  Mail,
   Music,
   Network,
   Newspaper,
@@ -75,6 +77,8 @@ const ICONS = {
   swords: Swords,
   zap: Zap,
   network: Network,
+  "information-circle-outline": Info,
+  "mail-outline": Mail,
 };
 
 export function Icon({ name, size = 20, color = colors.textPrimary, strokeWidth = 1.75, style }) {

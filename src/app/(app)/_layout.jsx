@@ -52,6 +52,7 @@ export default function AppLayout() {
         <Drawer.Screen name="verb-quiz" options={{ title: "ግሲ ፈተና" }} />
         <Drawer.Screen name="blog" options={{ title: "ቅኔ አበው" }} />
         <Drawer.Screen name="account" options={{ title: "Account" }} />
+        <Drawer.Screen name="about" options={{ title: "ስለ ቤተ ቅኔ" }} />
         <Drawer.Screen name="more" options={{ title: "ቤተ ቅኔ" }} />
       </Drawer>
       {showTabs ? <BottomTabs section={sectionOf(route)} /> : null}

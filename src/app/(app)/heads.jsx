@@ -201,7 +201,7 @@ export default function Heads() {
           "Easy: four heads · Medium: always with the look-alike (ቀተለ/ቀደሰ, ተንበለ/ማህረከ) · Hard: all eight",
           "After each answer: the book's mark and the head's pattern (ቀተለ · ይቀትል · ይቅትል · ቀቲል)",
           "Practice only: ዛሬ and ክለሳ are not changed",
-          ready ? `${items.length} verbs from መጽሐፈ ግስ ወሰዋስው · ${release.tag}` : null,
+          ready ? `${items.length} verbs to practise` : null,
         ].filter(Boolean)}
         best={game.best}
         onStart={start}

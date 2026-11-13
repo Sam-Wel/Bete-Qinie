@@ -49,6 +49,7 @@ const EXTRA_PAGES = {
   "boss-battle": GAME("Boss Battle"),
   heads: GAME("ርእስ", "Heads"),
   account: { title: "Account" },
+  about: { title: "ስለ ቤተ ቅኔ", english: "About" },
   more: { title: "ቤተ ቅኔ", english: "Everything in the app" },
 };
 

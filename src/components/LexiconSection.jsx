@@ -56,9 +56,9 @@ function LexiconWord({ word, showGloss }) {
 
 // What the book (መጽሐፈ ግስ ወሰዋስው) says about a verb: the head it follows and its
 // printed forms. Shown on Dictionary and ግሲ word cards when the live lexicon release
-// has the word; nothing is shown otherwise.
+// has the word; nothing is shown otherwise. The source and data version are on the About page.
 export function LexiconSection({ word }) {
-  const { lexicon, release } = useLexicon();
+  const { lexicon } = useLexicon();
   const matches = lookup(lexicon, word);
   if (!matches.length) return null;
   return (
@@ -66,7 +66,6 @@ export function LexiconSection({ word }) {
       {matches.map((m) => (
         <LexiconWord key={m.id} word={m} showGloss={matches.length > 1} />
       ))}
-      <Text style={styles.source}>From መጽሐፈ ግስ ወሰዋስው · {release?.tag}</Text>
     </View>
   );
 }
@@ -106,5 +105,4 @@ const styles = StyleSheet.create({
   groupName: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, color: colors.textSecondary, minWidth: 110 },
   groupForms: { fontFamily: fontFamily.ethiopicRegular, fontSize: 17, lineHeight: 26, color: colors.textPrimary, flexShrink: 1 },
   note: { ...typography.caption, color: colors.textSecondary },
-  source: { ...typography.caption, color: colors.textSecondary },
 });

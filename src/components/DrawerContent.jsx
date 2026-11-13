@@ -111,6 +111,14 @@ export function DrawerContent({ state, navigation }) {
               </View>
             </Pressable>
           )}
+          <Pressable
+            onPress={() => go("/about")}
+            accessibilityRole="link"
+            style={({ hovered }) => [styles.adminLink, (hovered || current === "about") && styles.itemHover]}
+          >
+            <Icon name="information-circle-outline" size={16} color={colors.textSecondary} />
+            <Text style={styles.adminText}>About ቤተ ቅኔ</Text>
+          </Pressable>
           {isAdmin ? (
             <Pressable onPress={() => go("/admin")} style={({ hovered }) => [styles.adminLink, hovered && styles.itemHover]}>
               <Icon name="shield-checkmark-outline" size={16} color={colors.textSecondary} />
