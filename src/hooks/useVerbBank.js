@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import { fetchAll } from "../lib/fetchAll";
 import { buildBank, VERB_ENDINGS } from "../lib/verbQuiz";
 
-const CACHE_KEY = "bete-qinie:verb-bank:v4"; // v4: new Tigrinya and Amharic
+const CACHE_KEY = "bete-qinie:verb-bank:v5"; // v5: ሃልሀ fixed (2026-11-13)
 const CACHE_MS = 24 * 3600 * 1000;
 
 let memory = null;
