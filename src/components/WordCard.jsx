@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useWordProgress } from "../context/WordProgressContext";
 import { LexiconSection } from "./LexiconSection";
 import { Icon } from "./ui/Icon";
@@ -24,6 +24,9 @@ export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples =
   const progress = useWordProgress();
   const saved = Boolean(geezId && progress.stats[geezId]?.saved);
   const tiles = LANGUAGE_ORDER.filter((code) => meanings[code]?.length);
+  // Phones: one panel with a row per language, so a word fits on screen with its ርባታ.
+  const compact = useWindowDimensions().width < 600;
+  const meaningText = (code) => meanings[code].join(code === "en" ? ", " : "፣ ").replace(/፣\s*/g, "፣ ");
 
   return (
     <View style={styles.card}>
@@ -43,7 +46,16 @@ export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples =
         ) : null}
       </View>
 
-      {tiles.length ? (
+      {tiles.length && compact ? (
+        <View style={styles.rows}>
+          {tiles.map((code, i) => (
+            <View key={code} style={[styles.row, i > 0 && styles.rowLine]}>
+              <Text style={styles.rowLang}>{languageName(code, languageMap[code])}</Text>
+              <Text style={[code === "en" ? styles.meaningLatin : styles.meaningWords, styles.rowText]}>{meaningText(code)}</Text>
+            </View>
+          ))}
+        </View>
+      ) : tiles.length ? (
         <View style={styles.meanings}>
           {tiles.map((code) => (
             <View key={code} style={styles.meaning}>
@@ -120,6 +132,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   meaningLang: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, color: colors.primaryDark },
+  rows: { borderRadius: radii.md, backgroundColor: colors.background, paddingHorizontal: spacing.md },
+  row: { flexDirection: "row", alignItems: "baseline", gap: spacing.md, paddingVertical: spacing.sm + 2 },
+  rowLine: { borderTopWidth: 1, borderTopColor: colors.borderMuted },
+  rowLang: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, color: colors.primaryDark, width: 64 },
+  rowText: { flex: 1 },
   meaningWords: { fontFamily: fontFamily.ethiopicRegular, fontSize: 17, lineHeight: 26, color: colors.textPrimary },
   meaningLatin: { fontFamily: fontFamily.latinRegular, fontSize: 16, lineHeight: 24, color: colors.textPrimary },
   none: { ...typography.caption, color: colors.textSecondary },

@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { helpFor } from "../lib/help";
 import { colors, fontFamily, radii, spacing, typography } from "../theme";
+import { Button } from "./ui/Button";
 import { Icon } from "./ui/Icon";
 
 // The "?" in a page's header: opens a short guide to that page (src/lib/help.js).
 // Pages without a guide show no button.
 export function HelpButton({ route }) {
   const [open, setOpen] = useState(false);
+  const { height } = useWindowDimensions();
   const guide = helpFor(route);
   if (!guide) return null;
 
@@ -33,7 +35,8 @@ export function HelpButton({ route }) {
               </Pressable>
             </View>
             <Text style={styles.title}>{guide.title}</Text>
-            <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={styles.points}>
+            {/* The points scroll; the Got it button below always stays in view. */}
+            <ScrollView style={{ maxHeight: Math.max(220, height * 0.55) }} contentContainerStyle={styles.points}>
               {guide.points.map((point) => (
                 <View key={point} style={styles.point}>
                   <View style={styles.dot} />
@@ -41,6 +44,9 @@ export function HelpButton({ route }) {
                 </View>
               ))}
             </ScrollView>
+            <Button onPress={() => setOpen(false)} style={styles.gotIt}>
+              Got it
+            </Button>
           </Pressable>
         </Pressable>
       </Modal>
@@ -70,4 +76,5 @@ const styles = StyleSheet.create({
   point: { flexDirection: "row", gap: spacing.sm, alignItems: "flex-start" },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginTop: 9 },
   pointText: { ...typography.body, lineHeight: 24, color: colors.textPrimary, flex: 1 },
+  gotIt: { alignSelf: "stretch", marginTop: spacing.sm },
 });

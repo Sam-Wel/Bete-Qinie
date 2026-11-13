@@ -49,7 +49,9 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
     <View style={{ gap: spacing.xs }}>
       <View style={styles.top}>
         <Text style={styles.counter}>
-          {done} of {startCount} learned · {LEARN_RIGHT - Math.min(LEARN_RIGHT, stat?.study?.right || 0)} more right for this one
+          {current.mode === "meet"
+            ? `New word · ${done} of ${startCount} learned`
+            : `${done} of ${startCount} learned · ${LEARN_RIGHT - Math.min(LEARN_RIGHT, stat?.study?.right || 0)} more right for this one`}
         </Text>
         <Pressable onPress={() => onDone(tally)} hitSlop={8}>
           <Text style={styles.link}>Stop</Text>

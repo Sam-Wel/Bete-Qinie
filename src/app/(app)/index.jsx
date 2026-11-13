@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { useDictionarySearch } from "../../hooks/useDictionarySearch";
 import { useRecentSearches } from "../../hooks/useRecentSearches";
@@ -69,6 +69,8 @@ export default function Dictionary() {
 
   // One verb a day, the same for everyone that day: one with a meaning in every language.
   const { bank } = useVerbBank();
+  // Phones: the search button sits inside the box instead of taking a row of its own.
+  const compact = useWindowDimensions().width < 600;
   const wordOfDay = useMemo(() => {
     if (!bank) return null;
     const full = bank.words.filter((e) => e.tr.ti.length && e.tr.am.length && e.tr.en.length);
@@ -105,10 +107,23 @@ export default function Dictionary() {
               accessibilityLabel="Search a word"
               style={styles.input}
             />
+            {compact ? (
+              <Pressable
+                onPress={() => runSearch()}
+                accessibilityRole="button"
+                accessibilityLabel="Search"
+                hitSlop={6}
+                style={({ pressed }) => [styles.goButton, pressed && styles.goButtonPressed]}
+              >
+                <Icon name="chevron-forward" size={22} color={colors.onPrimary} strokeWidth={2.4} />
+              </Pressable>
+            ) : null}
           </View>
-          <Button onPress={() => runSearch()} style={styles.searchButton}>
-            Search
-          </Button>
+          {compact ? null : (
+            <Button onPress={() => runSearch()} style={styles.searchButton}>
+              Search
+            </Button>
+          )}
         </View>
 
         {suggestions.length > 0 ? (
@@ -251,6 +266,16 @@ const styles = StyleSheet.create({
     outlineStyle: "none",
   },
   searchButton: { flexGrow: 1, flexBasis: 120, height: 54, borderRadius: radii.lg },
+  goButton: {
+    width: 38,
+    height: 38,
+    marginRight: -spacing.sm,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primary,
+  },
+  goButtonPressed: { backgroundColor: colors.primaryDark },
   suggestions: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, overflow: "hidden", marginTop: -4 },
   suggestion: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md },
   suggestionLine: { borderTopWidth: 1, borderTopColor: colors.borderMuted },
