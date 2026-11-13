@@ -1,0 +1,16 @@
+{
+  "name": "ቤተ ቅኔ · Bete Qinie",
+  "short_name": "ቤተ ቅኔ",
+  "description": "Learn ግዕዝ the way the ቅኔ ቤት teaches it.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF6EA",
+  "theme_color": "#FBF6EA",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
