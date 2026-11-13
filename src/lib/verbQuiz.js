@@ -438,9 +438,17 @@ const meaningOf = (entry, lang) => entry.ask[lang].slice(0, 3).join(" · ");
 // Wrong options come from the same ending family first: they look like the
 // answer, so they can only be told apart by knowing the word. Any option that
 // shares a meaning with the answer is left out, so exactly one is right.
+// An option sharing a spelling is left out too: the dictionary has a few combined
+// entries like "ሀልሀ/ሃልሀ" that are the same verb as "ሃልሀ".
+export const spellingsOf = (word) => (word || "").split("/").map((w) => w.trim()).filter(Boolean);
+
 function distractors(entry, lang, direction, bank, random, near = true) {
   const meanings = new Set(entry.tr[lang]);
-  const clash = (other) => other.id === entry.id || other.word === entry.word || other.tr[lang].some((m) => meanings.has(m));
+  const mine = new Set(spellingsOf(entry.word));
+  const clash = (other) =>
+    other.id === entry.id ||
+    spellingsOf(other.word).some((sp) => mine.has(sp)) ||
+    other.tr[lang].some((m) => meanings.has(m));
   const candidates = (list) => shuffle(list.filter((o) => hasLanguage(o, lang) && !clash(o)), random);
 
   // Same last letter first, then the rest of its family (ሀ·ሐ·ኃ·ኀ…), then anything.

@@ -59,3 +59,17 @@ test("a backlog is spread: a day's share, not everything at once", () => {
   for (let i = 0; i < 12; i++) small[i] = reviewing(1, 2, 1);
   assert.deepEqual(reviewPlan(small, NOW).left, 12);
 });
+
+test("an entry spelled like the answer is never offered as a wrong option", async () => {
+  const { buildBank, buildQuestion } = await import("../src/lib/verbQuiz.js");
+  const rows = [
+    { word_id: 1, word: "ሃልሀ", ti: ["ሓለኸ ናይ ላም"], am: ["ወደረ (የከብት)"], en: ["to tie up a cow for milking"] },
+    { word_id: 2, word: "ሀልሀ/ሃልሀ", ti: ["ኣሰረ (ከብቲ)"], am: ["ወደረ (የከብት፡-አሰረ)"], en: ["tie (cattle)"] },
+    ...["ቀተለ", "ሰበረ", "ነበረ", "ወረደ", "ጸሐፈ", "ሖረ"].map((w, i) => ({ word_id: 10 + i, word: w, ti: [`t${i}`], am: [`a${i}`], en: [`e${i}`] })),
+  ];
+  const b = buildBank(rows);
+  for (let k = 0; k < 30; k++) {
+    const q = buildQuestion(b.byId[1], "am", "toGeez", b);
+    assert.equal(q.options.includes("ሀልሀ/ሃልሀ"), false);
+  }
+});
