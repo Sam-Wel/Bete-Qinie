@@ -10,22 +10,23 @@
 
 begin;
 
--- 1. The books' spelling.
-update public.words set word = 'ሃልሀ'
-where word_id = 151 and language_code = 'gz' and word = 'ሐልሀ';
-
--- 2. Amharic, as both books print it.
-update public.words set word = 'ወደረ (የከብት)'
-where word_id = 11574 and language_code = 'am' and word = 'አገሣ (የላም)';
-
--- 3. English.
-update public.words set word = 'to tie up a cow for milking'
-where word_id = 8801 and language_code = 'en' and word = 'low (of a cow)';
-
--- 4. The empty duplicate: only if it still has no translations.
+-- 1. The empty duplicate first (a spelling can be used by only one Ge'ez word),
+--    and only if it still has no translations.
 delete from public.words w
 where w.word_id = 4141 and w.language_code = 'gz' and w.word = 'ሃልሀ'
   and not exists (select 1 from public.translationmappings m where m.word_id = 4141 or m.related_word_id = 4141);
+
+-- 2. The books' spelling.
+update public.words set word = 'ሃልሀ'
+where word_id = 151 and language_code = 'gz' and word = 'ሐልሀ';
+
+-- 3. Amharic, as both books print it.
+update public.words set word = 'ወደረ (የከብት)'
+where word_id = 11574 and language_code = 'am' and word = 'አገሣ (የላም)';
+
+-- 4. English.
+update public.words set word = 'to tie up a cow for milking'
+where word_id = 8801 and language_code = 'en' and word = 'low (of a cow)';
 
 -- Check: one ሃልሀ, with ti ሓለኸ ናይ ላም, am ወደረ (የከብት), en to tie up a cow for milking.
 select g.word_id, g.word, t.language_code, t.word as meaning
