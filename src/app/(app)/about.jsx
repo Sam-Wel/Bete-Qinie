@@ -80,12 +80,9 @@ export default function About() {
         </View>
       </Section>
 
-      <Section title="Where the words come from">
-        <Text style={styles.body}>
-          The meanings come from ቤተ ቅኔ's own dictionary. Each verb's head (ርእስ) and its printed forms (ርባታ) come from the
-          church-school verb book መጽሐፈ ግስ ወሰዋስው, read page by page. They are being checked against ፈለገ ግስ and other
-          books, and corrections arrive in new versions of the data.
-        </Text>
+      <Section title="Reference books">
+        <Text style={styles.body}>መጽሐፈ ግስ ወሰዋስው · ፈለገ ግስ</Text>
+        <Text style={styles.body}>ቤተ ቅኔ is still being developed. More features are coming soon.</Text>
       </Section>
 
       <Section title="Version">
