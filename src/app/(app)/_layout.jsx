@@ -39,6 +39,7 @@ export default function AppLayout() {
         <Drawer.Screen name="zema" options={{ title: "ዜማ" }} />
         <Drawer.Screen name="today" options={{ title: "ዛሬ" }} />
         <Drawer.Screen name="review" options={{ title: "ክለሳ" }} />
+        <Drawer.Screen name="progress" options={{ title: "እድገት" }} />
         <Drawer.Screen name="game" options={{ title: "ጨዋታዎች" }} />
         <Drawer.Screen name="shooter" options={{ title: "ቀስት" }} />
         <Drawer.Screen name="kal" options={{ title: "ቃል" }} />

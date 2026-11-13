@@ -145,8 +145,8 @@ export default function Today() {
           <>
             <Text style={shared.hint}>
               {reviews.later
-                ? `Today: ${reviews.left} reviews. The other ${reviews.later} are spread over the coming days, so a backlog never has to be cleared at once. Words you still know jump ahead.`
-                : `${reviews.left} due today. Reviews keep what you've learned; up to 20 at a time.`}
+                ? `Today: ${reviews.left} reviews · ${reviews.later} more on the coming days.`
+                : `${reviews.left} due today.`}
             </Text>
             <Button style={styles.wide} onPress={() => router.push("/review")}>
               {`Review ${Math.min(reviews.left, 20)}${reviews.left > 20 ? ` of ${reviews.left}` : ""}`}
@@ -174,10 +174,6 @@ export default function Today() {
           <Text style={shared.hint}>You've studied every verb with a meaning in this language. 🎉</Text>
         ) : (
           <>
-            <Text style={shared.hint}>
-              Meet each word, then answer about it both ways. A word is learned after {LEARN_RIGHT} right answers in two
-              kinds of question; games on today's words count too.
-            </Text>
             <View style={styles.words}>
               {todayIds.map((id) => (
                 <WordChip key={id} entry={bank.byId[id]} stat={stats[id]} lang={lang} />
@@ -231,10 +227,13 @@ export default function Today() {
           {!milestone
             ? `${mastered} mastered. Every milestone reached!`
             : mastered
-              ? `${mastered} mastered, ${milestone - mastered} more to reach ${milestone}. A word is mastered once it passes its 3-week review.`
-              : `Master ${milestone} words to reach your first milestone. A word is mastered once it passes its 3-week review.`}
+              ? `${mastered} mastered, ${milestone - mastered} more to reach ${milestone}.`
+              : `Master ${milestone} words to reach your first milestone.`}
         </Text>
         {milestone ? <ProgressBar value={(mastered - prevMilestone) / (milestone - prevMilestone)} color={colors.mastered} /> : null}
+        <Pressable onPress={() => router.push("/progress")} accessibilityRole="link" hitSlop={6}>
+          <Text style={styles.link}>See your progress ›</Text>
+        </Pressable>
         {ahead.length ? (
           <>
             <Text style={[styles.label, { marginTop: spacing.sm }]}>COMING NEXT</Text>

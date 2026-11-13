@@ -5,6 +5,7 @@ import { useIsWide } from "../hooks/useIsWide";
 import { isEthiopic, pageInfo } from "../lib/navigation";
 import { colors, fontFamily, spacing } from "../theme";
 import { Brand } from "./DrawerContent";
+import { HelpButton } from "./HelpButton";
 import { Icon } from "./ui/Icon";
 
 // Sections with pages inside them (a blog post, a chanted ቅኔ): Back returns to the list.
@@ -53,6 +54,7 @@ export function AppHeader({ route }) {
             </Text>
             {!backTo && english ? <Text style={styles.phoneEnglish}>{english}</Text> : null}
           </View>
+          <HelpButton route={route.name} />
         </View>
       </SafeAreaView>
     );
@@ -71,6 +73,7 @@ export function AppHeader({ route }) {
             {english && !inPost ? <Text style={styles.english}>{english}</Text> : null}
           </View>
         </View>
+        <HelpButton route={route.name} />
       </View>
     </SafeAreaView>
   );

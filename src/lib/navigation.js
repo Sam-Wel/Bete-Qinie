@@ -16,6 +16,7 @@ export const NAV_GROUPS = [
     items: [
       { route: "today", href: "/today", title: "ዛሬ", english: "Today", icon: "today-outline", badge: "today" },
       { route: "review", href: "/review", title: "ክለሳ", english: "Review", icon: "refresh-outline" },
+      { route: "progress", href: "/progress", title: "እድገት", english: "Progress", icon: "stats-chart-outline" },
       { route: "verb-quiz", href: "/verb-quiz", title: "ግሲ ፈተና", english: "Quiz", icon: "quiz-outline" },
       { route: "game", href: "/game", title: "ጨዋታዎች", english: "Games", icon: "game-controller-outline" },
     ],

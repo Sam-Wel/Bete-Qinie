@@ -11,7 +11,8 @@ const GAP = spacing.sm;
 // The 21 ending-letter groups as tiles. In "pick" mode a tile shows how many
 // words can be asked in the chosen language; in "progress" mode it shows how
 // many are known. Either way the bar underneath is that group's progress.
-export function FamilyGrid({ bank, stats, mode, lang, selected = [], onPress }) {
+// `best` (pick mode): the best quiz score per family, shown as the test result to beat.
+export function FamilyGrid({ bank, stats, mode, lang, selected = [], onPress, best = {} }) {
   const [width, setWidth] = useState(0);
   const perRow = Math.max(1, Math.floor((width + GAP) / (MIN + GAP)));
   const tileWidth = width ? Math.min(MAX, (width - GAP * (perRow - 1)) / perRow) : MAX;
@@ -53,6 +54,9 @@ export function FamilyGrid({ bank, stats, mode, lang, selected = [], onPress }) 
             </Text>
             <StackedBar counts={progress.counts} total={progress.total} height={4} style={styles.bar} />
             {mode === "progress" ? <Text style={styles.accuracy}>{touched ? percent(progress.accuracy) : " "}</Text> : null}
+            {mode === "pick" ? (
+              <Text style={[styles.accuracy, best[family.id] && styles.best]}>{best[family.id] ? `best ${percent(best[family.id].score)}` : " "}</Text>
+            ) : null}
           </Pressable>
         );
       })}
@@ -89,4 +93,5 @@ const styles = StyleSheet.create({
   count: { ...typography.caption, color: colors.textSecondary },
   bar: { alignSelf: "stretch", marginTop: 4 },
   accuracy: { ...typography.caption, fontSize: 11, lineHeight: 14, height: 14, color: colors.textMuted },
+  best: { color: colors.primaryDark, fontFamily: fontFamily.latinSemiBold },
 });

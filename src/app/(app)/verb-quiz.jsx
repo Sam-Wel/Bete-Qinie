@@ -3,15 +3,14 @@ import { ActivityIndicator, StyleSheet, Text } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { setGameLanguage, useGameLanguage } from "../../hooks/useGameLanguage";
-import { ScreenContainer, Tabs } from "../../components/ui";
+import { ScreenContainer } from "../../components/ui";
 import { useToday } from "../../hooks/useToday";
 import { QuizSetup } from "../../components/verbQuiz/QuizSetup";
 import { QuizPlay } from "../../components/verbQuiz/QuizPlay";
 import { QuizResults } from "../../components/verbQuiz/QuizResults";
-import { QuizProgress } from "../../components/verbQuiz/QuizProgress";
 import { useVerbBank } from "../../hooks/useVerbBank";
 import { useWordProgress } from "../../context/WordProgressContext";
-import { buildQuiz, hasLanguage, pickWords, summarizeRun, wordsInScope } from "../../lib/verbQuiz";
+import { bestByFamily, buildQuiz, hasLanguage, pickWords, summarizeRun, wordsInScope } from "../../lib/verbQuiz";
 import { colors, spacing, typography } from "../../theme";
 
 const SETTINGS_KEY = "bete-qinie:verb-quiz-settings:v1";
@@ -24,11 +23,6 @@ const DEFAULT_SETTINGS = {
   direction: "mixed",
   alsoShow: ["ti", "en"],
 };
-
-const TABS = [
-  { key: "practice", label: "Practice" },
-  { key: "progress", label: "Progress" },
-];
 
 const newQuiz = (questions, settings) => ({
   settings,
@@ -44,7 +38,6 @@ export default function VerbQuiz() {
   const progress = useWordProgress();
   useToday(); // fills today's set, which the default filter asks from
 
-  const [tab, setTab] = useState("practice");
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [quiz, setQuiz] = useState(null);
   const [result, setResult] = useState(null);
@@ -93,7 +86,6 @@ export default function VerbQuiz() {
     if (!words.length) return;
     setResult(null);
     setPaused(null);
-    setTab("practice");
     setQuiz(newQuiz(buildQuiz(words, used.lang, used.direction, bank), used));
   };
 
@@ -116,13 +108,6 @@ export default function VerbQuiz() {
     practiseWords(String(handedOver).split(",").map(Number));
     router.setParams({ words: undefined });
   }, [handedOver, bank, progress.ready]);
-
-  const practiseFamily = (familyId) => {
-    changeSettings({ scope: { mode: "choose", picks: { [familyId]: "all" } }, filter: "smart" });
-    setQuiz(null);
-    setResult(null);
-    setTab("practice");
-  };
 
   const finish = async (done) => {
     const summary = summarizeRun(done.answers);
@@ -147,17 +132,6 @@ export default function VerbQuiz() {
     body = <Text style={styles.error}>{error}</Text>;
   } else if (loading || !progress.ready) {
     body = <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />;
-  } else if (tab === "progress") {
-    body = (
-      <QuizProgress
-        bank={bank}
-        stats={progress.stats}
-        runs={progress.runs}
-        lang={settings.lang}
-        onPractiseFamily={practiseFamily}
-        onPractiseWords={practiseWords}
-      />
-    );
   } else if (quiz) {
     body = (
       <QuizPlay
@@ -180,7 +154,7 @@ export default function VerbQuiz() {
         bank={bank}
         onRetryMissed={() => practiseWords(result.run.missed)}
         onNewQuiz={() => setResult(null)}
-        onProgress={() => setTab("progress")}
+        onProgress={() => router.navigate("/progress")}
       />
     );
   } else {
@@ -188,6 +162,7 @@ export default function VerbQuiz() {
       <QuizSetup
         bank={bank}
         stats={progress.stats}
+        best={bestByFamily(progress.runs)}
         settings={settings}
         onChange={changeSettings}
         onStart={start}
@@ -212,7 +187,7 @@ export default function VerbQuiz() {
   return (
     <ScreenContainer scroll>
       {/* A quiz in progress gets the screen to itself; Pause leads back out. */}
-      {quiz && tab === "practice" ? null : <Tabs tabs={TABS} value={tab} onChange={setTab} />}
+
       {body}
     </ScreenContainer>
   );

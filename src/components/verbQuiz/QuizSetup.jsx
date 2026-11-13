@@ -62,7 +62,7 @@ function PartPicker({ bank, stats, familyId, pick, lang, onPick, onRemove }) {
   );
 }
 
-export function QuizSetup({ bank, stats, settings, onChange, onStart, paused, onResume, onDiscard, storageNote }) {
+export function QuizSetup({ bank, stats, best, settings, onChange, onStart, paused, onResume, onDiscard, storageNote }) {
   const { lang, scope, filter, count, direction, alsoShow } = settings;
   const picks = scope.mode === "choose" ? scope.picks : {};
   const pickedIds = Object.keys(picks);
@@ -212,6 +212,7 @@ export function QuizSetup({ bank, stats, settings, onChange, onStart, paused, on
               bank={bank}
               stats={stats}
               mode="pick"
+              best={best}
               lang={lang}
               selected={scope.mode === "choose" ? pickedIds : []}
               onPress={toggleFamily}

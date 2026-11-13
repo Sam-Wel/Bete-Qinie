@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { useWordProgress } from "../../context/WordProgressContext";
 import { useVerbBank } from "../../hooks/useVerbBank";
 import { supabase } from "../../lib/supabaseClient";
-import { REVIEW_DAYS, applyAnswer, dueQueue, inReview, reviewSummary, startOfDay, stateOf } from "../../lib/verbQuiz";
+import { applyAnswer, dueQueue, inReview, reviewSummary, startOfDay, stateOf } from "../../lib/verbQuiz";
 import { ScreenContainer, Button } from "../../components/ui";
 import { languageName } from "../../components/WordCard";
 import { CleanupCard } from "../../components/today/CleanupCard";
@@ -267,13 +267,7 @@ export default function Review() {
             </View>
           </View>
         )}
-        <Text style={shared.muted}>
-          Words come here once you've learned them in ዛሬ, and when you save one from the Dictionary or ግሲ. Right
-          answers push a word further off ({REVIEW_DAYS.slice(1).join(", ")} days); Easy skips a step, and a word you
-          still know after a break jumps to the wait that matches it. A miss moves it back one step and brings it back
-          tomorrow. With a backlog you get a day's share at a time. After the 3-week review a word is mastered and only returns every few months.
-          {progress.mode === "account" ? "" : " Kept on this device until you sign in."}
-        </Text>
+        {progress.mode === "account" ? null : <Text style={shared.muted}>Kept on this device until you sign in.</Text>}
       </View>
 
       <Text style={styles.sectionTitle}>SAVED BY YOU</Text>

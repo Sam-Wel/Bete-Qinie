@@ -638,3 +638,17 @@ export function rowFromStat(userId, wordId, s, { withStudy = true } = {}) {
     ...(withStudy ? { study: s.study ?? null } : {}),
   };
 }
+
+// ግሲ ፈተና as a test: the best score per ending family, from finished quizzes that
+// asked at least `min` questions of that family. { [familyId]: { score, n, at } }.
+export function bestByFamily(runs, min = 5) {
+  const best = {};
+  for (const run of runs || []) {
+    for (const [id, f] of Object.entries(run.families || {})) {
+      if (!f || f.n < min) continue;
+      const score = f.c / f.n;
+      if (!best[id] || score > best[id].score) best[id] = { score, n: f.n, at: run.at };
+    }
+  }
+  return best;
+}

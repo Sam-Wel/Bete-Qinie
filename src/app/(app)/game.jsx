@@ -105,10 +105,6 @@ export default function Games() {
 
   return (
     <ScreenContainer scroll contentContainerStyle={styles.page}>
-      <Text style={styles.lead}>
-        Games start on today's words, so playing is studying. Switch a game to Free play for any word (practice only).
-      </Text>
-
       <View style={styles.topRow}>
         <Pressable
           onPress={() => router.push("/kal")}
@@ -167,7 +163,6 @@ const card = {
 
 const styles = StyleSheet.create({
   page: { gap: spacing.xl },
-  lead: { ...typography.body, color: colors.textSecondary, marginBottom: -spacing.sm },
   topRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   feature: {
     ...card,
