@@ -162,6 +162,14 @@ export function useDictionarySearch() {
         return;
       }
       setResults(found.entries);
+      if (!found.entries.length) {
+        // Counted for the editors' "Searches with no result" (no account attached);
+        // fire and forget, and harmless before supabase/admin_tools.sql is run.
+        supabase.rpc("log_search_miss", { p_term: searchQuery.trim(), p_language: searchLanguage }).then(
+          () => {},
+          () => {}
+        );
+      }
 
       const ids = found.entries.map((e) => e.geezId).filter(Boolean);
       if (ids.length) {

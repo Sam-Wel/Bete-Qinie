@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useWordProgress } from "../context/WordProgressContext";
 import { LexiconSection } from "./LexiconSection";
+import { ReportMistake } from "./ReportMistake";
 import { Icon } from "./ui/Icon";
 import { colors, fontFamily, radii, spacing, typography } from "../theme";
 
@@ -82,6 +83,8 @@ export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples =
           ))}
         </View>
       ) : null}
+
+      {geezId && tag === "ግዕዝ" ? <ReportMistake wordId={geezId} word={word} /> : null}
     </View>
   );
 }

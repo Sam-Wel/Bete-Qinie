@@ -91,8 +91,16 @@ export default function DictionaryAdmin() {
     showFilter(filter);
   }, [filter, showFilter]);
 
-  const runSearch = async () => {
-    const t = query.trim();
+  // Opened with ?q=… (from "Searches with no result"): search for it straight away.
+  useEffect(() => {
+    if (typeof params.q === "string" && params.q.trim()) {
+      setQuery(params.q);
+      runSearch(params.q);
+    }
+  }, [params.q]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const runSearch = async (text = query) => {
+    const t = text.trim();
     if (!t) return setSearch(null);
     const byId = t.match(/^#?(\d+)$/);
     if (byId) return router.push(`/admin/dictionary/${byId[1]}`);
@@ -144,11 +152,11 @@ export default function DictionaryAdmin() {
             if (!t.trim()) setSearch(null);
           }}
           placeholder="A word in any language, or #679"
-          onSubmitEditing={runSearch}
+          onSubmitEditing={() => runSearch()}
           returnKeyType="search"
           style={{ flex: 1 }}
         />
-        <Button size="sm" onPress={runSearch} loading={searching}>
+        <Button size="sm" onPress={() => runSearch()} loading={searching}>
           Search
         </Button>
       </View>
