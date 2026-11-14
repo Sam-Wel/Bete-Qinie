@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { toDate } from "./dates";
 
 // The admin pages talk to the database through the functions in
 // supabase/admin_tools.sql. Their errors, in plain words.
@@ -20,7 +21,7 @@ export async function rpc(name, args = {}) {
 
 // Short dates and times for lists.
 export const shortDate = (value) =>
-  value ? new Date(value).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—";
+  value ? toDate(value).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—";
 
 export function ago(value, now = Date.now()) {
   if (!value) return "never";

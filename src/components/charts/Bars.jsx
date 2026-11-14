@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
+import { toDate } from "../../lib/dates";
 import { colors, radii, spacing, typography } from "../../theme";
 
 // Simple bars on a baseline, with a label under each; the tallest bar fills the height.
@@ -28,7 +29,7 @@ export function Bars({ items, label, highlightLast, empty }) {
   );
 }
 
-export const shortDate = (time) => new Date(time).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+export const shortDate = (time) => toDate(time).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
 const styles = StyleSheet.create({
   bars: { flexDirection: "row", alignItems: "flex-end", gap: spacing.sm, height: 130 },

@@ -57,3 +57,11 @@ test("a link's two rows show once", () => {
   ];
   assert.equal(collapsePairs(rows).length, 3);
 });
+
+test("a calendar day stays that day in every timezone", async () => {
+  const { toDate } = await import("../src/lib/dates.js");
+  const d = toDate("2026-11-12");
+  assert.deepEqual([d.getFullYear(), d.getMonth(), d.getDate()], [2026, 10, 12]);
+  assert.equal(toDate("2026-11-14T05:08:25.000Z").toISOString(), "2026-11-14T05:08:25.000Z");
+  assert.equal(toDate(0).getTime(), 0);
+});

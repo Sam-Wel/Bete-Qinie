@@ -12,7 +12,9 @@ function useEnterAnimation() {
   useFocusEffect(
     useCallback(() => {
       progress.setValue(0);
-      Animated.timing(progress, { toValue: 1, duration: 220, useNativeDriver: Platform.OS !== "web" }).start();
+      Animated.timing(progress, { toValue: 1, duration: 220, useNativeDriver: Platform.OS !== "web" }).start(({ finished }) => {
+        if (!finished) progress.setValue(1); // never leave a page part-faded
+      });
     }, [progress])
   );
   return {
@@ -78,10 +80,11 @@ export function ScreenContainer({
     </View>
   );
 
-  if (!keyboardAvoiding) return wrapped;
-
+  // Always the same wrapper, with keyboard avoiding switched on or off, so a page that
+  // goes from its loading view to its content (keyboardAvoiding changing) never rebuilds
+  // the fading-in view mid-animation, which left the page stuck half faded.
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1 }} enabled={keyboardAvoiding} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       {wrapped}
     </KeyboardAvoidingView>
   );
