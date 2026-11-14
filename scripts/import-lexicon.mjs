@@ -14,16 +14,22 @@
 // the `lex.py deployed …` line this script prints.
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { register } from "node:module";
 import { createInterface } from "node:readline";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 
+// The checks and row builders are shared with the admin Data releases page
+// (src/lib/lexiconImport.js). The app's src/ files are ES modules in .js files, which
+// the tests' loader teaches Node to read; it must be registered before they are imported.
+register("../tests/loader.mjs", import.meta.url);
+const { FORM_BATCH, WORD_BATCH, checkRelease, deployedLine, formRows, releaseRow, wordRows } = await import(
+  "../src/lib/lexiconImport.js"
+);
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const LEXICON_REPO = resolve(HERE, "../../geez-lexicon");
-const TARGET = "bete-qinie-production";
-const WORD_BATCH = 500;
-const FORM_BATCH = 1000;
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -96,16 +102,8 @@ async function setCurrent(tag) {
   const { error } = await supabase.rpc("lexicon_set_current", { p_tag: tag });
   if (error) fail(`Couldn't make ${tag} live: ${error.message}`);
   console.log(`✓ ${tag} is now the live release${before?.tag && before.tag !== tag ? ` (was ${before.tag})` : ""}.`);
-  const older = before?.tag && compareTags(tag, before.tag) < 0;
   console.log("\nRecord it in the lexicon's registry:");
-  console.log(`  cd ${LEXICON_REPO} && python3 lex.py deployed ${tag} ${TARGET}${older ? " --rollback" : ""} --note "made live with import-lexicon.mjs"`);
-}
-
-function compareTags(a, b) {
-  const v = (t) => t.replace(/^data-v/, "").split(".").map(Number);
-  const [x, y] = [v(a), v(b)];
-  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i];
-  return 0;
+  console.log(`  cd ${LEXICON_REPO} && ${deployedLine(tag, before?.tag, "made live with import-lexicon.mjs")}`);
 }
 
 function releaseDir(arg) {
@@ -134,8 +132,8 @@ async function importRelease(dirArg) {
   const manifest = JSON.parse(await readFile(resolve(dir, "manifest.json"), "utf8"));
   const app = JSON.parse(await readFile(resolve(dir, "app.json"), "utf8"));
   const tag = manifest.tag;
-  if ((manifest.profile || "full") !== "core" || app.profile !== "core") fail(`${tag} is a "${manifest.profile || "full"}" release; the app takes core releases only.`);
-  if (app.version !== manifest.version) fail("app.json and manifest.json disagree on the version.");
+  const problems = checkRelease(manifest, app);
+  if (problems.length) fail(problems.join("\n  "));
   console.log(`${tag} (core): ${manifest.words} words, ${manifest.forms} forms, ${app.heads?.length || 0} head tables, released ${manifest.date}`);
 
   await signIn();
@@ -150,45 +148,11 @@ async function importRelease(dirArg) {
     console.log(`Removed the earlier copy of ${tag}.`);
   }
 
-  const { error: releaseError } = await supabase.from("lexicon_releases").insert({
-    tag,
-    version: manifest.version,
-    profile: "core",
-    released_on: manifest.date,
-    source_commit: manifest.commit,
-    words: manifest.words,
-    forms: manifest.forms,
-    heads: app.heads ?? null,
-    manifest,
-    is_current: false,
-  });
+  const { error: releaseError } = await supabase.from("lexicon_releases").insert(releaseRow(manifest, app));
   if (releaseError) fail(`Writing the release row failed: ${releaseError.message}`);
 
-  const words = app.entries.map((e) => ({
-    release_tag: tag,
-    lex_id: e.id,
-    headword: e.headword,
-    spellings: [...new Set([e.headword, ...(e.variants || [])].map((s) => s.trim()).filter(Boolean))],
-    heads: e.verb_class || [],
-    senses: e.senses || [],
-    open_questions: e.open_questions || [],
-    sources: e.sources || [],
-    status: e.status ?? null,
-  }));
-  const forms = app.entries.flatMap((e) =>
-    (e.forms || []).map((f, n) => ({
-      release_tag: tag,
-      lex_id: e.id,
-      n,
-      form: f.form,
-      slot: f.slot ?? null,
-      category: f.category ?? null,
-      features: f.features ?? null,
-      traditional_name: f.traditional_name ?? null,
-      book_label: f.book_label ?? null,
-      book: f.book ?? null,
-    }))
-  );
+  const words = wordRows(tag, app);
+  const forms = formRows(tag, app);
   await insertInBatches("lexicon_words", words, WORD_BATCH, "words");
   await insertInBatches("lexicon_forms", forms, FORM_BATCH, "forms");
 
