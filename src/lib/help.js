@@ -93,6 +93,57 @@ export const HELP = {
   account: { title: "Account", points: ["Signed in, your progress is kept in your account and on every device."] },
   more: { title: "ቤተ ቅኔ", points: ["Every part of the app, your account, appearance, and About."] },
   about: { title: "About", points: ["What ቤተ ቅኔ is for, its version, and how to reach us."] },
+
+  // Admin pages (AdminHeader help="…").
+  "admin-dictionary": {
+    title: "Dictionary",
+    points: [
+      "Search in any language; part of a word is enough. Type #679 to open word 679.",
+      "The chips list what needs work: ግዕዝ words missing a language, duplicate spellings, meanings no word uses, reported words, and words learners miss most.",
+      "Learners get your changes the next time they open the app; no deploy is needed.",
+    ],
+  },
+  "admin-word": {
+    title: "Editing a word",
+    points: [
+      "Many ግዕዝ words share one meaning word. A shared meaning shows “also the meaning of N other words”.",
+      "Edit a shared meaning “for this word only” to give just this word a new meaning, or “for all” to correct the spelling everywhere.",
+      "Remove unlinks a meaning; a meaning no word uses any more is deleted with it.",
+      "Merge joins two entries of the same word: links, ሰዋሰው, reports and learners' progress move to the one you keep.",
+      "Every change is in the change log, with before and after.",
+    ],
+  },
+  "admin-reports": {
+    title: "Mistake reports",
+    points: [
+      "Learners send these from “Report a mistake” under a word card.",
+      "Open the word, fix it, then mark the report Fixed. Dismiss reports that need no change.",
+    ],
+  },
+  "admin-searches": {
+    title: "Searches with no result",
+    points: [
+      "Words people searched for in the Dictionary and didn't find, most searched first. Who searched is not kept.",
+      "Add a ግዕዝ word straight from here. For a ትግርኛ, አማርኛ or English word, open the ግዕዝ word it means and add it as a meaning.",
+      "A term stops being counted once a search for it finds something.",
+    ],
+  },
+  "admin-releases": {
+    title: "Data releases",
+    points: [
+      "Releases come from the Ge'ez lexicon repo (geez-lexicon/releases/data-vX.Y.Z). Pick its app.json and manifest.json to import one.",
+      "Only one release is live. Make live switches to another; an older one is a rollback. Learners get it the next time they open the app.",
+      "After a switch, run the lex.py line shown so the lexicon's registry records it.",
+    ],
+  },
+  "admin-access": {
+    title: "Access",
+    points: [
+      "Editors: the dictionary, reports, missed searches, the blog and the meters.",
+      "Admins: everything, plus learners, access, data releases, the announcement and the change log.",
+      "The person needs an account first. You can't change your own role, and there is always at least one admin.",
+    ],
+  },
 };
 
 export const helpFor = (route) => HELP[route] || null;

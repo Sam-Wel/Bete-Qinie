@@ -52,7 +52,7 @@ export default function Searches() {
 
   return (
     <ScreenContainer scroll contentContainerStyle={adminStyles.page}>
-      <AdminHeader title="Searches with no result" />
+      <AdminHeader title="Searches with no result" help="admin-searches" />
       <Text style={adminStyles.hint}>
         What people looked for in the Dictionary and didn't find. Nothing about who searched is kept. A word you add
         stops being counted, because its search then finds something.

@@ -137,6 +137,7 @@ export default function DictionaryAdmin() {
     <ScreenContainer scroll keyboardAvoiding contentContainerStyle={adminStyles.page}>
       <AdminHeader
         title="Dictionary"
+        help="admin-dictionary"
         right={
           <Button size="sm" onPress={() => router.push("/admin/dictionary/new")}>
             Add a word

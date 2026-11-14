@@ -50,7 +50,7 @@ function AccessPage() {
 
   return (
     <ScreenContainer scroll keyboardAvoiding contentContainerStyle={adminStyles.page}>
-      <AdminHeader title="Access" />
+      <AdminHeader title="Access" help="admin-access" />
       <Text style={adminStyles.hint}>
         Editors work on the dictionary, mistake reports, missed searches, the blog and the meters. Admins can also see
         learners, change access, publish data releases and the announcement, and read the change log.

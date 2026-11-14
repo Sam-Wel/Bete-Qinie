@@ -5,6 +5,7 @@ import { ScreenContainer, Button, Select } from "../../components/ui";
 import { LearnSession } from "../../components/today/LearnSession";
 import { CleanupCard } from "../../components/today/CleanupCard";
 import { WelcomeCard } from "../../components/today/WelcomeCard";
+import { AnnouncementBanner } from "../../components/AnnouncementBanner";
 import { ProgressBar } from "../../components/games/GameFrame";
 import { Chip, STATE_COLORS, shared } from "../../components/verbQuiz/shared";
 import { useToday } from "../../hooks/useToday";
@@ -97,6 +98,7 @@ export default function Today() {
 
   return (
     <ScreenContainer scroll contentContainerStyle={styles.page}>
+      <AnnouncementBanner />
       <WelcomeCard stats={stats} />
 
       <View style={[shared.card, styles.hero]}>

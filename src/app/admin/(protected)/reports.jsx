@@ -33,7 +33,7 @@ export default function Reports() {
   const rows = list.data || [];
   return (
     <ScreenContainer scroll contentContainerStyle={adminStyles.page}>
-      <AdminHeader title="Mistake reports" />
+      <AdminHeader title="Mistake reports" help="admin-reports" />
       <Chips items={STATUSES} value={status} onChange={setStatus} />
       <Notice tone={notice?.tone}>{notice?.text}</Notice>
       <Notice tone="error">{list.error}</Notice>

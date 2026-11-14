@@ -6,6 +6,7 @@ import { useRecentSearches } from "../../hooks/useRecentSearches";
 import { useBadges } from "../../hooks/useDueCount";
 import { Button, EmptyState, Icon, ScreenContainer, Select } from "../../components/ui";
 import { LANGUAGE_ORDER, WordCard, languageName } from "../../components/WordCard";
+import { AnnouncementBanner } from "../../components/AnnouncementBanner";
 import { useVerbBank } from "../../hooks/useVerbBank";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
@@ -91,6 +92,7 @@ export default function Dictionary() {
 
   return (
     <ScreenContainer scroll keyboardAvoiding contentContainerStyle={styles.page}>
+      <AnnouncementBanner />
       <View style={styles.searchCard}>
         <LanguageChips languages={languages} value={selectedLanguage} onChange={setSelectedLanguage} />
 

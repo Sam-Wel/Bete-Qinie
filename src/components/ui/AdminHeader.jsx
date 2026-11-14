@@ -1,11 +1,13 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Icon } from "./Icon";
+import { HelpButton } from "../HelpButton";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
 // Back and title share one row here, rather than stacking as ScreenHeader does, so the
 // admin pages lead with their content instead of a banner.
-export function AdminHeader({ title, titleEthiopic = false, right, onBack, fallback = "/admin" }) {
+// help: a key in src/lib/help.js for a "?" guide to the page.
+export function AdminHeader({ title, titleEthiopic = false, right, help, onBack, fallback = "/admin" }) {
   // router.back() is a no-op when the page was opened directly, which is how every admin
   // back button ended up dead. Fall back to a real destination.
   const goBack = () => {
@@ -30,6 +32,7 @@ export function AdminHeader({ title, titleEthiopic = false, right, onBack, fallb
 
         <View style={styles.spacer} />
         {right}
+        {help ? <HelpButton route={help} /> : null}
       </View>
       <View style={styles.rule} />
     </View>

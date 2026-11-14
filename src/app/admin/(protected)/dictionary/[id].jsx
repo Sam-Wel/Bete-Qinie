@@ -77,7 +77,7 @@ export default function EditWord() {
 
   return (
     <ScreenContainer scroll keyboardAvoiding contentContainerStyle={adminStyles.page}>
-      <AdminHeader title="Edit word" fallback="/admin/dictionary" />
+      <AdminHeader title="Edit word" fallback="/admin/dictionary" help="admin-word" />
 
       <View style={styles.top}>
         <Text style={[styles.word, scriptStyle(word.word) && styles.wordEthiopic]}>{word.word}</Text>

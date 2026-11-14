@@ -138,7 +138,7 @@ function ReleasesPage() {
   const busy = Boolean(progress);
   return (
     <ScreenContainer scroll contentContainerStyle={adminStyles.page}>
-      <AdminHeader title="Data releases" />
+      <AdminHeader title="Data releases" help="admin-releases" />
       <Text style={adminStyles.hint}>
         Dictionary data from the Ge'ez lexicon (heads and ርባታ from መጽሐፈ ግስ ወሰዋስው). One release is live at a time;
         learners' apps pick up a change the next time they open. Making an older release live is a rollback.
