@@ -20,7 +20,7 @@ function Row({ icon, title, english, badge, last, onPress, latin }) {
 
 // Phones: every section of the app in its group, plus account and appearance.
 export default function More() {
-  const { user, profile, isAdmin } = useAuth();
+  const { user, profile, canEdit } = useAuth();
   const badges = useBadges();
 
   return (
@@ -55,7 +55,7 @@ export default function More() {
         </View>
       ))}
 
-      {isAdmin ? (
+      {canEdit ? (
         <View style={styles.list}>
           <Row icon="shield-checkmark-outline" title="Admin dashboard" latin last onPress={() => router.navigate("/admin")} />
         </View>

@@ -10,7 +10,7 @@ import { colors, fontFamily, spacing, typography } from "../../../theme";
 
 export default function BlogPostDetail() {
   const { id } = useLocalSearchParams();
-  const { isAdmin } = useAuth();
+  const { canEdit } = useAuth();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -35,7 +35,7 @@ export default function BlogPostDetail() {
       // Drafts are only visible to a logged-in admin -- anonymous visitors
       // and regular signed-in users see "not found", mirroring the
       // is_published RLS policy.
-      if (error || !data || (data.is_published === false && !isAdmin)) {
+      if (error || !data || (data.is_published === false && !canEdit)) {
         setNotFound(true);
         setPost(null);
       } else {
@@ -48,7 +48,7 @@ export default function BlogPostDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id, isAdmin]);
+  }, [id, canEdit]);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -104,7 +104,7 @@ export default function BlogPostDetail() {
       ) : null}
       <BlogContent content={post.content} baseStyle={styles.content} />
 
-      {isAdmin && (
+      {canEdit && (
         <View style={styles.actionsRow}>
           {confirmingDelete ? (
             <>

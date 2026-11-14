@@ -39,6 +39,17 @@ import {
   Trophy,
   UserCircle,
   UserPlus,
+  Users,
+  UserCog,
+  Megaphone,
+  ScrollText,
+  Flag,
+  SearchX,
+  Database,
+  Upload,
+  Download,
+  Trash2,
+  GitMerge,
 } from "lucide-react-native";
 import { colors } from "../../theme";
 
@@ -83,6 +94,17 @@ const ICONS = {
   "mail-outline": Mail,
   "help-circle-outline": CircleHelp,
   close: X,
+  users: Users,
+  "user-cog": UserCog,
+  megaphone: Megaphone,
+  "scroll-text": ScrollText,
+  flag: Flag,
+  "search-x": SearchX,
+  database: Database,
+  upload: Upload,
+  download: Download,
+  trash: Trash2,
+  "git-merge": GitMerge,
 };
 
 export function Icon({ name, size = 20, color = colors.textPrimary, strokeWidth = 1.75, style }) {

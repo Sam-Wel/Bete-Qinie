@@ -12,16 +12,16 @@ export default function NoAccess() {
   return (
     <ScreenContainer center>
       <Card style={styles.card}>
-        <Text style={styles.title}>Admin only</Text>
+        <Text style={styles.title}>Editors and admins only</Text>
         <Text style={styles.body}>
           {user
-            ? `You are signed in as ${user.email}, but this account is not an admin.`
-            : "This area is for admins."}
+            ? `You are signed in as ${user.email}, but this account is not an editor or an admin.`
+            : "This area is for editors and admins."}
         </Text>
         {user ? (
           <Text style={styles.detail}>
             {profile
-              ? `profiles.role reads ${JSON.stringify(profile.role)} — it must be exactly "admin".`
+              ? `This account's role is ${JSON.stringify(profile.role)}. An admin can give it access on the Access page.`
               : "No profile row was found for this account."}
           </Text>
         ) : null}

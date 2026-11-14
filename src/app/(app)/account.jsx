@@ -11,7 +11,7 @@ const GAME_TYPE_LABELS = {
 };
 
 export default function Account() {
-  const { user, profile, isAdmin, loading: authLoading, signOut } = useAuth();
+  const { user, profile, canEdit, loading: authLoading, signOut } = useAuth();
   const [scores, setScores] = useState([]);
   const [scoresLoading, setScoresLoading] = useState(true);
 
@@ -70,7 +70,7 @@ export default function Account() {
         <Text style={styles.value}>{profile?.display_name || user.email}</Text>
         <Text style={styles.email}>{user.email}</Text>
 
-        {isAdmin && (
+        {canEdit && (
           <Button variant="secondary" onPress={() => router.push("/admin")} style={styles.button}>
             Admin Dashboard
           </Button>

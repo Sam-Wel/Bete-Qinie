@@ -76,7 +76,10 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = () => supabase.auth.signOut();
 
-  const isAdmin = profile?.role === "admin";
+  // Roles (supabase/admin_tools.sql): 'user', 'editor' (content), 'admin' (everything).
+  const role = profile?.role ?? (session ? "user" : null);
+  const isAdmin = role === "admin";
+  const canEdit = role === "admin" || role === "editor";
 
   return (
     <AuthContext.Provider
@@ -84,7 +87,9 @@ export const AuthProvider = ({ children }) => {
         session,
         user: session?.user ?? null,
         profile,
+        role,
         isAdmin,
+        canEdit,
         loading,
         signOut,
         passwordRecovery,

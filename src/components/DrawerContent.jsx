@@ -61,7 +61,7 @@ function NavItem({ item, active, badges, onPress }) {
 // The sidebar: permanent on wide screens. Sections grouped, the current one
 // highlighted, appearance and account at the bottom.
 export function DrawerContent({ state, navigation }) {
-  const { user, profile, isAdmin } = useAuth();
+  const { user, profile, canEdit } = useAuth();
   const badges = useBadges();
   const current = sectionOf(state.routes[state.index]?.name);
 
@@ -119,7 +119,7 @@ export function DrawerContent({ state, navigation }) {
             <Icon name="information-circle-outline" size={16} color={colors.textSecondary} />
             <Text style={styles.adminText}>About ቤተ ቅኔ</Text>
           </Pressable>
-          {isAdmin ? (
+          {canEdit ? (
             <Pressable onPress={() => go("/admin")} style={({ hovered }) => [styles.adminLink, hovered && styles.itemHover]}>
               <Icon name="shield-checkmark-outline" size={16} color={colors.textSecondary} />
               <Text style={styles.adminText}>Admin dashboard</Text>

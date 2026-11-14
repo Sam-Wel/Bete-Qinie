@@ -2,8 +2,9 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Redirect, Stack } from "expo-router";
 import { useAuth } from "../../../context/AuthContext";
 
+// Editors and admins get in; pages for admins alone wrap themselves in <AdminOnly>.
 export default function ProtectedLayout() {
-  const { isAdmin, loading, user } = useAuth();
+  const { canEdit, loading, user } = useAuth();
 
   if (loading) {
     return (
@@ -17,7 +18,7 @@ export default function ProtectedLayout() {
   // leaves the router with a child route it cannot resolve, so both refusals redirect
   // to a route that owns its own screen.
   if (!user) return <Redirect href="/auth/sign-in" />;
-  if (!isAdmin) return <Redirect href="/admin/no-access" />;
+  if (!canEdit) return <Redirect href="/admin/no-access" />;
 
   return <Stack screenOptions={{ headerShown: false }} />;
 }

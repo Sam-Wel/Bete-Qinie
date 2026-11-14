@@ -14,6 +14,7 @@ export function TextField({
   multiline,
   style,
   inputStyle,
+  ...inputProps // onSubmitEditing, returnKeyType, maxLength, autoFocus, …
 }) {
   return (
     <View style={[styles.wrapper, style]}>
@@ -28,6 +29,7 @@ export function TextField({
         autoCapitalize={autoCapitalize}
         autoComplete={autoComplete}
         multiline={multiline}
+        {...inputProps}
         style={[
           styles.input,
           multiline && styles.multiline,
