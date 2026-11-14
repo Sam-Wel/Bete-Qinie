@@ -351,6 +351,9 @@ begin
   if tg_table_name = 'app_settings' and coalesce(v_new, v_old) ->> 'key' = 'dictionary_version' then
     return null;
   end if;
+  if tg_table_name = 'word_reports' and tg_op = 'INSERT' then
+    return null;  -- a learner sending a report isn't an admin change; resolving it is
+  end if;
   if tg_table_name = 'lexicon_releases' then
     -- The head tables and manifest are large and never change after import.
     v_old := v_old - 'heads' - 'manifest';
