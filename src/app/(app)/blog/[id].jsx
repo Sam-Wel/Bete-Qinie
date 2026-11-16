@@ -63,7 +63,7 @@ export default function BlogPostDetail() {
 
   if (loading) {
     return (
-      <ScreenContainer center>
+      <ScreenContainer enter="slide" center>
         <ActivityIndicator color={colors.primary} />
       </ScreenContainer>
     );
@@ -71,7 +71,7 @@ export default function BlogPostDetail() {
 
   if (notFound || !post) {
     return (
-      <ScreenContainer center>
+      <ScreenContainer enter="slide" center>
         <Stack.Screen options={{ title: "Not found" }} />
         <EmptyState message="Post not found." icon="alert-circle-outline" />
       </ScreenContainer>
@@ -82,7 +82,7 @@ export default function BlogPostDetail() {
   const chanted = QINE.find((q) => q.blogId === Number(post.id));
 
   return (
-    <ScreenContainer scroll>
+    <ScreenContainer enter="slide" scroll>
       <Stack.Screen options={{ title: post.title }} />
       <ScreenHeader title={post.title} titleEthiopic />
 

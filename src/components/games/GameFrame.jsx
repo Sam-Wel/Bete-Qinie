@@ -1,4 +1,6 @@
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { router } from "expo-router";
 import { Button, ScreenContainer } from "../ui";
 import { DIFFICULTIES } from "../../lib/verbGames";
@@ -6,6 +8,7 @@ import { LANGUAGES } from "../../lib/verbQuiz";
 import { FOCUSES } from "../../lib/daily";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 import { Chip, shared } from "../verbQuiz/shared";
+import { BoneCard } from "../ui/Skeleton";
 
 // Always the hub: router.back() in the drawer goes to the first screen (Dictionary).
 export const backToGames = () => router.navigate("/game");
@@ -15,9 +18,9 @@ export const backToGames = () => router.navigate("/game");
 export function GameFrame({ title, game, children, scroll = true }) {
   let body = children;
   if (game.error) body = <Text style={styles.error}>{game.error}</Text>;
-  else if (!game.ready) body = <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />;
+  else if (!game.ready) body = <BoneCard tall lines={3} />;
   return (
-    <ScreenContainer scroll={scroll}>
+    <ScreenContainer scroll={scroll} enter="slide">
       {body}
     </ScreenContainer>
   );
@@ -104,10 +107,18 @@ export function StartCard({ emoji, lead, rules = [], best, children, onStart, st
 }
 
 // A thin bar showing how far through a round the player is.
+// A thin bar that grows to its value (and on to each new one).
 export function ProgressBar({ value, color = colors.primary }) {
+  const [trackWidth, setTrackWidth] = useState(0);
+  const target = Math.max(0, Math.min(1, value || 0));
+  const width = useSharedValue(0);
+  useEffect(() => {
+    width.value = withTiming(trackWidth * target, { duration: 500, easing: Easing.out(Easing.cubic) });
+  }, [trackWidth, target]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fill = useAnimatedStyle(() => ({ width: width.value }));
   return (
-    <View style={styles.track}>
-      <View style={[styles.fill, { width: `${Math.max(0, Math.min(1, value)) * 100}%`, backgroundColor: color }]} />
+    <View style={styles.track} onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}>
+      <Animated.View style={[styles.fill, { backgroundColor: color }, fill]} />
     </View>
   );
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
+import { BonePage } from "../../components/ui/Skeleton";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { setGameLanguage, useGameLanguage } from "../../hooks/useGameLanguage";
@@ -131,7 +132,7 @@ export default function VerbQuiz() {
   if (error) {
     body = <Text style={styles.error}>{error}</Text>;
   } else if (loading || !progress.ready) {
-    body = <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />;
+    body = <BonePage cards={[{ tall: true, lines: 3 }, { lines: 2 }]} />;
   } else if (quiz) {
     body = (
       <QuizPlay

@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
 const ETHIOPIC = /[ሀ-᎟ⶀ-⷟]/;
@@ -53,16 +55,29 @@ export const STATE_COLORS = {
   new: colors.borderMuted,
 };
 
+// The share of words at each stage, as one bar. It fills from the left when it first
+// appears.
 export function StackedBar({ counts, total, height = 6, style }) {
+  const [width, setWidth] = useState(0);
+  const reveal = useSharedValue(0);
+  useEffect(() => {
+    if (width) reveal.value = withTiming(1, { duration: 650, easing: Easing.out(Easing.cubic) });
+  }, [width]); // eslint-disable-line react-hooks/exhaustive-deps
+  const clip = useAnimatedStyle(() => ({ width: width * reveal.value }));
   return (
-    <View style={[styles.bar, { height }, style]}>
-      {total
-        ? ["mastered", "known", "learning", "shaky"].map((key) =>
-            counts[key] ? (
-              <View key={key} style={{ flex: counts[key] / total, backgroundColor: STATE_COLORS[key] }} />
-            ) : null
-          )
-        : null}
+    <View style={[styles.bar, { height }, style]} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      <Animated.View style={[styles.barClip, { height }, clip]}>
+        <View style={[styles.barRow, { width, height }]}>
+          {total
+            ? ["mastered", "known", "learning", "shaky"].map((key) =>
+                counts[key] ? (
+                  <View key={key} style={{ flex: counts[key] / total, backgroundColor: STATE_COLORS[key] }} />
+                ) : null
+              )
+            : null}
+          {total ? <View style={{ flex: Math.max(0, total - ["mastered", "known", "learning", "shaky"].reduce((n, k) => n + (counts[k] || 0), 0)) / total }} /> : null}
+        </View>
+      </Animated.View>
     </View>
   );
 }
@@ -127,6 +142,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: colors.borderMuted,
   },
+  barClip: { overflow: "hidden" },
+  barRow: { flexDirection: "row" },
   legend: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, flexShrink: 1, maxWidth: "100%" },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   legendDot: { width: 9, height: 9, borderRadius: 5 },

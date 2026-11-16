@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { AdminHeader, Button, ScreenContainer, TextField } from "../../../../components/ui";
 import { ConfirmButton, ListRow, Notice, Panel, adminStyles, scriptStyle } from "../../../../components/admin";
 import { LexiconSection } from "../../../../components/LexiconSection";
+import { toast } from "../../../../components/Toast";
 import { ago, rpc } from "../../../../lib/adminApi";
 import { languageLabel, searchWords } from "../../../../lib/dictionaryAdmin";
 import { colors, fontFamily, radii, spacing, typography } from "../../../../theme";
@@ -20,7 +21,6 @@ export default function EditWord() {
   const [word, setWord] = useState(null);
   const [reports, setReports] = useState([]);
   const [error, setError] = useState(null);
-  const [notice, setNotice] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -40,24 +40,43 @@ export default function EditWord() {
     load();
   }, [load]);
 
-  // Runs one change, says what happened, reloads the word. Returns the function's
-  // result, or undefined when it failed.
-  const act = async (fn, done, { reload = true } = {}) => {
-    setNotice(null);
+  // Runs one change, says what happened in a toast (with Undo when `undo` is given),
+  // reloads the word. Returns the function's result, or undefined when it failed.
+  const act = async (fn, done, { reload = true, undo } = {}) => {
     try {
       const result = await fn();
-      if (done) setNotice({ tone: "done", text: typeof done === "function" ? done(result) : done });
+      const text = typeof done === "function" ? done(result) : done;
+      if (text) {
+        toast(
+          text,
+          undo
+            ? {
+                action: {
+                  label: "Undo",
+                  onPress: async () => {
+                    try {
+                      await undo();
+                      await load();
+                    } catch (e) {
+                      toast(e.message, { tone: "error", duration: 6000 });
+                    }
+                  },
+                },
+              }
+            : {}
+        );
+      }
       if (reload) await load();
       return result;
     } catch (e) {
-      setNotice({ tone: "error", text: e.message });
+      toast(e.message, { tone: "error", duration: 6000 });
       return undefined;
     }
   };
 
   if (error) {
     return (
-      <ScreenContainer scroll contentContainerStyle={adminStyles.page}>
+      <ScreenContainer enter="slide" scroll contentContainerStyle={adminStyles.page}>
         <AdminHeader title="Edit word" fallback="/admin/dictionary" />
         <Notice tone="error">{error}</Notice>
       </ScreenContainer>
@@ -65,7 +84,7 @@ export default function EditWord() {
   }
   if (!word) {
     return (
-      <ScreenContainer center>
+      <ScreenContainer enter="slide" center>
         <ActivityIndicator color={colors.primary} />
       </ScreenContainer>
     );
@@ -76,7 +95,7 @@ export default function EditWord() {
   const geezLinks = word.links.filter((l) => l.language_code === "gz");
 
   return (
-    <ScreenContainer scroll keyboardAvoiding contentContainerStyle={adminStyles.page}>
+    <ScreenContainer enter="slide" scroll keyboardAvoiding contentContainerStyle={adminStyles.page}>
       <AdminHeader title="Edit word" fallback="/admin/dictionary" help="admin-word" />
 
       <View style={styles.top}>
@@ -86,7 +105,6 @@ export default function EditWord() {
           {isGeez ? ` · studied by ${plural(word.learners, "learner")}` : ""}
         </Text>
       </View>
-      <Notice tone={notice?.tone}>{notice?.text}</Notice>
 
       {reports.length ? (
         <Panel title={`Open reports (${reports.length})`}>
@@ -248,7 +266,15 @@ function Meaning({ meaning, word, act }) {
         >
           Edit
         </Button>
-        <ConfirmButton variant="plain" confirmLabel="Remove?" onConfirm={() => act(() => rpc("dict_unlink", { p_word_id: word.word_id, p_other_id: meaning.word_id }), `Removed “${meaning.word}”.`)}>
+        <ConfirmButton
+          variant="plain"
+          confirmLabel="Remove?"
+          onConfirm={() =>
+            act(() => rpc("dict_unlink", { p_word_id: word.word_id, p_other_id: meaning.word_id }), `Removed “${meaning.word}”.`, {
+              undo: () => rpc("dict_link", { p_word_id: word.word_id, p_lang: meaning.language_code, p_text: meaning.word }),
+            })
+          }
+        >
           Remove
         </ConfirmButton>
       </View>
@@ -349,7 +375,15 @@ function Examples({ word, act }) {
               >
                 Save
               </Button>
-              <ConfirmButton variant="plain" confirmLabel="Delete?" onConfirm={() => act(() => rpc("example_delete", { p_id: ex.sewasew_id }), "Example deleted.")}>
+              <ConfirmButton
+                variant="plain"
+                confirmLabel="Delete?"
+                onConfirm={() =>
+                  act(() => rpc("example_delete", { p_id: ex.sewasew_id }), "Example deleted.", {
+                    undo: () => rpc("example_save", { p_id: null, p_word_id: word.word_id, p_text: ex.text }),
+                  })
+                }
+              >
                 Delete
               </ConfirmButton>
             </View>

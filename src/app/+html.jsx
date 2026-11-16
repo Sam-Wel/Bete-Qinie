@@ -1,5 +1,6 @@
 import { ScrollViewStyleReset } from "expo-router/html";
 import { themeBootScript, themeCss } from "../theme/palettes";
+import { SPLASH_LINKS } from "../lib/splashLinks";
 
 // Installed on a phone's home screen, the app should feel native: no browser bars,
 // no page bounce, no double-tap zoom. The page itself never scrolls; each screen
@@ -10,6 +11,9 @@ body { position: fixed; inset: 0; -webkit-text-size-adjust: 100%; -webkit-tap-hi
 #root { height: 100%; }
 #root div { overscroll-behavior: contain; }
 a, button, [role="button"], [role="link"], [role="tab"] { touch-action: manipulation; }
+button, [role="button"], [role="link"], [role="tab"], [role="tablist"], div[tabindex] {
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
 `;
 
 // Web page shell. The theme script runs before the app so dark mode doesn't flash light.
@@ -28,6 +32,9 @@ export default function Root({ children }) {
         <meta name="theme-color" content="#15100A" media="(prefers-color-scheme: dark)" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        {SPLASH_LINKS.map((l) => (
+          <link key={l.href} rel="apple-touch-startup-image" href={l.href} media={l.media} />
+        ))}
         <ScrollViewStyleReset />
         <style id="app-shell" dangerouslySetInnerHTML={{ __html: appShellCss }} />
         <style id="theme-colors" dangerouslySetInnerHTML={{ __html: themeCss() }} />

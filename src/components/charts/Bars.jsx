@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { toDate } from "../../lib/dates";
 import { colors, radii, spacing, typography } from "../../theme";
 
@@ -14,12 +16,10 @@ export function Bars({ items, label, highlightLast, empty }) {
         <View key={i} style={styles.barCol}>
           <Text style={styles.barValue}>{item.count || ""}</Text>
           <View style={styles.barTrack}>
-            <View
-              style={[
-                styles.barFill,
-                { height: item.count ? `${Math.max(4, (item.count / max) * 100)}%` : 0 },
-                highlightLast && i === items.length - 1 && { backgroundColor: colors.primaryDark },
-              ]}
+            <Fill
+              pct={item.count ? Math.max(4, (item.count / max) * 100) : 0}
+              delay={i * 40}
+              color={highlightLast && i === items.length - 1 ? colors.primaryDark : colors.primary}
             />
           </View>
           <Text style={styles.barLabel}>{label(item, i)}</Text>
@@ -27,6 +27,17 @@ export function Bars({ items, label, highlightLast, empty }) {
       ))}
     </View>
   );
+}
+
+// One bar, growing up from the baseline when it first appears.
+function Fill({ pct, delay, color }) {
+  const grow = useSharedValue(0);
+  useEffect(() => {
+    grow.value = 0;
+    grow.value = withTiming(1, { duration: 550 + delay, easing: Easing.out(Easing.cubic) });
+  }, [pct]); // eslint-disable-line react-hooks/exhaustive-deps
+  const style = useAnimatedStyle(() => ({ height: `${pct * grow.value}%` }));
+  return <Animated.View style={[styles.barFill, { backgroundColor: color }, style]} />;
 }
 
 export const shortDate = (time) => toDate(time).toLocaleDateString(undefined, { month: "short", day: "numeric" });

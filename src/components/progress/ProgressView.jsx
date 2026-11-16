@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Button } from "../ui";
+import { CountUp } from "../ui/CountUp";
 import { Bars, shortDate } from "../charts/Bars";
 import { FamilyGrid } from "../verbQuiz/FamilyGrid";
 import { Legend, STATE_COLORS, Section, StackedBar, scriptFont, shared } from "../verbQuiz/shared";
@@ -44,7 +45,7 @@ export function ProgressView({ bank, stats, lang, readOnly = false }) {
         <View style={styles.heroRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.heroNumber}>
-              {stages.mastered + stages.known}
+              {readOnly ? stages.mastered + stages.known : <CountUp value={stages.mastered + stages.known} id="progress-known" />}
               <Text style={styles.heroOf}> / {stages.total}</Text>
             </Text>
             <Text style={styles.heroLabel}>{readOnly ? "verbs known" : "verbs you know"}</Text>

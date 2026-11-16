@@ -34,7 +34,7 @@ function LearnerPage() {
 
   const user = data.data?.user;
   return (
-    <ScreenContainer scroll contentContainerStyle={adminStyles.page}>
+    <ScreenContainer enter="slide" scroll contentContainerStyle={adminStyles.page}>
       <AdminHeader title="Learner" fallback="/admin/learners" />
       <Notice tone="error">{data.error || bankError}</Notice>
       {!user || !bank ? (

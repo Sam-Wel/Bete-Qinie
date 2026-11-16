@@ -5,6 +5,7 @@ import { AdminHeader, Button, EmptyState, ScreenContainer } from "../../../compo
 import { Chips, Notice, Panel, adminStyles, scriptStyle } from "../../../components/admin";
 import { useRpc } from "../../../hooks/useRpc";
 import { ago, rpc } from "../../../lib/adminApi";
+import { toast } from "../../../components/Toast";
 import { colors, fontFamily, spacing, typography } from "../../../theme";
 
 const STATUSES = [
@@ -17,16 +18,18 @@ const STATUSES = [
 export default function Reports() {
   const [status, setStatus] = useState("open");
   const list = useRpc("reports_list", { p_status: status, p_limit: 300 });
-  const [notice, setNotice] = useState(null);
 
-  const resolve = async (report, next) => {
-    setNotice(null);
+  const resolve = async (report, next, quiet = false) => {
     try {
       await rpc("report_resolve", { p_id: report.id, p_status: next, p_note: null });
-      setNotice({ tone: "done", text: next === "open" ? "Reopened." : next === "fixed" ? "Marked fixed." : "Dismissed." });
+      if (!quiet) {
+        toast(next === "open" ? "Reopened." : next === "fixed" ? "Marked fixed." : "Dismissed.", {
+          action: { label: "Undo", onPress: () => resolve(report, report.status, true) },
+        });
+      }
       list.reload();
     } catch (e) {
-      setNotice({ tone: "error", text: e.message });
+      toast(e.message, { tone: "error", duration: 6000 });
     }
   };
 
@@ -35,7 +38,6 @@ export default function Reports() {
     <ScreenContainer scroll contentContainerStyle={adminStyles.page}>
       <AdminHeader title="Mistake reports" help="admin-reports" />
       <Chips items={STATUSES} value={status} onChange={setStatus} />
-      <Notice tone={notice?.tone}>{notice?.text}</Notice>
       <Notice tone="error">{list.error}</Notice>
       <Panel title={list.loading ? "Loading…" : `${rows.length} report${rows.length === 1 ? "" : "s"}`}>
         {list.loading && !rows.length ? <ActivityIndicator color={colors.primary} /> : null}

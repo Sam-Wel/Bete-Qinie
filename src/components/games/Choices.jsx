@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { colors, radii, spacing, typography } from "../../theme";
 import { scriptFont, scriptFontBold } from "../verbQuiz/shared";
+import { AnswerMotion } from "./AnswerMotion";
 
 // Four answers, two by two on wide screens. After a pick the right one turns
 // green and a wrong pick red. Keys 1–4 answer on a computer.
@@ -25,38 +26,38 @@ export function Choices({ options, answerIndex, chosen, onPick, geez = false, da
       {options.map((text, i) => {
         const state = chosen == null ? null : i === answerIndex ? "right" : i === chosen ? "wrong" : "dim";
         return (
-          <Pressable
-            key={`${i}-${text}`}
-            onPress={() => !locked && onPick(i)}
-            accessibilityRole="button"
-            accessibilityLabel={`${i + 1}. ${text}`}
-            style={({ hovered, pressed }) => [
-              styles.option,
-              wide && styles.optionWide,
-              dark && styles.optionDark,
-              (hovered || pressed) && !locked && (dark ? styles.hoverDark : styles.hover),
-              state === "right" && styles.right,
-              state === "wrong" && styles.wrong,
-              state === "dim" && styles.dim,
-            ]}
-          >
-            <View style={[styles.key, dark && styles.keyDark, state === "right" && styles.keyRight, state === "wrong" && styles.keyWrong]}>
-              <Text style={[styles.keyText, (state === "right" || state === "wrong") && { color: "#fff" }]}>
-                {state === "right" ? "✓" : state === "wrong" ? "✕" : i + 1}
-              </Text>
-            </View>
-            <Text
-              style={[
-                geez ? scriptFontBold(text) : scriptFont(text),
-                styles.text,
-                geez && styles.textGeez,
-                dark && styles.textDark,
-                (state === "right" || state === "wrong") && dark && { color: colors.textPrimary },
+          <AnswerMotion key={`${i}-${text}`} state={state} picked={i === chosen} style={wide && styles.optionWide}>
+            <Pressable
+              onPress={() => !locked && onPick(i)}
+              accessibilityRole="button"
+              accessibilityLabel={`${i + 1}. ${text}`}
+              style={({ hovered, pressed }) => [
+                styles.option,
+                dark && styles.optionDark,
+                (hovered || pressed) && !locked && (dark ? styles.hoverDark : styles.hover),
+                state === "right" && styles.right,
+                state === "wrong" && styles.wrong,
+                state === "dim" && styles.dim,
               ]}
             >
-              {text}
-            </Text>
-          </Pressable>
+              <View style={[styles.key, dark && styles.keyDark, state === "right" && styles.keyRight, state === "wrong" && styles.keyWrong]}>
+                <Text style={[styles.keyText, (state === "right" || state === "wrong") && { color: "#fff" }]}>
+                  {state === "right" ? "✓" : state === "wrong" ? "✕" : i + 1}
+                </Text>
+              </View>
+              <Text
+                style={[
+                  geez ? scriptFontBold(text) : scriptFont(text),
+                  styles.text,
+                  geez && styles.textGeez,
+                  dark && styles.textDark,
+                  (state === "right" || state === "wrong") && dark && { color: colors.textPrimary },
+                ]}
+              >
+                {text}
+              </Text>
+            </Pressable>
+          </AnswerMotion>
         );
       })}
     </View>

@@ -1,37 +1,57 @@
 import { useCallback, useRef } from "react";
-import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { Animated, Easing, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { gradients, spacing } from "../../theme";
+import { useReducedMotion } from "../../lib/motion";
 
-// Each time a screen comes into view it fades and rises in a little, like a native
-// app's page change, instead of appearing all at once.
-function useEnterAnimation() {
+// Each time a screen comes into view it moves in a little, like a native app's page
+// change: a page you go into (a game, a word in admin) slides in from the right; the
+// main sections fade up. With Reduce Motion on, they simply appear.
+function useEnterAnimation(kind) {
+  const reduced = useReducedMotion();
   const progress = useRef(new Animated.Value(1)).current;
   useFocusEffect(
     useCallback(() => {
+      if (reduced) {
+        progress.setValue(1);
+        return;
+      }
       progress.setValue(0);
-      Animated.timing(progress, { toValue: 1, duration: 220, useNativeDriver: Platform.OS !== "web" }).start(({ finished }) => {
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: kind === "slide" ? 260 : 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: Platform.OS !== "web",
+      }).start(({ finished }) => {
         if (!finished) progress.setValue(1); // never leave a page part-faded
       });
-    }, [progress])
+    }, [progress, reduced, kind])
   );
+  if (kind === "slide") {
+    return {
+      opacity: progress.interpolate({ inputRange: [0, 1], outputRange: [0.25, 1] }),
+      transform: [{ translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [28, 0] }) }],
+    };
+  }
   return {
     opacity: progress.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }),
     transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }],
   };
 }
 
+// enter: "fade" for the main sections, "slide" for pages you go into.
 export function ScreenContainer({
   scroll = false,
   keyboardAvoiding = false,
   center = false,
+  enter: enterKind = "fade",
   style,
   contentContainerStyle,
   children,
 }) {
-  const enter = useEnterAnimation();
+  const enter = useEnterAnimation(enterKind);
   const content = scroll ? (
     <ScrollView
       style={{ flex: 1 }}

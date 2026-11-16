@@ -8,6 +8,7 @@ import { applyAnswer, dueQueue, inReview, reviewSummary, startOfDay, stateOf } f
 import { ScreenContainer, Button } from "../../components/ui";
 import { ReportMistake } from "../../components/ReportMistake";
 import { useNow } from "../../lib/appResume";
+import { BonePage } from "../../components/ui/Skeleton";
 import { languageName } from "../../components/WordCard";
 import { CleanupCard } from "../../components/today/CleanupCard";
 import { reviewPlan } from "../../lib/daily";
@@ -199,8 +200,8 @@ export default function Review() {
 
   if (!progress.ready || !bank) {
     return (
-      <ScreenContainer center>
-        <ActivityIndicator color={colors.primary} />
+      <ScreenContainer scroll>
+        <BonePage cards={[{ tall: true, lines: 2 }, { lines: 3 }]} />
       </ScreenContainer>
     );
   }

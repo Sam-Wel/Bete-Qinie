@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { ReportMistake } from "../ReportMistake";
+import { AnswerMotion } from "../games/AnswerMotion";
 import { Button } from "../ui";
 import { useWordProgress } from "../../context/WordProgressContext";
 import { FAMILY_BY_ID, LANGUAGE_LABEL, buildQuestion } from "../../lib/verbQuiz";
@@ -143,26 +144,26 @@ export function QuizPlay({ quiz, bank, onChange, onFirstAnswer, onFinish, onQuit
           const picked = index === chosen;
           const state = chosen == null ? null : isAnswer ? "right" : picked ? "wrong" : "dim";
           return (
-            <Pressable
-              key={index}
-              onPress={() => choose(index)}
-              disabled={chosen != null}
-              style={({ hovered }) => [
-                styles.option,
-                grid && styles.optionHalf,
-                hovered && chosen == null && styles.optionHover,
-                state === "right" && styles.optionRight,
-                state === "wrong" && styles.optionWrong,
-                state === "dim" && styles.optionDim,
-              ]}
-            >
-              <View style={[styles.key, state === "right" && styles.keyRight, state === "wrong" && styles.keyWrong]}>
-                <Text style={[styles.keyText, state && state !== "dim" && styles.keyTextOn]}>
-                  {state === "right" ? "✓" : state === "wrong" ? "✕" : index + 1}
-                </Text>
-              </View>
-              <Text style={[styles.optionText, scriptFont(option), toGeez && styles.optionGeez]}>{option}</Text>
-            </Pressable>
+            <AnswerMotion key={index} state={state} picked={picked} style={grid && styles.optionHalf}>
+              <Pressable
+                onPress={() => choose(index)}
+                disabled={chosen != null}
+                style={({ hovered }) => [
+                  styles.option,
+                  hovered && chosen == null && styles.optionHover,
+                  state === "right" && styles.optionRight,
+                  state === "wrong" && styles.optionWrong,
+                  state === "dim" && styles.optionDim,
+                ]}
+              >
+                <View style={[styles.key, state === "right" && styles.keyRight, state === "wrong" && styles.keyWrong]}>
+                  <Text style={[styles.keyText, state && state !== "dim" && styles.keyTextOn]}>
+                    {state === "right" ? "✓" : state === "wrong" ? "✕" : index + 1}
+                  </Text>
+                </View>
+                <Text style={[styles.optionText, scriptFont(option), toGeez && styles.optionGeez]}>{option}</Text>
+              </Pressable>
+            </AnswerMotion>
           );
         })}
       </View>

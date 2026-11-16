@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { supabase } from "../lib/supabaseClient";
 import { colors, fontFamily, radii, spacing, typography } from "../theme";
 import { Button } from "./ui/Button";
 import { Icon } from "./ui/Icon";
 import { TextField } from "./ui/TextField";
+import { Sheet } from "./ui/Sheet";
+import { toast } from "./Toast";
 
 const KINDS = ["Wrong meaning", "Spelling", "Missing meaning", "Other"];
 
@@ -16,24 +18,24 @@ export function ReportMistake({ wordId, word }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState(null);
   const [text, setText] = useState("");
-  const [state, setState] = useState("idle"); // idle | sending | sent
+  const [state, setState] = useState("idle"); // idle | sending
   const [error, setError] = useState(null);
 
   const message = [kind, text.trim()].filter(Boolean).join(": ");
-  const close = () => {
-    setOpen(false);
-    if (state === "sent") {
-      setKind(null);
-      setText("");
-      setState("idle");
-    }
-  };
+  const close = () => setOpen(false);
 
   const send = async () => {
     setState("sending");
     setError(null);
     const { error: e } = await supabase.rpc("report_word", { p_word_id: wordId, p_word: word, p_message: message });
-    if (!e) return setState("sent");
+    if (!e) {
+      setOpen(false);
+      setKind(null);
+      setText("");
+      setState("idle");
+      toast("Report sent. Thank you! An editor will look at it.");
+      return;
+    }
     setState("idle");
     setError(
       e.code === "PGRST202" ? "Reporting isn't available yet. Please try again later." : e.message || "Couldn't send it. Please try again."
@@ -47,56 +49,36 @@ export function ReportMistake({ wordId, word }) {
         <Text style={styles.linkText}>Report a mistake</Text>
       </Pressable>
 
-      <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
-        <Pressable style={styles.backdrop} onPress={close} accessibilityLabel="Close">
-          <Pressable style={styles.sheet} onPress={() => {}}>
-            <View style={styles.head}>
-              <Text style={styles.kicker}>REPORT A MISTAKE</Text>
-              <Pressable onPress={close} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
-                <Icon name="close" size={20} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-            <Text style={styles.word}>{word}</Text>
-
-            {state === "sent" ? (
-              <>
-                <Text style={styles.body}>Thank you! An editor will look at it.</Text>
-                <Button onPress={close} style={styles.full}>
-                  Close
-                </Button>
-              </>
-            ) : (
-              <ScrollView style={{ maxHeight: Math.max(260, height * 0.6) }} contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
-                <Text style={styles.body}>What's wrong?</Text>
-                <View style={styles.kinds}>
-                  {KINDS.map((k) => (
-                    <Pressable
-                      key={k}
-                      onPress={() => setKind(kind === k ? null : k)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: kind === k }}
-                      style={({ hovered, pressed }) => [styles.kind, kind === k && styles.kindOn, kind !== k && (hovered || pressed) && styles.kindHover]}
-                    >
-                      <Text style={[styles.kindText, kind === k && styles.kindTextOn]}>{k}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-                <TextField
-                  value={text}
-                  onChangeText={setText}
-                  placeholder="What should it be? (optional)"
-                  multiline
-                  maxLength={400}
-                />
-                {error ? <Text style={styles.error}>{error}</Text> : null}
-                <Button onPress={send} loading={state === "sending"} disabled={!message} style={styles.full}>
-                  Send
-                </Button>
-              </ScrollView>
-            )}
+      <Sheet visible={open} onClose={close} label={`Report a mistake in ${word}`}>
+        <View style={styles.head}>
+          <Text style={styles.kicker}>REPORT A MISTAKE</Text>
+          <Pressable onPress={close} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
+            <Icon name="close" size={20} color={colors.textSecondary} />
           </Pressable>
-        </Pressable>
-      </Modal>
+        </View>
+        <Text style={styles.word}>{word}</Text>
+        <ScrollView style={{ maxHeight: Math.max(260, height * 0.6) }} contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+          <Text style={styles.body}>What's wrong?</Text>
+          <View style={styles.kinds}>
+            {KINDS.map((k) => (
+              <Pressable
+                key={k}
+                onPress={() => setKind(kind === k ? null : k)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: kind === k }}
+                style={({ hovered, pressed }) => [styles.kind, kind === k && styles.kindOn, kind !== k && (hovered || pressed) && styles.kindHover]}
+              >
+                <Text style={[styles.kindText, kind === k && styles.kindTextOn]}>{k}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <TextField value={text} onChangeText={setText} placeholder="What should it be? (optional)" multiline maxLength={400} />
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          <Button onPress={send} loading={state === "sending"} disabled={!message} style={styles.full}>
+            Send
+          </Button>
+        </ScrollView>
+      </Sheet>
     </>
   );
 }
@@ -104,18 +86,6 @@ export function ReportMistake({ wordId, word }) {
 const styles = StyleSheet.create({
   link: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingVertical: 2 },
   linkText: { ...typography.caption, color: colors.textMuted, textDecorationLine: "underline" },
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: spacing.lg },
-  sheet: {
-    width: "100%",
-    maxWidth: 520,
-    alignSelf: "center",
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg + 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg + 2,
-    gap: spacing.sm,
-  },
   head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   kicker: { fontFamily: fontFamily.latinSemiBold, fontSize: 12, letterSpacing: 1, color: colors.primaryDark },
   word: { fontFamily: fontFamily.ethiopicBold, fontSize: 26, lineHeight: 36, color: colors.textPrimary },

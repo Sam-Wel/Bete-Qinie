@@ -1,10 +1,14 @@
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, { ZoomIn } from "react-native-reanimated";
 import { router } from "expo-router";
 import { ScreenContainer, Button, Select } from "../../components/ui";
 import { LearnSession } from "../../components/today/LearnSession";
 import { CleanupCard } from "../../components/today/CleanupCard";
 import { WelcomeCard } from "../../components/today/WelcomeCard";
+import { FinishCard } from "../../components/today/FinishCard";
+import { CountUp } from "../../components/ui/CountUp";
+import { BonePage } from "../../components/ui/Skeleton";
 import { AnnouncementBanner } from "../../components/AnnouncementBanner";
 import { ProgressBar } from "../../components/games/GameFrame";
 import { Chip, STATE_COLORS, shared } from "../../components/verbQuiz/shared";
@@ -62,8 +66,8 @@ export default function Today() {
   }
   if (!ready || !info) {
     return (
-      <ScreenContainer center>
-        <ActivityIndicator color={colors.primary} />
+      <ScreenContainer scroll>
+        <BonePage cards={[{ tall: true, lines: 2 }, { lines: 1 }, { lines: 3 }, { lines: 2 }]} />
       </ScreenContainer>
     );
   }
@@ -100,13 +104,25 @@ export default function Today() {
   return (
     <ScreenContainer scroll contentContainerStyle={styles.page}>
       <AnnouncementBanner />
+      {lastSession ? (
+        <FinishCard
+          session={lastSession}
+          streak={streak}
+          left={learnIds.length}
+          onKeepGoing={() => {
+            setLastSession(null);
+            setLearning(learnIds);
+          }}
+          onClose={() => setLastSession(null)}
+        />
+      ) : null}
       <WelcomeCard stats={stats} />
 
       <View style={[shared.card, styles.hero]}>
         <View style={styles.heroRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.heroNumber}>
-              {counts.learned + counts.skipped}
+              <CountUp value={counts.learned + counts.skipped} id="today-learned" />
               <Text style={styles.heroOf}> / {counts.total || plan.size}</Text>
             </Text>
             <Text style={styles.heroLabel}>{finished ? "learned today, all done 🎉" : "learned today"}</Text>
@@ -121,12 +137,6 @@ export default function Today() {
           </View>
         </View>
         <ProgressBar value={counts.total ? (counts.learned + counts.skipped) / counts.total : 0} />
-        {lastSession ? (
-          <Text style={styles.sessionLine}>
-            Session: {lastSession.learned} learned{lastSession.skipped ? `, ${lastSession.skipped} you already knew` : ""} · {lastSession.right}/
-            {lastSession.asked} right
-          </Text>
-        ) : null}
         <Pressable onPress={() => setSettingsOpen((o) => !o)} hitSlop={8}>
           <Text style={styles.link}>{settingsOpen ? "Hide settings" : `${plan.size} new words a day · change`}</Text>
         </Pressable>
@@ -198,7 +208,13 @@ export default function Today() {
             )}
             <View style={styles.words}>
               {(allWords ? todayIds : todayIds.slice(0, FOLDED_WORDS)).map((id) => (
-                <WordChip key={id} entry={bank.byId[id]} stat={stats[id]} lang={lang} />
+                <WordChip
+                  key={id}
+                  entry={bank.byId[id]}
+                  stat={stats[id]}
+                  lang={lang}
+                  pop={Boolean(lastSession && (lastSession.learnedIds?.includes(id) || lastSession.skippedIds?.includes(id)))}
+                />
               ))}
               {todayIds.length > FOLDED_WORDS ? (
                 <Pressable
@@ -277,13 +293,18 @@ export default function Today() {
 }
 
 // A word of today's set: its colour says where it is; dots count right answers.
-function WordChip({ entry, stat, lang }) {
+// pop: just learned in the session that ended, so it pops in.
+function WordChip({ entry, stat, lang, pop = false }) {
   const state = stateOf(stat);
   const learningNow = isLearning(stat);
   const right = stat?.study?.right || 0;
   const skipped = stat?.study?.skipped === startOfDay(Date.now());
   return (
-    <View style={[styles.wordChip, !learningNow && styles.wordChipDone]} accessibilityLabel={`${entry.word}: ${entry.ask[lang]?.[0] ?? ""}`}>
+    <Animated.View
+      entering={pop ? ZoomIn.springify().damping(9) : undefined}
+      style={[styles.wordChip, !learningNow && styles.wordChipDone]}
+      accessibilityLabel={`${entry.word}: ${entry.ask[lang]?.[0] ?? ""}`}
+    >
       <Text style={styles.wordChipText}>{entry.word}</Text>
       {learningNow ? (
         <View style={styles.dots}>
@@ -294,7 +315,7 @@ function WordChip({ entry, stat, lang }) {
       ) : (
         <Text style={styles.wordChipMark}>{skipped ? "known" : state === "shaky" ? "✓?" : "✓"}</Text>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -307,7 +328,6 @@ const styles = StyleSheet.create({
   heroStat: { alignItems: "flex-end" },
   heroSmall: { fontFamily: fontFamily.latinBold, fontSize: 22, lineHeight: 28, color: colors.textSecondary },
   heroLabel: { ...typography.caption, color: colors.textMuted },
-  sessionLine: { ...typography.bodySemiBold, color: colors.success },
   label: { ...typography.label, color: colors.textMuted, letterSpacing: 1 },
   link: { ...typography.label, color: colors.primaryDark, textDecorationLine: "underline" },
   step: { gap: spacing.sm },

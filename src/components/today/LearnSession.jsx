@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeInRight } from "react-native-reanimated";
 import { Button } from "../ui";
 import { ReportMistake } from "../ReportMistake";
 import { Choices } from "../games/Choices";
@@ -19,7 +20,8 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
   const [queue, setQueue] = useState(ids);
   const [met, setMet] = useState(() => new Set(ids.filter((id) => progress.stats[id]?.seen > 0)));
   const [card, setCard] = useState(null); // { id, mode: "meet" | "ask" | "check", question, chosen }
-  const [tally, setTally] = useState({ right: 0, asked: 0, learned: 0, skipped: 0 });
+  const [tally, setTally] = useState({ right: 0, asked: 0, learned: 0, skipped: 0, learnedIds: [], skippedIds: [] });
+  const [turn, setTurn] = useState(0); // each new card slides in; answering doesn't move it
   const startCount = ids.length;
 
   // The next card is drawn once per turn (not on every render, which would
@@ -34,10 +36,11 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
   const current = card ?? upNext;
 
   const advance = (nextQueue, learned = 0) => {
-    const t = { ...tally, learned: tally.learned + learned };
+    const t = { ...tally, learned: tally.learned + learned, learnedIds: learned ? [...tally.learnedIds, current.id] : tally.learnedIds };
     setTally(t);
     setQueue(nextQueue);
     setCard(null);
+    setTurn((n) => n + 1);
     if (!nextQueue.length) onDone(t);
   };
 
@@ -66,7 +69,8 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
     return (
       <View style={styles.wrap}>
         {header}
-        <View style={[shared.card, styles.card]}>
+        <View style={styles.stage}>
+        <Animated.View key={turn} entering={FadeInRight.duration(260)} style={[shared.card, styles.card]}>
           <Text style={styles.eyebrow}>NEW WORD</Text>
           <Text style={styles.word}>{entry.word}</Text>
           <Meanings entry={entry} lang={lang} />
@@ -77,6 +81,7 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
               setMet((m) => new Set(m).add(current.id));
               setQueue((q) => requeue(q, current.id, MEET_GAP));
               setCard(null);
+              setTurn((n) => n + 1);
             }}
           >
             Got it
@@ -89,6 +94,7 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
           >
             <Text style={styles.link}>I already know this</Text>
           </Pressable>
+        </Animated.View>
         </View>
       </View>
     );
@@ -104,7 +110,7 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
     setCard({ ...current, chosen: i });
     if (current.mode === "check") {
       if (correct) progress.updateWords((all) => ({ [current.id]: skipKnown(all[current.id]) }));
-      setTally((t) => ({ ...t, skipped: t.skipped + (correct ? 1 : 0) }));
+      setTally((t) => ({ ...t, skipped: t.skipped + (correct ? 1 : 0), skippedIds: correct ? [...t.skippedIds, current.id] : t.skippedIds }));
       return;
     }
     progress.recordAnswer(current.id, correct, { kind: `learn:${q.dir}` });
@@ -117,6 +123,7 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
       if (right) return advance(queue.filter((x) => x !== current.id));
       setMet((m) => new Set(m).add(current.id)); // not known after all: learn it, after a few other cards
       setQueue((q) => requeue(q, current.id, MEET_GAP));
+      setTurn((n) => n + 1);
       return setCard(null);
     }
     if (!isLearning(after)) return advance(queue.filter((x) => x !== current.id), 1);
@@ -126,7 +133,8 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
   return (
     <View style={styles.wrap}>
       {header}
-      <View style={[shared.card, styles.card]}>
+      <View style={styles.stage}>
+      <Animated.View key={turn} entering={FadeInRight.duration(260)} style={[shared.card, styles.card]}>
         <Text style={styles.eyebrow}>
           {current.mode === "check" ? "PROVE IT: WHICH VERB MEANS" : q.dir === "toGeez" ? `WHICH VERB MEANS (${LANGUAGE_LABEL[lang]})` : "WHAT DOES IT MEAN?"}
         </Text>
@@ -155,6 +163,7 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
             <ReportMistake wordId={entry.id} word={entry.word} />
           </View>
         ) : null}
+      </Animated.View>
       </View>
     </View>
   );
@@ -177,19 +186,20 @@ function Meanings({ entry, lang }) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: spacing.md },
+  wrap: { gap: spacing.md, flexGrow: 1 },
+  stage: { flexGrow: 1, justifyContent: "center", paddingBottom: spacing.xl },
   top: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.md },
   counter: { ...typography.label, color: colors.textSecondary, flex: 1 },
   link: { ...typography.label, color: colors.textMuted, textDecorationLine: "underline" },
   card: { alignItems: "center", gap: spacing.lg, paddingVertical: spacing.xl },
   eyebrow: { fontFamily: fontFamily.ethiopicBold, fontSize: 12, letterSpacing: 1, color: colors.primaryDark, textAlign: "center" },
-  word: { fontFamily: fontFamily.ethiopicBold, fontSize: 40, lineHeight: 56, color: colors.textPrimary },
+  word: { fontFamily: fontFamily.ethiopicBold, fontSize: 52, lineHeight: 72, color: colors.textPrimary },
   prompt: { fontSize: 22, lineHeight: 32, color: colors.textPrimary, textAlign: "center" },
   wide: { alignSelf: "stretch" },
   feedback: { alignSelf: "stretch", alignItems: "center" },
   verdict: { ...typography.bodySemiBold, textAlign: "center" },
   answerWord: { fontFamily: fontFamily.ethiopicBold, fontSize: 24, lineHeight: 34, color: colors.textPrimary },
-  meanings: { alignSelf: "stretch", gap: spacing.xs, paddingHorizontal: spacing.sm },
-  meaningLine: { fontSize: 16, lineHeight: 24, color: colors.textPrimary },
+  meanings: { alignSelf: "stretch", alignItems: "center", gap: spacing.xs, paddingHorizontal: spacing.sm },
+  meaningLine: { fontSize: 17, lineHeight: 26, color: colors.textPrimary, textAlign: "center" },
   meaningLang: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, color: colors.textMuted },
 });

@@ -1,4 +1,6 @@
+import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBadges } from "../../hooks/useDueCount";
@@ -15,10 +17,32 @@ export function BottomTabs({ section }) {
   const badges = useBadges();
   const active = IN_TABS.has(section) ? section : SECTION_ROUTES.has(section) || section === "account" || section === "about" ? "more" : section;
 
+  // One highlight that glides to the tab you tap (measured: the row's width, and how far
+  // down its tab the icon pill sits).
+  const [rowWidth, setRowWidth] = useState(0);
+  const [pillY, setPillY] = useState(null);
+  const index = TABS.findIndex((t) => t.route === active);
+  const x = useSharedValue(0);
+  const placed = useRef(false);
+  useEffect(() => {
+    if (!rowWidth || index < 0) return;
+    const tabWidth = (rowWidth - 2 * ROW_PAD) / TABS.length;
+    const target = ROW_PAD + index * tabWidth + (tabWidth - PILL_W) / 2;
+    if (placed.current) x.value = withSpring(target, { damping: 18, stiffness: 230 });
+    else {
+      x.value = target;
+      placed.current = true;
+    }
+  }, [index, rowWidth]); // eslint-disable-line react-hooks/exhaustive-deps
+  const glide = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
+
   return (
     <SafeAreaView edges={["bottom"]} style={styles.bar}>
-      <View style={styles.row} accessibilityRole="tablist">
-        {TABS.map((tab) => {
+      <View style={styles.row} accessibilityRole="tablist" onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}>
+        {rowWidth && pillY != null && index >= 0 ? (
+          <Animated.View pointerEvents="none" style={[styles.glide, { top: ROW_TOP + pillY }, glide]} />
+        ) : null}
+        {TABS.map((tab, i) => {
           const on = active === tab.route;
           return (
             <Pressable
@@ -29,7 +53,7 @@ export function BottomTabs({ section }) {
               accessibilityLabel={badges[tab.badge] ? `${tab.label}, ${badges[tab.badge]} to do` : tab.label}
               style={styles.tab}
             >
-              <View style={[styles.pill, on && styles.pillOn]}>
+              <View style={styles.pill} onLayout={i === 0 ? (e) => setPillY(e.nativeEvent.layout.y) : undefined}>
                 <Icon name={tab.icon} size={20} color={on ? colors.primaryDark : colors.textSecondary} strokeWidth={on ? 2.2 : 1.9} />
                 {badges[tab.badge] ? (
                   <View style={[styles.badge, tab.badge === "today" && !badges.due && styles.badgeCalm]}>
@@ -48,12 +72,16 @@ export function BottomTabs({ section }) {
   );
 }
 
+const ROW_PAD = 4;
+const ROW_TOP = 6;
+const PILL_W = 56;
+
 const styles = StyleSheet.create({
   bar: { backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
-  row: { flexDirection: "row", paddingTop: 6, paddingBottom: 8, paddingHorizontal: 4 },
+  row: { flexDirection: "row", paddingTop: ROW_TOP, paddingBottom: 8, paddingHorizontal: ROW_PAD },
   tab: { flex: 1, alignItems: "center", gap: 3, minHeight: 50, justifyContent: "center" },
-  pill: { width: 56, height: 30, borderRadius: radii.pill, alignItems: "center", justifyContent: "center" },
-  pillOn: { backgroundColor: colors.primaryLight },
+  pill: { width: PILL_W, height: 30, borderRadius: radii.pill, alignItems: "center", justifyContent: "center" },
+  glide: { position: "absolute", left: 0, width: PILL_W, height: 30, borderRadius: radii.pill, backgroundColor: colors.primaryLight },
   badge: {
     position: "absolute",
     top: -2,

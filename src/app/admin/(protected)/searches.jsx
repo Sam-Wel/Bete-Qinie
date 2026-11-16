@@ -5,6 +5,7 @@ import { AdminHeader, Button, EmptyState, ScreenContainer } from "../../../compo
 import { Chips, ConfirmButton, Notice, Panel, adminStyles, scriptStyle } from "../../../components/admin";
 import { adminError, ago } from "../../../lib/adminApi";
 import { languageLabel } from "../../../lib/dictionaryAdmin";
+import { toast } from "../../../components/Toast";
 import { supabase } from "../../../lib/supabaseClient";
 import { colors, fontFamily, spacing, typography } from "../../../theme";
 
@@ -19,7 +20,6 @@ export default function Searches() {
   const [view, setView] = useState("open");
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
-  const [notice, setNotice] = useState(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -40,14 +40,13 @@ export default function Searches() {
   }, [load]);
 
   const change = async (row, patch, done) => {
-    setNotice(null);
     const q = supabase.from("search_misses");
     const { error: e } = await (patch === "delete" ? q.delete() : q.update(patch)).eq("language", row.language).eq("term", row.term);
-    if (e) setNotice({ tone: "error", text: adminError(e) });
-    else {
-      setNotice({ tone: "done", text: done });
-      load();
-    }
+    if (e) return toast(adminError(e), { tone: "error", duration: 6000 });
+    // Dismiss and restore can be undone; a delete can't (the count is gone).
+    const undo = patch === "delete" ? null : { label: "Undo", onPress: () => change(row, { dismissed: row.dismissed }, null) };
+    if (done) toast(done, undo ? { action: undo } : {});
+    load();
   };
 
   return (
@@ -58,7 +57,6 @@ export default function Searches() {
         stops being counted, because its search then finds something.
       </Text>
       <Chips items={VIEWS} value={view} onChange={setView} />
-      <Notice tone={notice?.tone}>{notice?.text}</Notice>
       <Notice tone="error">{error}</Notice>
       <Panel title={rows ? `${rows.length} search${rows.length === 1 ? "" : "es"}` : "Loading…"}>
         {!rows && !error ? <ActivityIndicator color={colors.primary} /> : null}

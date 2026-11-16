@@ -15,7 +15,7 @@ export default function Qine() {
 
   if (!qine) {
     return (
-      <ScreenContainer>
+      <ScreenContainer enter="slide">
         <EmptyState message="This ቅኔ isn't here." icon="musical-notes-outline" />
         <Pressable onPress={() => router.navigate("/zema")} hitSlop={8}>
           <Text style={styles.back}>Back to ዜማ</Text>
@@ -25,7 +25,7 @@ export default function Qine() {
   }
 
   return (
-    <ScreenContainer scroll contentContainerStyle={styles.page}>
+    <ScreenContainer enter="slide" scroll contentContainerStyle={styles.page}>
       <View style={[styles.textCard, shadows.card]}>
         <Text style={styles.meta}>
           {typeName(qine.type)} · {qine.zema} · {qine.number}

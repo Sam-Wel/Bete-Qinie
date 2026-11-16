@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useWordProgress } from "../context/WordProgressContext";
 import { LexiconSection } from "./LexiconSection";
 import { ReportMistake } from "./ReportMistake";
+import { toast } from "./Toast";
 import { Icon } from "./ui/Icon";
 import { colors, fontFamily, radii, spacing, typography } from "../theme";
 
@@ -49,7 +50,15 @@ export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples =
         {tag ? <Text style={styles.tag}>{tag}</Text> : null}
         {geezId ? (
           <Pressable
-            onPress={() => (saved ? progress.unsave(geezId) : progress.save([geezId]))}
+            onPress={() => {
+              if (saved) {
+                progress.unsave(geezId);
+                toast(`${word} removed from ክለሳ`, { action: { label: "Undo", onPress: () => progress.save([geezId]) } });
+              } else {
+                progress.save([geezId]);
+                toast(`${word} saved to ክለሳ`, { action: { label: "Undo", onPress: () => progress.unsave(geezId) } });
+              }
+            }}
             accessibilityRole="button"
             accessibilityLabel={saved ? "In ክለሳ. Tap to remove." : "Save to ክለሳ"}
             accessibilityState={{ checked: saved }}

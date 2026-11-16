@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "./AuthContext";
 import { supabase } from "../lib/supabaseClient";
 import { applyAnswer, markSaved, markUnsaved, mergeStats, rowFromStat, statFromRow, withDue } from "../lib/verbQuiz";
+import { toast } from "../components/Toast";
 
 const TABLE = "word_progress";
 const GAME_TYPE = "verb_quiz";
@@ -213,6 +214,9 @@ export function WordProgressProvider({ children }) {
           setRuns(allRuns);
           setMode("account");
           setReady(true);
+          if (guestIds.length) {
+            toast(`Your progress from this device (${guestIds.length} word${guestIds.length === 1 ? "" : "s"}) was added to your account.`, { duration: 5000 });
+          }
           return;
         } catch (err) {
           // Most likely supabase/word_progress.sql hasn't been run yet: keep going on the device.
