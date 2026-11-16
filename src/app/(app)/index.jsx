@@ -230,7 +230,7 @@ const card = {
 
 const styles = StyleSheet.create({
   dayWord: { gap: spacing.xs },
-  dayWordLabel: { fontFamily: fontFamily.latinSemiBold, fontSize: 11, letterSpacing: 1, color: colors.textMuted },
+  dayWordLabel: { fontFamily: fontFamily.latinSemiBold, fontSize: 11, letterSpacing: 1, color: colors.rubric },
   page: { gap: spacing.lg },
   searchCard: { ...card, gap: spacing.md + 2 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },

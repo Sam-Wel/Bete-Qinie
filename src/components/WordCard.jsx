@@ -46,7 +46,7 @@ export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples =
   return (
     <View style={styles.card}>
       <View style={styles.wordRow}>
-        <Text style={styles.word}>{word}</Text>
+        <Text style={[styles.word, tag === "ግዕዝ" && styles.geezWord]}>{word}</Text>
         {tag ? <Text style={styles.tag}>{tag}</Text> : null}
         {geezId ? (
           <Pressable
@@ -127,6 +127,7 @@ const styles = StyleSheet.create({
   },
   wordRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, flexWrap: "wrap" },
   word: { fontFamily: fontFamily.ethiopicBold, fontSize: 32, lineHeight: 42, color: colors.textPrimary },
+  geezWord: { color: colors.rubric },
   tag: {
     ...typography.caption,
     fontFamily: fontFamily.ethiopicBold,

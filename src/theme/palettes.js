@@ -1,5 +1,5 @@
 // Light is the original parchment look; dark keeps the same gold and red on warm
-// near-black. Tokens used as text (primaryDark, accentDark, dangerDark, success)
+// near-black. Tokens used as text (primaryDark, accentDark, dangerDark, success, rubric)
 // get lighter in dark so they stay readable; the *Light tokens become dark tints.
 export const palettes = {
   light: {
@@ -11,6 +11,7 @@ export const palettes = {
     accent: "#A23B26",
     accentDark: "#7A2B1B",
     accentLight: "#F4DCD3",
+    rubric: "#A23B26", // red for ግዕዝ headwords and their labels, as the books print them
 
     background: "#FBF6EA",
     surface: "#FFFFFF",
@@ -52,6 +53,7 @@ export const palettes = {
     accent: "#C9543B",
     accentDark: "#EE9A84",
     accentLight: "#3E1F17",
+    rubric: "#DE6A50", // 5.2:1 on surface; accent is too faint for small text here
 
     background: "#15100A",
     surface: "#211910",

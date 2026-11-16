@@ -4,6 +4,7 @@ import { useLexicon, useLexiconForms } from "../hooks/useLexicon";
 import { bookGloss, formsByName, headsOf, lookup } from "../lib/lexicon";
 import { colors, fontFamily, radii, spacing, typography } from "../theme";
 import { Icon } from "./ui/Icon";
+import { OrnamentDivider } from "./ui/OrnamentDivider";
 
 // The book's ርባታ of one lexicon word: its printed forms grouped by name, loaded on open.
 function Forms({ lexId }) {
@@ -63,6 +64,7 @@ export function LexiconSection({ word }) {
   if (!matches.length) return null;
   return (
     <View style={styles.section}>
+      <OrnamentDivider />
       {matches.map((m) => (
         <LexiconWord key={m.id} word={m} showGloss={matches.length > 1} />
       ))}
@@ -71,7 +73,7 @@ export function LexiconSection({ word }) {
 }
 
 const styles = StyleSheet.create({
-  section: { gap: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  section: { gap: spacing.sm },
   word: { gap: spacing.sm },
   headRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: spacing.sm },
   label: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, letterSpacing: 1, color: colors.primaryDark },
