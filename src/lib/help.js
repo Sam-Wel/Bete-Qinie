@@ -79,7 +79,14 @@ export const HELP = {
   },
   shooter: { title: "ቀስት", points: ["Shoot the verb that matches the meaning before time runs out.", GAME_FOCUS] },
   lightning: { title: "Lightning Round", points: ["Tap the meaning of each verb as fast as you can.", "Right answers in a row build a combo for more points.", GAME_FOCUS] },
-  "boss-battle": { title: "Boss Battle", points: ["Each right answer strikes the boss; a miss or a slow answer lets it strike back.", "Beat all four bosses.", GAME_FOCUS] },
+  "boss-battle": {
+    title: "Boss Battle",
+    points: [
+      "You carry a lamp. Each right answer strikes the adversary with its light; a miss or a slow answer dims your lamp.",
+      "Overcome all four; the cross shines over each one you overcome.",
+      GAME_FOCUS,
+    ],
+  },
   "memory-match": { title: "Memory Match", points: ["Turn two cards at a time and pair each verb with its meaning.", GAME_FOCUS] },
   "guess-action": { title: "Guess the Action", points: ["See a picture of an action and pick the verb for it.", GAME_FOCUS] },
   unscramble: { title: "Unscramble", points: ["Read the meaning and put the verb's letters back in order.", "A hint places the next letter.", GAME_FOCUS] },

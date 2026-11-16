@@ -25,11 +25,12 @@ export function Brand({ compact = false }) {
   );
 }
 
-export function DueBadge({ count, suffix = "" }) {
+// calm: only new words to learn (gold); otherwise reviews are waiting (red).
+export function DueBadge({ count, suffix = "", calm = false }) {
   if (!count) return null;
   return (
-    <View style={styles.badge}>
-      <Text style={styles.badgeText}>
+    <View style={[styles.badge, calm && styles.badgeCalm]}>
+      <Text style={[styles.badgeText, calm && styles.badgeTextCalm]}>
         {count > 99 ? "99+" : count}
         {suffix}
       </Text>
@@ -49,7 +50,7 @@ function NavItem({ item, active, badges, onPress }) {
       <Text style={styles.itemTitle}>{item.title}</Text>
       <View style={styles.itemEnd}>
         {badges[item.badge] ? (
-          <DueBadge count={badges[item.badge]} />
+          <DueBadge count={badges[item.badge]} calm={item.badge === "today" && !badges.due} />
         ) : (
           <Text style={[styles.itemEnglish, active && styles.itemEnglishActive]}>{item.english}</Text>
         )}
@@ -172,6 +173,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   badgeText: { fontFamily: fontFamily.latinBold, fontSize: 11, color: colors.white },
+  badgeCalm: { backgroundColor: colors.primaryDark },
+  badgeTextCalm: { color: colors.background },
   footer: { marginTop: "auto", gap: spacing.sm + 2, paddingTop: spacing.md },
   account: {
     flexDirection: "row",

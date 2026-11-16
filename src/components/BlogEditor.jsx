@@ -117,6 +117,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   error: {
-    color: colors.danger,
+    color: colors.dangerDark,
   },
 });

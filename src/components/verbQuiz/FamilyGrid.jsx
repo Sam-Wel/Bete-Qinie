@@ -24,7 +24,6 @@ export function FamilyGrid({ bank, stats, mode, lang, selected = [], onPress, be
         const available = mode === "pick" ? bank.byFamily[family.id].filter((e) => hasLanguage(e, lang)).length : null;
         const empty = mode === "pick" && available === 0;
         const isSelected = selected.includes(family.id);
-        const touched = progress.total - progress.counts.new;
 
         return (
           <Pressable
@@ -53,7 +52,9 @@ export function FamilyGrid({ bank, stats, mode, lang, selected = [], onPress, be
                 : `${progress.counts.known + progress.counts.mastered}/${progress.total}`}
             </Text>
             <StackedBar counts={progress.counts} total={progress.total} height={4} style={styles.bar} />
-            {mode === "progress" ? <Text style={styles.accuracy}>{touched ? percent(progress.accuracy) : " "}</Text> : null}
+            {mode === "progress" ? (
+              <Text style={styles.accuracy}>{progress.accuracy != null ? `${percent(progress.accuracy)} right` : " "}</Text>
+            ) : null}
             {mode === "pick" ? (
               <Text style={[styles.accuracy, best[family.id] && styles.best]}>{best[family.id] ? `best ${percent(best[family.id].score)}` : " "}</Text>
             ) : null}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Button } from "../ui";
+import { ReportMistake } from "../ReportMistake";
 import { Choices } from "../games/Choices";
 import { ProgressBar } from "../games/GameFrame";
 import { scriptFont, shared } from "../verbQuiz/shared";
@@ -151,6 +152,7 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
             <Button style={styles.wide} onPress={goOn}>
               Next
             </Button>
+            <ReportMistake wordId={entry.id} word={entry.word} />
           </View>
         ) : null}
       </View>

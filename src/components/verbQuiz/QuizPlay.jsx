@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
+import { ReportMistake } from "../ReportMistake";
 import { Button } from "../ui";
 import { useWordProgress } from "../../context/WordProgressContext";
 import { FAMILY_BY_ID, LANGUAGE_LABEL, buildQuestion } from "../../lib/verbQuiz";
@@ -194,6 +195,7 @@ export function QuizPlay({ quiz, bank, onChange, onFirstAnswer, onFinish, onQuit
               {isLast && (inRetry || quiz.answers.every((a) => a.correct)) ? "See results" : "Next →"}
             </Button>
           </View>
+          <ReportMistake wordId={entry.id} word={entry.word} />
         </Animated.View>
       ) : null}
 

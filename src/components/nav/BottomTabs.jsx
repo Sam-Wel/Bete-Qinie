@@ -32,8 +32,10 @@ export function BottomTabs({ section }) {
               <View style={[styles.pill, on && styles.pillOn]}>
                 <Icon name={tab.icon} size={20} color={on ? colors.primaryDark : colors.textSecondary} strokeWidth={on ? 2.2 : 1.9} />
                 {badges[tab.badge] ? (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{badges[tab.badge] > 99 ? "99+" : badges[tab.badge]}</Text>
+                  <View style={[styles.badge, tab.badge === "today" && !badges.due && styles.badgeCalm]}>
+                    <Text style={[styles.badgeText, tab.badge === "today" && !badges.due && styles.badgeTextCalm]}>
+                      {badges[tab.badge] > 99 ? "99+" : badges[tab.badge]}
+                    </Text>
                   </View>
                 ) : null}
               </View>
@@ -65,6 +67,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   badgeText: { fontFamily: fontFamily.latinBold, fontSize: 10, color: colors.white },
+  badgeCalm: { backgroundColor: colors.primaryDark },
+  badgeTextCalm: { color: colors.background },
   label: { fontFamily: fontFamily.ethiopicBold, fontSize: 11, lineHeight: 15, color: colors.textSecondary },
   labelLatin: { fontFamily: fontFamily.latinSemiBold, fontSize: 11, lineHeight: 15, color: colors.textSecondary },
   labelOn: { color: colors.textPrimary },

@@ -209,7 +209,9 @@ export const fitsBin = (card, bin) => metaOf(card.entry)?.categories.includes(bi
 
 export const PLAYER_HP = 100;
 
-// Forces of evil from Scripture and the icons, each one beaten by the cross.
+// Forces of evil from Scripture and the icons, each one beaten by the cross. The player is a
+// learner with a lamp (PLAYER_HP is its light): misses dim the lamp, never the cross, which
+// only ever appears in victory.
 export const BOSSES = [
   { key: "serpent", name: "ከይሲ", english: "Serpent of Eden", emoji: "🐍", hp: 100, hit: 14, seconds: 14 },
   { key: "goliath", name: "ጎልያድ", english: "Goliath", emoji: "🛡️", hp: 140, hit: 18, seconds: 12 },

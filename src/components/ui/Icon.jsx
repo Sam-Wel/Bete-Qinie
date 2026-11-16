@@ -50,6 +50,8 @@ import {
   Download,
   Trash2,
   GitMerge,
+  BowArrow,
+  Flame,
 } from "lucide-react-native";
 import { colors } from "../../theme";
 
@@ -105,6 +107,8 @@ const ICONS = {
   download: Download,
   trash: Trash2,
   "git-merge": GitMerge,
+  "bow-arrow": BowArrow,
+  flame: Flame,
 };
 
 export function Icon({ name, size = 20, color = colors.textPrimary, strokeWidth = 1.75, style }) {

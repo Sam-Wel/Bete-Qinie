@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   error: {
-    color: colors.danger,
+    color: colors.dangerDark,
     textAlign: "center",
   },
   success: {

@@ -65,7 +65,7 @@ export default function ResetPassword() {
   } else {
     body = (
       <>
-        {error ? <Text style={[typography.body, { color: colors.danger, textAlign: "center" }]}>{error}</Text> : null}
+        {error ? <Text style={[typography.body, { color: colors.dangerDark, textAlign: "center" }]}>{error}</Text> : null}
         <TextField label="New password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" />
         <TextField label="Type it again" value={confirm} onChangeText={setConfirm} secureTextEntry autoComplete="new-password" />
         <Button variant="primary" loading={busy} onPress={handleSubmit} style={{ marginTop: spacing.sm }}>

@@ -16,7 +16,7 @@ const ART_BG = "#17110a";
 const ART_GOLD = "#e0a52a";
 
 const ARCADE = [
-  { route: "/shooter", type: "verb_shooter", title: "ቀስት", line: "Shoot the right verb in time" },
+  { route: "/shooter", type: "verb_shooter", title: "ቀስት", line: "Shoot the right verb in time", icon: "bow-arrow" },
   { route: "/lightning", type: "verb_lightning_60", title: "Lightning Round", line: "Beat the clock, build combos", icon: "zap" },
   { route: "/boss-battle", type: "verb_boss", title: "Boss Battle", line: "Four bosses, rising difficulty", icon: "swords" },
 ];

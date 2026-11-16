@@ -9,7 +9,7 @@ import { AnnouncementBanner } from "../../components/AnnouncementBanner";
 import { ProgressBar } from "../../components/games/GameFrame";
 import { Chip, STATE_COLORS, shared } from "../../components/verbQuiz/shared";
 import { useToday } from "../../hooks/useToday";
-import { DAILY_SIZES, BACKLOG_PAUSE, masteredCount, nextMilestone, reviewPlan, studyStreak, upcoming } from "../../lib/daily";
+import { DAILY_SIZES, BACKLOG_PAUSE, hasStudied, masteredCount, nextMilestone, reviewPlan, studyStreak, upcoming } from "../../lib/daily";
 import { FAMILIES, LEARN_RIGHT, isLearning, startOfDay, stateOf } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
@@ -41,7 +41,7 @@ function Step({ n, title, done, children }) {
 // by at most the daily size.
 export default function Today() {
   const today = useToday();
-  const { ready, error, bank, lang, plan, setPlan, info, counts, stats, progress } = today;
+  const { ready, error, bank, lang, plan, setPlan, info, counts, now, stats, progress } = today;
   const [learning, setLearning] = useState(null); // ids in the current session
   const [lastSession, setLastSession] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -56,7 +56,7 @@ export default function Today() {
   if (error) {
     return (
       <ScreenContainer>
-        <Text style={{ ...typography.body, color: colors.danger }}>{error}</Text>
+        <Text style={{ ...typography.body, color: colors.dangerDark }}>{error}</Text>
       </ScreenContainer>
     );
   }
@@ -87,8 +87,9 @@ export default function Today() {
   }
 
   const due = info.due;
-  const reviews = reviewPlan(stats);
-  const streak = studyStreak(stats);
+  const reviews = reviewPlan(stats, Math.max(now, Date.now()));
+  const studied = hasStudied(stats);
+  const streak = studyStreak(stats, Math.max(now, Date.now()));
   const mastered = masteredCount(stats);
   const milestone = nextMilestone(mastered);
   const prevMilestone = [0, 25, 100, 250, 500, 1000, 2000].filter((m) => m <= mastered).pop();
@@ -149,7 +150,7 @@ export default function Today() {
 
       <CleanupCard progress={progress} />
 
-      <Step n="1" title="ክለሳ: words due for review" done={reviews.left === 0}>
+      <Step n="1" title="ክለሳ: words due for review" done={reviews.left === 0 && studied}>
         {reviews.left ? (
           <>
             <Text style={shared.hint}>
@@ -163,7 +164,11 @@ export default function Today() {
           </>
         ) : (
           <Text style={shared.hint}>
-            {reviews.later ? `Today's reviews are done. ${reviews.later} more are waiting for the coming days.` : "Nothing due. Well kept."}
+            {!studied
+              ? "Nothing to review yet. Words you learn come back here."
+              : reviews.later
+                ? `Today's reviews are done. ${reviews.later} more are waiting for the coming days.`
+                : "Nothing due. Well kept."}
           </Text>
         )}
       </Step>

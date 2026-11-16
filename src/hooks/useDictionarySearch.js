@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Fuse from "fuse.js";
 import { supabase } from "../lib/supabaseClient";
+import { searchOrder } from "../lib/searchLanguage";
 
 const SUGGESTION_DEBOUNCE_MS = 300;
 const SUGGESTION_CANDIDATE_LIMIT = 25;
@@ -49,6 +50,9 @@ export function useDictionarySearch() {
   const [error, setError] = useState(null);
 
   const suggestionTimer = useRef(null);
+  // Counts searches, so suggestions still loading when a search starts are dropped
+  // instead of popping up under the results.
+  const searchCount = useRef(0);
 
   useEffect(() => {
     const fetchLanguages = async () => {
@@ -78,6 +82,9 @@ export function useDictionarySearch() {
         setSuggestions([]);
         return;
       }
+      const startedAt = searchCount.current;
+      // Suggest in the language the letters belong to (Latin → English).
+      const language = searchOrder(value, selectedLanguage)[0];
 
       try {
         // Cast a wider net than a strict prefix match (catches typos and
@@ -89,7 +96,7 @@ export function useDictionarySearch() {
         const { data, error } = await supabase
           .from("words")
           .select("word")
-          .eq("language_code", selectedLanguage)
+          .eq("language_code", language)
           .ilike("word", `%${value}%`)
           .limit(SUGGESTION_CANDIDATE_LIMIT);
 
@@ -97,6 +104,7 @@ export function useDictionarySearch() {
           console.error("Error fetching suggestions:", error);
           return;
         }
+        if (searchCount.current !== startedAt) return; // a search ran meanwhile
 
         const candidates = [...new Set(data.map((item) => item.word))];
         const fuse = new Fuse(candidates, { includeScore: true, threshold: 0.4 });
@@ -146,8 +154,9 @@ export function useDictionarySearch() {
       return;
     }
 
+    searchCount.current += 1;
+    if (suggestionTimer.current) clearTimeout(suggestionTimer.current);
     setQuery(searchQuery);
-    setSelectedLanguage(searchLanguage);
     setLoading(true);
     setError(null);
     setSewasewExamples([]);
@@ -155,7 +164,21 @@ export function useDictionarySearch() {
     setSuggestions([]);
 
     try {
-      const found = await findEntries(searchQuery.trim(), searchLanguage);
+      // The letters decide the language (Latin → English); Ethiopic tries the selected
+      // language first, then the other two. The chip follows to where it was found.
+      const order = searchOrder(searchQuery, searchLanguage);
+      let found = null;
+      let foundIn = order[0];
+      for (const language of order) {
+        const attempt = await findEntries(searchQuery.trim(), language);
+        if (attempt.error || attempt.entries.length) {
+          found = attempt;
+          foundIn = language;
+          break;
+        }
+        found ??= attempt;
+      }
+      setSelectedLanguage(foundIn);
       if (found.error) {
         setError("Failed to fetch data. Please try again.");
         console.error(found.error);
@@ -165,7 +188,7 @@ export function useDictionarySearch() {
       if (!found.entries.length) {
         // Counted for the editors' "Searches with no result" (no account attached);
         // fire and forget, and harmless before supabase/admin_tools.sql is run.
-        supabase.rpc("log_search_miss", { p_term: searchQuery.trim(), p_language: searchLanguage }).then(
+        supabase.rpc("log_search_miss", { p_term: searchQuery.trim(), p_language: order[0] }).then(
           () => {},
           () => {}
         );
@@ -185,7 +208,7 @@ export function useDictionarySearch() {
         }
       }
 
-      return { query: searchQuery, language: searchLanguage };
+      return { query: searchQuery, language: foundIn, asked: searchLanguage };
     } catch (err) {
       setError("An unexpected error occurred.");
       console.error(err);

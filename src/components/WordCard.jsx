@@ -1,4 +1,6 @@
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { router } from "expo-router";
+import { useAuth } from "../context/AuthContext";
 import { useWordProgress } from "../context/WordProgressContext";
 import { LexiconSection } from "./LexiconSection";
 import { ReportMistake } from "./ReportMistake";
@@ -21,8 +23,19 @@ export const languageName = (code, name) => LANGUAGE_NAMES[code] ?? shortName(na
 
 // One Ge'ez word with its meanings in each language and its ሰዋሰው examples,
 // as shown by the Dictionary and ግሲ. `meanings` maps a language code to a list.
+// For editors and admins, in place of "Report a mistake": straight to the word's editor.
+function EditLink({ id }) {
+  return (
+    <Pressable onPress={() => router.push(`/admin/dictionary/${id}`)} hitSlop={8} accessibilityRole="link" style={styles.footerLink}>
+      <Icon name="create-outline" size={14} color={colors.primaryDark} />
+      <Text style={styles.editText}>Edit in admin</Text>
+    </Pressable>
+  );
+}
+
 export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples = [], languageMap = {} }) {
   const progress = useWordProgress();
+  const { canEdit } = useAuth();
   const saved = Boolean(geezId && progress.stats[geezId]?.saved);
   const tiles = LANGUAGE_ORDER.filter((code) => meanings[code]?.length);
   // Phones: one panel with a row per language, so a word fits on screen with its ርባታ.
@@ -38,11 +51,15 @@ export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples =
           <Pressable
             onPress={() => (saved ? progress.unsave(geezId) : progress.save([geezId]))}
             accessibilityRole="button"
+            accessibilityLabel={saved ? "In ክለሳ. Tap to remove." : "Save to ክለሳ"}
             accessibilityState={{ checked: saved }}
-            style={({ hovered }) => [styles.save, saved && styles.saveOn, hovered && !saved && styles.saveHover]}
+            style={({ hovered, pressed }) => [styles.save, compact && styles.saveCompact, saved && styles.saveOn, (hovered || pressed) && !saved && styles.saveHover]}
           >
             <Icon name="bookmark-outline" size={16} color={saved ? colors.success : colors.primaryDark} />
-            <Text style={[styles.saveText, saved && { color: colors.success }]}>{saved ? "In ክለሳ" : "Save to ክለሳ"}</Text>
+            {/* Phones: a short label, so the button stays beside the word. */}
+            <Text style={[styles.saveText, saved && { color: colors.success }]}>
+              {compact ? (saved ? "Saved" : "Save") : saved ? "In ክለሳ" : "Save to ክለሳ"}
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -84,7 +101,7 @@ export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples =
         </View>
       ) : null}
 
-      {geezId && tag === "ግዕዝ" ? <ReportMistake wordId={geezId} word={word} /> : null}
+      {geezId && tag === "ግዕዝ" ? canEdit ? <EditLink id={geezId} /> : <ReportMistake wordId={geezId} word={word} /> : null}
     </View>
   );
 }
@@ -122,7 +139,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  saveCompact: { height: 36, paddingHorizontal: spacing.sm + 2, gap: 4 },
   saveHover: { backgroundColor: colors.surfaceMuted },
+  footerLink: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingVertical: 2 },
+  editText: { ...typography.caption, fontFamily: fontFamily.latinSemiBold, color: colors.primaryDark, textDecorationLine: "underline" },
   saveOn: { borderColor: colors.success, backgroundColor: colors.successLight },
   saveText: { fontFamily: fontFamily.ethiopicBold, fontSize: 14, color: colors.primaryDark },
   meanings: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },

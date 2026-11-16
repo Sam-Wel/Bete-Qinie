@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   page: { gap: spacing.lg },
   card: { ...card, gap: spacing.md },
   lead: { ...typography.caption, color: colors.textSecondary },
-  error: { ...typography.body, color: colors.danger },
+  error: { ...typography.body, color: colors.dangerDark },
   letters: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: spacing.sm },
   letter: {
     width: 46,

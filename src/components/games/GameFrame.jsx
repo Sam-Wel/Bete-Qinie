@@ -113,7 +113,7 @@ export function ProgressBar({ value, color = colors.primary }) {
 }
 
 const styles = StyleSheet.create({
-  error: { ...typography.body, color: colors.danger, marginTop: spacing.lg },
+  error: { ...typography.body, color: colors.dangerDark, marginTop: spacing.lg },
   pickerRow: { gap: spacing.xs },
   pickerLabel: { ...typography.label, color: colors.textMuted, letterSpacing: 1 },
   focusStatus: { ...typography.caption, color: colors.primaryDark },

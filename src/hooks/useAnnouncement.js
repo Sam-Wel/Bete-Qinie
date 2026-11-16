@@ -2,10 +2,24 @@ import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabaseClient";
 import { isActive } from "../lib/announcement";
+import { HOUR, onResume } from "../lib/appResume";
 
 const CLOSED_KEY = "bete-qinie:announcement-closed"; // the id of the last one this device closed
 
-let loaded = null; // one read per app session, shared by every page that shows the banner
+let loaded = null; // one read per app session (and per return after an hour), shared by every page that shows the banner
+const listeners = new Set();
+let watching = false;
+
+function watchForNews() {
+  if (watching) return;
+  watching = true;
+  onResume((away) => {
+    if (away < HOUR) return;
+    loaded = null;
+    const next = loadOnce();
+    listeners.forEach((fn) => next.then(fn));
+  });
+}
 
 function loadOnce() {
   if (!loaded) {
@@ -29,9 +43,13 @@ export function useAnnouncement() {
 
   useEffect(() => {
     let live = true;
-    loadOnce().then(([announcement, closed]) => live && setState({ announcement, closed }));
+    const show = ([announcement, closed]) => live && setState({ announcement, closed });
+    loadOnce().then(show);
+    listeners.add(show);
+    watchForNews();
     return () => {
       live = false;
+      listeners.delete(show);
     };
   }, []);
 

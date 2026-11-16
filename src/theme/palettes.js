@@ -22,7 +22,7 @@ export const palettes = {
 
     textPrimary: "#2B2013",
     textSecondary: "#6b5233",
-    textMuted: "#9c8760",
+    textMuted: "#7f6a45", // 4.8:1 on background (was #9c8760, 3.2:1)
 
     danger: "#7a2e2e",
     dangerDark: "#5c1f1f",

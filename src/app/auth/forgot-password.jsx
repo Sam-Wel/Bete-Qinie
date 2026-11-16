@@ -53,7 +53,7 @@ export default function ForgotPassword() {
               Enter your email and we'll send you a link to set a new password.
             </Text>
 
-            {error ? <Text style={[typography.body, { color: colors.danger, textAlign: "center" }]}>{error}</Text> : null}
+            {error ? <Text style={[typography.body, { color: colors.dangerDark, textAlign: "center" }]}>{error}</Text> : null}
 
             <TextField
               label="Email"

@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabaseClient";
 import { fetchAll } from "../lib/fetchAll";
 import { buildBank, VERB_ENDINGS } from "../lib/verbQuiz";
+import { HOUR, onResume } from "../lib/appResume";
 
 const CACHE_KEY = "bete-qinie:verb-bank:v6"; // v6: ሃልሀ and ሀልሀ fixed (2026-11-13)
 const CACHE_MS = 24 * 3600 * 1000; // only until supabase/admin_tools.sql adds the dictionary version
@@ -21,8 +22,6 @@ async function serverVersion() {
   const wait = new Promise((done) => setTimeout(() => done(null), VERSION_WAIT_MS));
   return Promise.race([ask, wait]);
 }
-
-let memory = null;
 
 // Before supabase/verb_quiz.sql has been run there is no verb_quiz_bank view, so
 // the same rows are put together here from words and translationmappings.
@@ -56,51 +55,87 @@ async function loadRows() {
   }
 }
 
+// One shared copy for the whole app: { bank, error }, the dictionary version it was
+// built from, and the screens listening for it.
+let memory = null;
+let memoryVersion = null;
+let pending = null;
+const listeners = new Set();
+
+function publish(state) {
+  if (state.bank) memory = state.bank;
+  listeners.forEach((fn) => fn(state));
+}
+
+async function load() {
+  const [cached, version] = await Promise.all([
+    AsyncStorage.getItem(CACHE_KEY)
+      .then((text) => JSON.parse(text || "null"))
+      .catch(() => null), // a broken cache just means loading fresh
+    serverVersion(),
+  ]);
+  const fresh = version ? cached?.version === version : cached && Date.now() - cached.at < CACHE_MS;
+  if (cached?.rows && fresh) {
+    memoryVersion = version ?? cached.version ?? null;
+    return buildBank(cached.rows);
+  }
+  try {
+    const rows = await loadRows();
+    memoryVersion = version;
+    AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), version, rows })).catch(() => {});
+    return buildBank(rows);
+  } catch (err) {
+    console.error("Error loading the verb bank:", err);
+    if (cached?.rows) return buildBank(cached.rows); // offline: yesterday's words beat no words
+    throw err;
+  }
+}
+
+function ensureLoaded() {
+  if (memory || pending) return;
+  pending = load()
+    .then((bank) => publish({ bank, error: null }))
+    .catch(() => publish({ bank: null, error: "Couldn't load the verbs. Check your connection and try again." }))
+    .finally(() => {
+      pending = null;
+    });
+}
+
+// Back after an hour or more: if the dictionary changed meanwhile (an editor fixed a
+// word), load the new words; every screen showing the bank gets them.
+let watching = false;
+function watchForUpdates() {
+  if (watching) return;
+  watching = true;
+  onResume(async (away) => {
+    if (away < HOUR || !memory || pending) return;
+    const version = await serverVersion();
+    if (!version || version === memoryVersion) return;
+    try {
+      const rows = await loadRows();
+      memoryVersion = version;
+      AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), version, rows })).catch(() => {});
+      publish({ bank: buildBank(rows), error: null });
+    } catch {
+      // Keep the words already shown; the next return tries again.
+    }
+  });
+}
+
 // Every Ge'ez verb with its meanings, loaded once per session and kept on the
 // device until the dictionary changes, so the quiz opens instantly the next time.
 export function useVerbBank() {
-  const [bank, setBank] = useState(memory);
-  const [error, setError] = useState(null);
+  const [state, setState] = useState({ bank: memory, error: null });
 
   useEffect(() => {
-    if (memory) return;
-    let cancelled = false;
-
-    (async () => {
-      const [cached, version] = await Promise.all([
-        AsyncStorage.getItem(CACHE_KEY)
-          .then((text) => JSON.parse(text || "null"))
-          .catch(() => null), // a broken cache just means loading fresh
-        serverVersion(),
-      ]);
-      const fresh = version ? cached?.version === version : cached && Date.now() - cached.at < CACHE_MS;
-      if (cached?.rows && fresh) {
-        memory = buildBank(cached.rows);
-        if (!cancelled) setBank(memory);
-        return;
-      }
-
-      try {
-        const rows = await loadRows();
-        memory = buildBank(rows);
-        if (!cancelled) setBank(memory);
-        AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), version, rows })).catch(() => {});
-      } catch (err) {
-        console.error("Error loading the verb bank:", err);
-        if (cached?.rows) {
-          // Offline: yesterday's words beat no words.
-          memory = buildBank(cached.rows);
-          if (!cancelled) setBank(memory);
-        } else if (!cancelled) {
-          setError("Couldn't load the verbs. Check your connection and try again.");
-        }
-      }
-    })();
-
+    listeners.add(setState);
+    if (memory) setState({ bank: memory, error: null });
+    else ensureLoaded();
+    watchForUpdates();
     return () => {
-      cancelled = true;
+      listeners.delete(setState);
     };
   }, []);
 
-  return { bank, loading: !bank && !error, error };
+  return { bank: state.bank, loading: !state.bank && !state.error, error: state.error };
 }

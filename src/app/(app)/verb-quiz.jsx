@@ -194,5 +194,5 @@ export default function VerbQuiz() {
 }
 
 const styles = StyleSheet.create({
-  error: { ...typography.body, color: colors.danger, marginTop: spacing.lg },
+  error: { ...typography.body, color: colors.dangerDark, marginTop: spacing.lg },
 });

@@ -127,6 +127,6 @@ const styles = StyleSheet.create({
   kindHover: { backgroundColor: colors.surfaceMuted },
   kindText: { ...typography.label, fontSize: 13, color: colors.textPrimary },
   kindTextOn: { color: colors.onPrimary },
-  error: { ...typography.caption, color: colors.danger },
+  error: { ...typography.caption, color: colors.dangerDark },
   full: { alignSelf: "stretch", marginTop: spacing.xs },
 });

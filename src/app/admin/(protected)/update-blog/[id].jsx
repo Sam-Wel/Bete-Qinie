@@ -87,7 +87,7 @@ export default function UpdateBlogPost() {
     return (
       <ScreenContainer center>
         {message ? (
-          <Text style={[typography.body, { color: colors.danger }]}>{message}</Text>
+          <Text style={[typography.body, { color: colors.dangerDark }]}>{message}</Text>
         ) : (
           <ActivityIndicator color={colors.primary} />
         )}
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   error: {
-    color: colors.danger,
+    color: colors.dangerDark,
     textAlign: "center",
   },
   success: {

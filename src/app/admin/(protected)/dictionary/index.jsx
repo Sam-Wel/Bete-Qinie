@@ -180,7 +180,7 @@ export default function DictionaryAdmin() {
         </Panel>
       ) : (
         <>
-          <Chips items={chips} value={filter} onChange={setFilter} />
+          <Chips items={chips} value={filter} onChange={setFilter} scroll />
           <Notice tone="error">{counts.error}</Notice>
           <Panel
             title={list.loading && !list.rows.length ? "Loading…" : `${list.total} word${list.total === 1 ? "" : "s"}`}

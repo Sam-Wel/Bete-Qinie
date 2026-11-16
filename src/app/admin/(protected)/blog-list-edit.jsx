@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   },
   error: {
     ...typography.body,
-    color: colors.danger,
+    color: colors.dangerDark,
     textAlign: "center",
     marginBottom: spacing.sm,
   },

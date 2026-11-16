@@ -88,9 +88,26 @@ export default function EditWord() {
       </View>
       <Notice tone={notice?.tone}>{notice?.text}</Notice>
 
-      {isGeez ? <LexiconSection word={word.word} /> : null}
+      {reports.length ? (
+        <Panel title={`Open reports (${reports.length})`}>
+          {reports.map((r) => (
+            <View key={r.id} style={styles.report}>
+              <Text style={[styles.reportText, scriptStyle(r.message) && adminStyles.ethiopic]}>{r.message}</Text>
+              <Text style={adminStyles.muted}>{`${ago(r.created_at)} · ${r.reporter_email || (r.signed_in ? "a signed-in learner" : "a guest")}`}</Text>
+              <View style={adminStyles.row}>
+                <Button size="sm" onPress={() => act(() => rpc("report_resolve", { p_id: r.id, p_status: "fixed", p_note: null }), "Marked fixed.")}>
+                  Fixed
+                </Button>
+                <Button size="sm" variant="secondary" onPress={() => act(() => rpc("report_resolve", { p_id: r.id, p_status: "dismissed", p_note: null }), "Dismissed.")}>
+                  Dismiss
+                </Button>
+              </View>
+            </View>
+          ))}
+        </Panel>
+      ) : null}
 
-      <Spelling word={word} act={act} />
+      {isGeez ? <LexiconSection word={word.word} /> : null}
 
       {isGeez ? (
         <Panel title="Meanings">
@@ -119,24 +136,7 @@ export default function EditWord() {
 
       {isGeez ? <Examples word={word} act={act} /> : null}
 
-      {reports.length ? (
-        <Panel title={`Open reports (${reports.length})`}>
-          {reports.map((r) => (
-            <View key={r.id} style={styles.report}>
-              <Text style={[styles.reportText, scriptStyle(r.message) && adminStyles.ethiopic]}>{r.message}</Text>
-              <Text style={adminStyles.muted}>{`${ago(r.created_at)} · ${r.reporter_email || (r.signed_in ? "a signed-in learner" : "a guest")}`}</Text>
-              <View style={adminStyles.row}>
-                <Button size="sm" onPress={() => act(() => rpc("report_resolve", { p_id: r.id, p_status: "fixed", p_note: null }), "Marked fixed.")}>
-                  Fixed
-                </Button>
-                <Button size="sm" variant="secondary" onPress={() => act(() => rpc("report_resolve", { p_id: r.id, p_status: "dismissed", p_note: null }), "Dismissed.")}>
-                  Dismiss
-                </Button>
-              </View>
-            </View>
-          ))}
-        </Panel>
-      ) : null}
+      <Spelling word={word} act={act} />
 
       <Merge word={word} initial={merge ? Number(merge) : null} act={act} />
 
@@ -248,7 +248,7 @@ function Meaning({ meaning, word, act }) {
         >
           Edit
         </Button>
-        <ConfirmButton onConfirm={() => act(() => rpc("dict_unlink", { p_word_id: word.word_id, p_other_id: meaning.word_id }), `Removed “${meaning.word}”.`)}>
+        <ConfirmButton variant="plain" confirmLabel="Remove?" onConfirm={() => act(() => rpc("dict_unlink", { p_word_id: word.word_id, p_other_id: meaning.word_id }), `Removed “${meaning.word}”.`)}>
           Remove
         </ConfirmButton>
       </View>
@@ -318,7 +318,7 @@ function AddMeaning({ lang, word, act }) {
       <TextField
         value={text}
         onChangeText={setText}
-        placeholder={`Add a ${languageLabel(lang)} meaning`}
+        placeholder={`Add ${lang === "en" ? "an" : "a"} ${languageLabel(lang)} meaning`}
         onSubmitEditing={add}
         returnKeyType="done"
         style={{ flex: 1 }}
@@ -349,7 +349,9 @@ function Examples({ word, act }) {
               >
                 Save
               </Button>
-              <ConfirmButton onConfirm={() => act(() => rpc("example_delete", { p_id: ex.sewasew_id }), "Example deleted.")}>Delete</ConfirmButton>
+              <ConfirmButton variant="plain" confirmLabel="Delete?" onConfirm={() => act(() => rpc("example_delete", { p_id: ex.sewasew_id }), "Example deleted.")}>
+                Delete
+              </ConfirmButton>
             </View>
           </View>
         );

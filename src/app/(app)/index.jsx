@@ -66,6 +66,7 @@ export default function Dictionary() {
   const due = badges.due;
   const toLearn = badges.today - badges.due;
   const [searched, setSearched] = useState(null);
+  const [movedTo, setMovedTo] = useState(null); // the language a search was found in, when not the chip's
   const current = languages.find((l) => l.language_code === selectedLanguage);
 
   // One verb a day, the same for everyone that day: one with a meaning in every language.
@@ -85,6 +86,7 @@ export default function Dictionary() {
     const result = await handleSearch(searchQuery, searchLanguage);
     if (result) {
       setSearched(result.query);
+      setMovedTo(result.language !== result.asked ? result.language : null);
       addRecentSearch(result.query, result.language, languageName(result.language, languageMap[result.language]));
     }
   };
@@ -163,8 +165,9 @@ export default function Dictionary() {
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {results.length > 0 && selectedLanguage !== "gz" && results[0].geez ? (
+      {results.length > 0 && (selectedLanguage !== "gz" || movedTo) && results[0].geez ? (
         <Text style={styles.foundLine}>
+          {movedTo ? `Found in ${languageName(movedTo, languageMap[movedTo])}: ` : ""}
           {searched} · {results.length === 1 ? "1 ግዕዝ word" : `${results.length} ግዕዝ words`}
         </Text>
       ) : null}
@@ -286,7 +289,7 @@ const styles = StyleSheet.create({
   recentLabel: { ...typography.caption, color: colors.textSecondary, marginRight: 2 },
   recentChip: { paddingVertical: 4, paddingHorizontal: spacing.md, borderRadius: radii.pill, backgroundColor: colors.surfaceMuted },
   recentText: { fontFamily: fontFamily.ethiopicBold, fontSize: 15, lineHeight: 22, color: colors.textPrimary },
-  error: { ...typography.body, color: colors.danger },
+  error: { ...typography.body, color: colors.dangerDark },
   card: { ...card, gap: spacing.md },
   foundLine: { ...typography.caption, color: colors.textSecondary, marginBottom: -spacing.sm },
   review: {

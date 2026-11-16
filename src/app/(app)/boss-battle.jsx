@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
   ZoomIn,
 } from "react-native-reanimated";
-import { Button } from "../../components/ui";
+import { Button, Icon } from "../../components/ui";
 import { CrossMenuIcon } from "../../components/ui/CrossMenuIcon";
 import { FocusPicker, GameFrame, LanguagePicker, StartCard } from "../../components/games/GameFrame";
 import { Choices } from "../../components/games/Choices";
@@ -26,7 +26,7 @@ const NIGHT = "#17110a";
 const GOLD = "#e0a52a";
 const GOLD_SOFT = "#f6e2ac";
 const RED = "#d0553c";
-const GREEN = "#7fb069";
+const LIGHT = "#f2c14e"; // the lamp's light
 const NEXT_MS = 1100;
 
 function HealthBar({ value, max, color, label }) {
@@ -55,7 +55,27 @@ function Damage({ hit }) {
   );
 }
 
-// Verb Boss Battle: answer about ግዕዝ verbs to strike the boss; miss and it strikes back.
+// The learner's lamp: its flame flickers, and burns lower as the light runs down.
+function Lamp({ light, size }) {
+  const flicker = useSharedValue(1);
+  useEffect(() => {
+    flicker.value = withRepeat(withSequence(withTiming(1.07, { duration: 650 }), withTiming(0.95, { duration: 850 })), -1, true);
+  }, []);
+  const flameStyle = useAnimatedStyle(() => ({ transform: [{ scale: flicker.value }] }));
+  const glow = 0.4 + 0.6 * light;
+  return (
+    <View style={[styles.lamp, { opacity: 0.45 + 0.55 * light }]}>
+      <Animated.View style={[styles.flame, { boxShadow: `0 0 ${Math.round(28 * glow)}px rgba(242,193,78,${0.55 * glow})` }, flameStyle]}>
+        <Icon name="flame" size={size * (0.7 + 0.3 * light)} color={LIGHT} strokeWidth={2} />
+      </Animated.View>
+      <View style={[styles.lampBase, { width: size * 0.8 }]} />
+    </View>
+  );
+}
+
+// Verb Boss Battle: answer about ግዕዝ verbs to strike the adversary; miss and your lamp dims.
+// You play a learner with a lamp, not the cross: the cross only appears over a beaten
+// adversary, because the cross is never the one that loses.
 export default function BossBattle() {
   const game = useVerbGame("verb_boss");
   const [battle, setBattle] = useState(null);
@@ -147,7 +167,7 @@ export default function BossBattle() {
     } else {
       bossShift.value = withSequence(withTiming(-60, { duration: 160 }), withTiming(0, { duration: 220 }));
       playerShift.value = withSequence(withTiming(0, { duration: 140 }), withTiming(-12, { duration: 50 }), withTiming(10, { duration: 50 }), withTiming(0, { duration: 60 }));
-      setHit({ side: "player", text: `−${damage}`, color: RED, key: Date.now() });
+      setHit({ side: "player", text: `−${damage} light`, color: RED, key: Date.now() });
     }
 
     const state = battleState(b);
@@ -180,21 +200,29 @@ export default function BossBattle() {
   if (phase === "over" && result) {
     body = (
       <GameResults
-        title={result.won ? "Champion! Every boss defeated" : `Defeated by ${BOSSES[result.level].english}`}
+        title={result.won ? "Every adversary overcome" : `Your lamp went out at ${BOSSES[result.level].name}`}
         score={result.xp}
         isBest={result.isBest}
         stats={[
-          { value: result.bossesBeaten, label: "bosses beaten", tone: colors.success },
+          { value: result.bossesBeaten, label: "overcome", tone: colors.success },
           { value: `${result.right}/${result.asked}`, label: "right" },
           { value: result.bestCombo, label: "best combo" },
-          { value: `${BOSSES[result.level].emoji} ${result.level + 1}`, label: "boss level reached" },
+          { value: `${BOSSES[result.level].emoji} ${result.level + 1}`, label: "level reached" },
         ]}
         missedIds={game.missedIds()}
         bank={game.bank}
         lang={game.lang}
         signedIn={game.signedIn}
         onAgain={start}
-      />
+      >
+        {result.won ? (
+          <View style={styles.championCross}>
+            <CrossMenuIcon size={64} color={GOLD} ground={NIGHT} />
+          </View>
+        ) : (
+          <Text style={styles.encourage}>Study the words you missed, then light it again.</Text>
+        )}
+      </GameResults>
     );
   } else if (phase === "fight" || phase === "victory") {
     const q = turn.question;
@@ -203,18 +231,24 @@ export default function BossBattle() {
       <View style={styles.play}>
         <View style={styles.arena}>
           <View style={styles.bars}>
-            <HealthBar value={battle.playerHp} max={PLAYER_HP} color={GREEN} label="You" />
+            <HealthBar value={battle.playerHp} max={PLAYER_HP} color={LIGHT} label="Your lamp" />
             <HealthBar value={battle.bossHp} max={battle.boss.hp} color={GOLD} label={`${battle.boss.name} · level ${battle.level + 1}`} />
           </View>
           <View style={[styles.fighters, compact && styles.fightersCompact]}>
             <Animated.View style={[styles.fighter, playerStyle]}>
-              <CrossMenuIcon size={compact ? 52 : 70} color={GOLD} ground={NIGHT} />
+              <Lamp light={Math.max(0, battle.playerHp / PLAYER_HP)} size={compact ? 46 : 60} />
               {hit?.side === "player" ? <Damage key={hit.key} hit={hit} /> : null}
             </Animated.View>
-            <Animated.Text style={[styles.arrow, arrowStyle]}>➶</Animated.Text>
+            <Animated.Text style={[styles.arrow, arrowStyle]}>✦</Animated.Text>
             <Animated.View style={[styles.fighter, bossStyle]}>
-              <Text style={[styles.boss, compact && styles.bossCompact]}>{battle.boss.emoji}</Text>
+              <Text style={[styles.boss, compact && styles.bossCompact, phase === "victory" && styles.bossBeaten]}>{battle.boss.emoji}</Text>
               {hit?.side === "boss" ? <Damage key={hit.key} hit={hit} /> : null}
+              {/* The cross rises over the beaten adversary. */}
+              {phase === "victory" ? (
+                <Animated.View entering={ZoomIn.duration(600)} style={styles.victoryCross}>
+                  <CrossMenuIcon size={compact ? 56 : 72} color={GOLD} ground={NIGHT} />
+                </Animated.View>
+              ) : null}
             </Animated.View>
           </View>
           <View style={styles.status}>
@@ -222,16 +256,19 @@ export default function BossBattle() {
             {phase === "fight" ? <Text style={[styles.statusText, left <= 3 && { color: RED }]}>{left}s</Text> : null}
           </View>
 
-          {phase === "victory" ? (
-            <Animated.View entering={ZoomIn.duration(250)} style={styles.victory}>
-              <Text style={styles.victoryTitle}>Victory!</Text>
-              <Text style={styles.victoryText}>
-                {battle.boss.name} ({battle.boss.english}) is beaten. Next: {BOSSES[battle.level + 1].emoji} {BOSSES[battle.level + 1].name}
-              </Text>
-              <Button onPress={fightOn}>Fight on</Button>
-            </Animated.View>
-          ) : null}
         </View>
+
+        {phase === "victory" ? (
+          <Animated.View entering={FadeIn.duration(300)} style={styles.victory}>
+            <Text style={styles.victoryTitle}>Victory!</Text>
+            <Text style={styles.victoryText}>
+              {battle.boss.name} ({battle.boss.english}) is overcome. Next: {BOSSES[battle.level + 1].emoji} {BOSSES[battle.level + 1].name}
+            </Text>
+            <Button onPress={fightOn} style={styles.victoryButton}>
+              Go on
+            </Button>
+          </Animated.View>
+        ) : null}
 
         {phase === "fight" ? (
           <>
@@ -264,8 +301,8 @@ export default function BossBattle() {
   } else {
     body = (
       <StartCard
-        emoji="🐉"
-        lead="Answer questions about ግዕዝ verbs to strike the boss. Miss, or take too long, and it strikes back."
+        emoji="🕯️"
+        lead="Carry your lamp against four adversaries. Answer about ግዕዝ verbs to strike with its light; miss, or take too long, and your lamp dims. Overcome each one and the cross shines over it."
         rules={[
           `${BOSSES.map((b) => `${b.emoji} ${b.name}`).join(" → ")}: each tougher and faster`,
           "Every fifth right answer in a row is a combo strike",
@@ -303,20 +340,29 @@ const styles = StyleSheet.create({
   boss: { fontSize: 84, lineHeight: 100 },
   bossCompact: { fontSize: 58, lineHeight: 70 },
   fightersCompact: { height: 88 },
-  arrow: { position: "absolute", left: 120, fontSize: 34, color: GOLD },
+  arrow: { position: "absolute", left: 120, fontSize: 30, color: LIGHT },
+  lamp: { alignItems: "center", justifyContent: "flex-end", gap: 2 },
+  flame: { borderRadius: 999, padding: 4 },
+  lampBase: { height: 10, borderRadius: 999, backgroundColor: "#8a6a2c", borderTopWidth: 2, borderTopColor: GOLD },
+  victoryCross: { position: "absolute", borderRadius: 999, boxShadow: "0 0 40px rgba(224,165,42,0.8)" },
+  championCross: { alignSelf: "center", marginTop: spacing.sm, borderRadius: 999, boxShadow: "0 0 32px rgba(224,165,42,0.6)" },
+  encourage: { ...typography.body, color: colors.textSecondary, textAlign: "center" },
   damage: { position: "absolute", fontFamily: fontFamily.latinBold, fontSize: 22 },
   damageBoss: { top: -6 },
   damagePlayer: { top: -6 },
   status: { flexDirection: "row", justifyContent: "space-between" },
   statusText: { fontFamily: fontFamily.latinSemiBold, fontSize: 13, color: "#c9b48a" },
   victory: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(23,17,10,0.9)",
+    backgroundColor: NIGHT,
+    borderRadius: radii.lg,
+    borderWidth: 2,
+    borderColor: GOLD,
     alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.md,
+    gap: spacing.sm,
     padding: spacing.lg,
   },
+  victoryButton: { alignSelf: "stretch", marginTop: spacing.xs },
+  bossBeaten: { opacity: 0.25 },
   victoryTitle: { fontFamily: fontFamily.latinBold, fontSize: 32, color: GOLD },
   victoryText: { fontFamily: fontFamily.ethiopicRegular, fontSize: 15, color: GOLD_SOFT, textAlign: "center" },
   prompt: { alignItems: "center", gap: 4 },

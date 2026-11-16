@@ -56,5 +56,5 @@ const styles = StyleSheet.create({
   },
   multiline: { minHeight: 100, textAlignVertical: "top" },
   inputError: { borderColor: colors.danger },
-  error: { ...typography.caption, color: colors.danger },
+  error: { ...typography.caption, color: colors.dangerDark },
 });

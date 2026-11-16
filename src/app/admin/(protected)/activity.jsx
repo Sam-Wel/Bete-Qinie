@@ -87,7 +87,7 @@ function ActivityPage() {
           ) : null
         }
       />
-      <Chips items={AREAS.map(({ value, label }) => ({ value, label }))} value={area} onChange={setArea} />
+      <Chips items={AREAS.map(({ value, label }) => ({ value, label }))} value={area} onChange={setArea} scroll />
       <Chips items={DAYS} value={days} onChange={setDays} />
       <Notice tone="error">{error}</Notice>
       <Panel title={loading && !rows.length ? "Loading…" : `${shown.length}${more ? "+" : ""} change${shown.length === 1 ? "" : "s"}`}>
@@ -104,9 +104,10 @@ function ActivityPage() {
               accessibilityState={{ expanded }}
             >
               <Text style={[styles.line, scriptStyle(line) && adminStyles.ethiopic]}>{line}</Text>
-              <Text style={adminStyles.muted}>{`${row.actor_email || "someone"} · ${ago(row.at)} · ${new Date(row.at).toLocaleString()}`}</Text>
+              <Text style={adminStyles.muted}>{`${row.actor_email || "someone"} · ${ago(row.at)}`}</Text>
               {expanded ? (
                 <View style={styles.detail}>
+                  <Text style={adminStyles.muted}>{new Date(row.at).toLocaleString()}</Text>
                   {row.before ? <Text style={styles.json}>{`Before\n${JSON.stringify(row.before, null, 2).slice(0, 1500)}`}</Text> : null}
                   {row.after ? <Text style={styles.json}>{`After\n${JSON.stringify(row.after, null, 2).slice(0, 1500)}`}</Text> : null}
                 </View>

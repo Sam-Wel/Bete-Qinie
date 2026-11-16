@@ -34,7 +34,7 @@ export default function SignIn() {
         />
 
         {error ? (
-          <Text style={[typography.body, { color: colors.danger, textAlign: "center" }]}>
+          <Text style={[typography.body, { color: colors.dangerDark, textAlign: "center" }]}>
             {error}
           </Text>
         ) : null}

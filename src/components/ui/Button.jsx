@@ -19,7 +19,9 @@ const VARIANTS = {
   },
   danger: { bg: colors.dangerLight, hoverBg: colors.dangerLight, text: colors.dangerDark, border: colors.dangerDark },
   dangerConfirm: { bg: colors.danger, hoverBg: colors.dangerHover, text: colors.white, border: "transparent" },
-  ghost: { bg: "transparent", hoverBg: colors.primaryLight, text: colors.primary, border: "transparent" },
+  ghost: { bg: "transparent", hoverBg: colors.primaryLight, text: colors.primaryDark, border: "transparent" },
+  // Quiet: for actions repeated down a list (Remove, Delete) that only turn red once armed.
+  plain: { bg: "transparent", hoverBg: colors.surfaceMuted, text: colors.textSecondary, border: colors.border },
 };
 
 export function Button({

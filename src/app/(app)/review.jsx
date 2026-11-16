@@ -6,6 +6,8 @@ import { useVerbBank } from "../../hooks/useVerbBank";
 import { supabase } from "../../lib/supabaseClient";
 import { applyAnswer, dueQueue, inReview, reviewSummary, startOfDay, stateOf } from "../../lib/verbQuiz";
 import { ScreenContainer, Button } from "../../components/ui";
+import { ReportMistake } from "../../components/ReportMistake";
+import { useNow } from "../../lib/appResume";
 import { languageName } from "../../components/WordCard";
 import { CleanupCard } from "../../components/today/CleanupCard";
 import { reviewPlan } from "../../lib/daily";
@@ -51,7 +53,7 @@ function useWordTexts(ids, bank) {
   return (id) => bank?.byId[id]?.word ?? texts[id] ?? null;
 }
 
-function Card({ word, onAnswer, stat }) {
+function Card({ wordId, word, onAnswer, stat }) {
   const [shown, setShown] = useState(false);
   const [translations, setTranslations] = useState(null);
   const [examples, setExamples] = useState([]);
@@ -143,6 +145,7 @@ function Card({ word, onAnswer, stat }) {
               <Text style={styles.choiceSub}>next {ifEasy}</Text>
             </Pressable>
           </View>
+          {wordId ? <ReportMistake wordId={wordId} word={word} /> : null}
         </>
       )}
     </View>
@@ -158,7 +161,8 @@ export default function Review() {
   const [done, setDone] = useState(null);
 
   const { stats } = progress;
-  const summary = reviewSummary(stats);
+  const now = useNow(); // a new day, or coming back, brings in what has fallen due since
+  const summary = reviewSummary(stats, Math.max(now, Date.now()));
   const savedIds = useMemo(
     () =>
       Object.entries(stats)
@@ -167,9 +171,12 @@ export default function Review() {
         .map(([id]) => Number(id)),
     [stats]
   );
-  const plan = reviewPlan(stats);
+  const plan = reviewPlan(stats, Math.max(now, Date.now()));
   // Today's share first; once it is done, "Review more" takes the next 20 anyway.
-  const queueNow = useMemo(() => dueQueue(stats, Date.now(), Math.min(20, reviewPlan(stats).left || 20)), [stats]);
+  const queueNow = useMemo(() => {
+    const t = Math.max(now, Date.now());
+    return dueQueue(stats, t, Math.min(20, reviewPlan(stats, t).left || 20));
+  }, [stats, now]);
   const textOf = useWordTexts(useMemo(() => [...new Set([...savedIds, ...queueNow])], [savedIds, queueNow]), bank);
 
   const start = () => {
@@ -213,7 +220,7 @@ export default function Review() {
         <View style={styles.track}>
           <View style={[styles.trackFill, { width: `${(session.index / session.queue.length) * 100}%` }]} />
         </View>
-        <Card key={id} word={textOf(id)} stat={stats[id]} onAnswer={answer} />
+        <Card key={id} wordId={Number(id)} word={textOf(id)} stat={stats[id]} onAnswer={answer} />
       </ScreenContainer>
     );
   }

@@ -51,7 +51,7 @@ export default function SignUp() {
         />
 
         {error ? (
-          <Text style={[typography.body, { color: colors.danger, textAlign: "center" }]}>
+          <Text style={[typography.body, { color: colors.dangerDark, textAlign: "center" }]}>
             {error}
           </Text>
         ) : null}

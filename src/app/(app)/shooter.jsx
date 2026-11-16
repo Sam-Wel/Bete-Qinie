@@ -51,7 +51,7 @@ export default function ShooterScreen() {
   };
 
   let body;
-  if (error) body = <Text style={{ ...typography.body, color: colors.danger }}>{error}</Text>;
+  if (error) body = <Text style={{ ...typography.body, color: colors.dangerDark }}>{error}</Text>;
   else if (loading || !progress.ready || !scores.ready || !focused.ready) body = <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />;
   else if (playing)
     body = (

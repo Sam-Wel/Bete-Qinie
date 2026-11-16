@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import { Button, Card, Icon, ScreenContainer } from "../ui";
@@ -60,7 +60,7 @@ export function ConfirmButton({ children, confirmLabel = "Tap again to confirm",
 // A line of feedback under an action: error, done, or plain information.
 export function Notice({ tone = "info", children }) {
   if (!children) return null;
-  const color = tone === "error" ? colors.danger : tone === "done" ? colors.success : colors.textSecondary;
+  const color = tone === "error" ? colors.dangerDark : tone === "done" ? colors.success : colors.textSecondary;
   return <Text style={[styles.notice, { color }]}>{children}</Text>;
 }
 
@@ -130,10 +130,11 @@ export function Panel({ title, right, children, style }) {
   );
 }
 
-// Small selectable chips (filters, choices).
-export function Chips({ items, value, onChange }) {
-  return (
-    <View style={styles.chips}>
+// Small selectable chips (filters, choices). scroll: one row that scrolls sideways
+// instead of wrapping onto several lines (long filter lists on phones).
+export function Chips({ items, value, onChange, scroll = false }) {
+  const row = (
+    <View style={[styles.chips, scroll && styles.chipsRow]}>
       {items.map((item) => {
         const on = item.value === value;
         return (
@@ -152,6 +153,12 @@ export function Chips({ items, value, onChange }) {
         );
       })}
     </View>
+  );
+  if (!scroll) return row;
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chipScrollContent}>
+      {row}
+    </ScrollView>
   );
 }
 
@@ -202,6 +209,9 @@ const styles = StyleSheet.create({
   panelHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, flexWrap: "wrap" },
   panelTitle: { ...typography.label, color: colors.textSecondary, letterSpacing: 0.4 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs + 2 },
+  chipsRow: { flexWrap: "nowrap" },
+  chipScroll: { flexGrow: 0, marginHorizontal: -spacing.lg },
+  chipScrollContent: { paddingHorizontal: spacing.lg },
   chip: {
     paddingVertical: 6,
     paddingHorizontal: 12,

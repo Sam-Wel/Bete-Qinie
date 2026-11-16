@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabaseClient";
 import { fetchAll } from "../lib/fetchAll";
 import { buildLexicon } from "../lib/lexicon";
+import { HOUR, onResume } from "../lib/appResume";
 
 // The live Ge'ez lexicon release: which release it is, and its verbs (heads, glosses,
 // open questions). Words are cached on the device per release tag, so a new release
@@ -73,17 +74,30 @@ function ensureLoaded() {
     });
 }
 
+// Back after an hour or more: if another release has gone live meanwhile, load it.
+let watching = false;
+function watchForRelease() {
+  if (watching) return;
+  watching = true;
+  onResume(async (away) => {
+    if (away < HOUR || !memory || pending) return;
+    const { data, error } = await supabase.from("lexicon_releases").select("tag").eq("is_current", true).maybeSingle();
+    if (error || (data?.tag ?? null) === (memory.release?.tag ?? null)) return;
+    memory = null;
+    formsMemory.clear();
+    ensureLoaded();
+  });
+}
+
 // { lexicon, release, available, loading }. One request per app session, shared by every caller.
 export function useLexicon() {
   const [state, setState] = useState(memory);
 
   useEffect(() => {
-    if (memory) {
-      setState(memory);
-      return undefined;
-    }
     listeners.add(setState);
-    ensureLoaded();
+    if (memory) setState(memory);
+    else ensureLoaded();
+    watchForRelease();
     return () => {
       listeners.delete(setState);
     };

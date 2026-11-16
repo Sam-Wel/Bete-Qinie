@@ -5,6 +5,7 @@ import { useGameLanguage } from "./useGameLanguage";
 import { useStudyPlan } from "./useStudyPlan";
 import { planToday, todayProgress } from "../lib/daily";
 import { introduce, resetStat } from "../lib/verbQuiz";
+import { useNow } from "../lib/appResume";
 
 // Today's set, kept in line with the settings: when the day begins, a word is
 // skipped as known, or the size or family changes, untouched words are added
@@ -16,10 +17,14 @@ export function useToday() {
   const [lang] = useGameLanguage();
   const [plan, setPlan] = useStudyPlan();
   const ready = progress.ready && Boolean(bank) && Boolean(plan.loaded);
+  // A new day re-plans, even if the app stayed open overnight or sat in the background:
+  // `now` changes at midnight and on every return, and goes into each calculation (the
+  // compiler caches by what a calculation reads, so it has to be read, not just listed).
+  const now = useNow();
 
   const info = useMemo(
-    () => (ready ? planToday(bank, progress.stats, lang, plan) : null),
-    [ready, bank, progress.stats, lang, plan]
+    () => (ready ? planToday(bank, progress.stats, lang, plan, Math.max(now, Date.now())) : null),
+    [ready, bank, progress.stats, lang, plan, now]
   );
 
   const changeKey = info ? `${info.add.join(",")}|${info.remove.join(",")}` : "";
@@ -32,7 +37,7 @@ export function useToday() {
     // changeKey: only when the words to add or remove change.
   }, [changeKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const counts = useMemo(() => todayProgress(progress.stats), [progress.stats]);
+  const counts = useMemo(() => todayProgress(progress.stats, Math.max(now, Date.now())), [progress.stats, now]);
 
-  return { ready, error, bank, lang, plan, setPlan, info, counts, stats: progress.stats, progress };
+  return { ready, error, bank, lang, plan, setPlan, info, counts, now, stats: progress.stats, progress };
 }

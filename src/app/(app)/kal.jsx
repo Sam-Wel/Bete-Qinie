@@ -157,7 +157,7 @@ export default function Kal() {
   if (error) {
     return (
       <ScreenContainer>
-        <Text style={{ ...typography.body, color: colors.danger }}>{error}</Text>
+        <Text style={{ ...typography.body, color: colors.dangerDark }}>{error}</Text>
       </ScreenContainer>
     );
   }

@@ -46,7 +46,7 @@ export default function More() {
                 icon={item.icon}
                 title={item.title}
                 english={item.english}
-                badge={badges[item.badge] ? <DueBadge count={badges[item.badge]} suffix={item.badge === "due" ? " due" : " to do"} /> : null}
+                badge={badges[item.badge] ? <DueBadge count={badges[item.badge]} suffix={item.badge === "due" ? " due" : " to do"} calm={item.badge === "today" && !badges.due} /> : null}
                 last={i === group.items.length - 1}
                 onPress={() => router.navigate(item.href)}
               />
