@@ -16,7 +16,7 @@ export function CanonArch({ children, style }) {
   const band = `M0 ${RISE} A${rx} ${RISE - 6} 0 0 1 ${w} ${RISE} L${w - BAND} ${RISE} A${rx - BAND} ${RISE - 6 - BAND} 0 0 0 ${BAND} ${RISE} Z`;
   const dots = Array.from({ length: 9 }, (_, i) => {
     const a = Math.PI - ((i + 1) / 10) * Math.PI;
-    return { x: rx + (rx - BAND / 2) * Math.cos(a), y: RISE - (RISE - 6 - BAND / 2) * Math.sin(a), c: i % 2 ? colors.malachite : colors.lapis };
+    return { x: rx + (rx - BAND / 2) * Math.cos(a), y: RISE - (RISE - 6 - BAND / 2) * Math.sin(a), c: colors.rubric };
   });
   return (
     <View style={style} onLayout={(e) => setW(Math.round(e.nativeEvent.layout.width))}>

@@ -13,8 +13,6 @@ export const palettes = {
     accentLight: "#F4DCD3",
     rubric: "#A23B26", // red for ግዕዝ headwords and their labels, as the books print them
     // Pigments of the books, for ornament only (ሐረግ bands, arches, gold leaf); never text.
-    lapis: "#2F4E8C",
-    malachite: "#3E7A4F",
     ochre: "#D9A13B",
     gold: "#C99A2E",
     soot: "#2B2013",
@@ -60,8 +58,6 @@ export const palettes = {
     accentDark: "#EE9A84",
     accentLight: "#3E1F17",
     rubric: "#DE6A50", // 5.2:1 on surface; accent is too faint for small text here
-    lapis: "#6D8CD0",
-    malachite: "#79B386",
     ochre: "#E6B95A",
     gold: "#DDB24E",
     soot: "#0B0805",

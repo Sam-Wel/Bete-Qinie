@@ -5,9 +5,9 @@ import { colors } from "../../theme";
 
 // A cubic Bézier that matches half a sine wave puts its control points this far along.
 const K = 4 / (3 * Math.PI);
-const CROSS = "#FFF7E6";
 
-const BOOK = () => ({ a: colors.rubric, b: colors.ochre, dots: [colors.lapis, colors.malachite], rule: colors.rubric, outline: colors.soot });
+// Two pigments only, red and gold, the pair the books illuminate with most.
+const BOOK = () => ({ a: colors.rubric, b: colors.ochre, dots: [colors.ochre, colors.rubric], rule: colors.rubric, outline: colors.soot });
 const GOLD = () => ({ a: colors.gold, b: colors.ochre, dots: [colors.gold, colors.ochre], rule: colors.gold, outline: colors.soot });
 
 // One strand of the braid: half waves of length `half`, alternately above and below the middle.
@@ -61,14 +61,15 @@ function Braid({ length, t, p, clipId }) {
   );
 }
 
-// Painted squares in the four pigments, each with a cross, between two red rules.
+// Squares painted red and gold in turn, each with a cross in the other colour, between
+// two red rules.
 function Checker({ length, t, p }) {
   const rule = Math.max(1, t * 0.07);
   const top = rule * 2;
   const inner = t - rule * 4;
   const count = Math.max(1, Math.round(length / inner));
   const w = length / count;
-  const fills = [p.a, p.b, p.dots[1], p.dots[0]];
+  const fills = [p.a, p.b];
   const arm = inner * 0.26;
   const bar = Math.max(1, inner * 0.14);
   return (
@@ -79,9 +80,9 @@ function Checker({ length, t, p }) {
         const cy = top + inner / 2;
         return (
           <G key={i}>
-            <Rect x={i * w} y={top} width={w} height={inner} fill={fills[i % 4]} stroke={p.outline} strokeWidth={0.8} />
-            <Rect x={cx - arm} y={cy - bar / 2} width={arm * 2} height={bar} fill={CROSS} />
-            <Rect x={cx - bar / 2} y={cy - arm} width={bar} height={arm * 2} fill={CROSS} />
+            <Rect x={i * w} y={top} width={w} height={inner} fill={fills[i % 2]} stroke={p.outline} strokeWidth={0.8} />
+            <Rect x={cx - arm} y={cy - bar / 2} width={arm * 2} height={bar} fill={fills[(i + 1) % 2]} />
+            <Rect x={cx - bar / 2} y={cy - arm} width={bar} height={arm * 2} fill={fills[(i + 1) % 2]} />
           </G>
         );
       })}
@@ -95,12 +96,12 @@ function Pearls({ length, t, p }) {
   const step = r * 4;
   const count = Math.max(1, Math.floor(length / step));
   const start = (length - (count - 1) * step) / 2;
-  const fills = [p.a, p.b, p.dots[1], p.dots[0]];
+  const fills = [p.a, p.b];
   return (
     <>
       <Path d={`M0 0.5 H${length} M0 ${t - 0.5} H${length}`} stroke={p.rule} strokeWidth={1} />
       {Array.from({ length: count }, (_, i) => (
-        <Circle key={i} cx={start + i * step} cy={t / 2} r={r} fill={fills[i % 4]} />
+        <Circle key={i} cx={start + i * step} cy={t / 2} r={r} fill={fills[i % 2]} />
       ))}
     </>
   );
