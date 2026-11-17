@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { useWindowDimensions } from "../../hooks/useWindowDimensions";
 import Animated, {
   FadeIn,
   FadeOut,

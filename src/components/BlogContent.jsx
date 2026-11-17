@@ -1,4 +1,4 @@
-import { useWindowDimensions } from "react-native";
+import { useWindowDimensions } from "../hooks/useWindowDimensions";
 import RenderHtml from "react-native-render-html";
 import { toHtmlSource } from "../util/renderBlogContent";
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useWindowDimensions } from "../hooks/useWindowDimensions";
 import { helpFor } from "../lib/help";
 import { colors, fontFamily, radii, spacing, typography } from "../theme";
 import { Button } from "./ui/Button";

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Platform, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Platform, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { useWindowDimensions } from "../../hooks/useWindowDimensions";
 import { ScreenContainer, Button, Tabs } from "../../components/ui";
 import { KalBoard, KalLegend, MARK_COLORS, consonantsOf } from "../../components/games/KalBoard";
 import { KalRootBoard, KalRootLegend } from "../../components/games/KalRootBoard";

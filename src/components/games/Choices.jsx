@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useWindowDimensions } from "../../hooks/useWindowDimensions";
 import { colors, radii, spacing, typography } from "../../theme";
 import { scriptFont, scriptFontBold } from "../verbQuiz/shared";
 import { AnswerMotion } from "./AnswerMotion";

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useWindowDimensions } from "../../hooks/useWindowDimensions";
 import Svg, { Circle, Line } from "react-native-svg";
 import { CrossMenuIcon } from "../ui/CrossMenuIcon";
 import { LANGUAGE_LABEL } from "../../lib/verbQuiz";

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Modal, PanResponder, Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Modal, PanResponder, Platform, Pressable, StyleSheet, View } from "react-native";
+import { useWindowDimensions } from "../../hooks/useWindowDimensions";
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, radii, spacing } from "../../theme";

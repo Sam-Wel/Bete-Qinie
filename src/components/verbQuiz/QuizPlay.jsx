@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useWindowDimensions } from "../../hooks/useWindowDimensions";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { ReportMistake } from "../ReportMistake";
 import { AnswerMotion } from "../games/AnswerMotion";
