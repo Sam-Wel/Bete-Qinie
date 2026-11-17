@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Link, router, useLocalSearchParams } from "expo-router";
 import { ScreenContainer, EmptyState } from "../../../components/ui";
 import { LoopPlayer } from "../../../components/LoopPlayer";
+import { Harag } from "../../../components/manuscript/Harag";
+import { toGeez } from "../../../lib/geezNumerals";
 import { QINE_BY_ID, typeName } from "../../../data/qine";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../../theme";
 
@@ -28,9 +30,10 @@ export default function Qine() {
     <ScreenContainer enter="slide" scroll contentContainerStyle={styles.page}>
       <View style={[styles.textCard, shadows.card]}>
         <Text style={styles.meta}>
-          {typeName(qine.type)} · {qine.zema} · {qine.number}
+          {typeName(qine.type)} · {qine.zema} · {toGeez(qine.number)}
         </Text>
         <Text style={styles.title}>{qine.title}</Text>
+        <Harag thickness={12} />
         <View style={styles.lines}>
           {qine.lines.map((line, i) => {
             const timed = line.start != null && line.end != null;
@@ -77,7 +80,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   meta: { fontFamily: fontFamily.ethiopicRegular, fontSize: 13, color: colors.textMuted, textAlign: "center" },
-  title: { fontFamily: fontFamily.ethiopicBold, fontSize: 26, lineHeight: 38, color: colors.primaryDark, textAlign: "center" },
+  title: { fontFamily: fontFamily.ethiopicBold, fontSize: 26, lineHeight: 38, color: colors.rubric, textAlign: "center" },
   lines: { gap: spacing.sm },
   lineRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.sm, borderRadius: radii.md },
   lineOn: { backgroundColor: colors.primaryLight },

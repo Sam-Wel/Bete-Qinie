@@ -1,3 +1,5 @@
+import { toGeez } from "./geezNumerals";
+
 export const LINE_TYPES = [
   { key: "wedaqi", label: "ወዳቂ" },
   { key: "tetay", label: "ተጣይ" },
@@ -9,7 +11,7 @@ export const TYPE_KEYS = LINE_TYPES.map((t) => t.key);
 export const TYPE_LABEL = Object.fromEntries(LINE_TYPES.map((t) => [t.key, t.label]));
 
 export const NOT_ALLOWED = "አይአቱን";
-export const ORDINALS = ["፩", "፪", "፫", "፬", "፭", "፮", "፯", "፰", "፱", "፲", "፲፩", "፲፪"];
+export const ORDINALS = Array.from({ length: 12 }, (_, i) => toGeez(i + 1)); // ፩ … ፲፪
 
 export const MEASURE_SOURCES = [
   { key: "medeb", label: "መደብ" },

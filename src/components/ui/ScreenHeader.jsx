@@ -1,9 +1,10 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon } from "./Icon";
 import { colors, spacing, typography } from "../../theme";
-import { OrnamentDivider } from "./OrnamentDivider";
+import { Harag } from "../manuscript/Harag";
 
-export function ScreenHeader({ title, titleEthiopic = false, onBack, right, style }) {
+// rubric: the title in red, as the books write the openings of their readings.
+export function ScreenHeader({ title, titleEthiopic = false, rubric = false, onBack, right, style }) {
   return (
     <View style={[styles.wrapper, style]}>
       <View style={styles.container}>
@@ -14,11 +15,11 @@ export function ScreenHeader({ title, titleEthiopic = false, onBack, right, styl
               <Text style={styles.backText}>Back</Text>
             </Pressable>
           ) : null}
-          <Text style={titleEthiopic ? styles.titleEthiopic : styles.title}>{title}</Text>
+          <Text style={[titleEthiopic ? styles.titleEthiopic : styles.title, rubric && { color: colors.rubric }]}>{title}</Text>
         </View>
         {right ? <View>{right}</View> : null}
       </View>
-      <OrnamentDivider style={styles.divider} />
+      <Harag thickness={12} style={styles.divider} />
     </View>
   );
 }

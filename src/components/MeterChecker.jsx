@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useWindowDimensions } from "../hooks/useWindowDimensions";
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { OrnamentDivider } from "./ui/OrnamentDivider";
+import { Harag } from "./manuscript/Harag";
 import { MeterPicker, rememberMeter } from "./MeterPicker";
 import { colors, fontFamily, gradients, radii, shadows, spacing, typography } from "../theme";
 import {
@@ -481,7 +483,7 @@ export function MeterChecker() {
 
       {complete ? (
         <Animated.View entering={FadeIn.duration(320)} style={styles.finale}>
-          <OrnamentDivider />
+          <Harag thickness={14} />
           <Text style={styles.finaleTitle}>It fits</Text>
           <Text style={styles.finaleSubtitle}>All lines fit {meter.title}.</Text>
 
@@ -503,7 +505,7 @@ export function MeterChecker() {
               </View>
             );
           })}
-          <OrnamentDivider style={{ marginTop: spacing.md }} />
+          <Harag thickness={12} style={{ marginTop: spacing.md }} />
 
           {user ? (
             <View style={styles.save}>

@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { ScreenContainer, Icon } from "../../components/ui";
+import { Harag } from "../../components/manuscript/Harag";
 import { CrossMenuIcon } from "../../components/ui/CrossMenuIcon";
 import { useGameScores } from "../../hooks/useGameScores";
 import { useBadges } from "../../hooks/useDueCount";
@@ -105,6 +106,7 @@ export default function Games() {
 
   return (
     <ScreenContainer scroll contentContainerStyle={styles.page}>
+      <Harag thickness={14} />
       <View style={styles.topRow}>
         <Pressable
           onPress={() => router.push("/kal")}

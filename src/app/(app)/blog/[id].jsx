@@ -84,7 +84,7 @@ export default function BlogPostDetail() {
   return (
     <ScreenContainer enter="slide" scroll>
       <Stack.Screen options={{ title: post.title }} />
-      <ScreenHeader title={post.title} titleEthiopic />
+      <ScreenHeader title={post.title} titleEthiopic rubric />
 
       {post.is_published === false && (
         <Badge label="Draft (only visible to you)" tone="warning" />

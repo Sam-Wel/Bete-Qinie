@@ -2,6 +2,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
 import { ScreenContainer, Icon } from "../../../components/ui";
 import { QINE, QINE_TYPES } from "../../../data/qine";
+import { Harag } from "../../../components/manuscript/Harag";
+import { toGeez } from "../../../lib/geezNumerals";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../../theme";
 
 // ዜማ: ቅኔ to listen to, grouped by type. Each opens with its text and audio.
@@ -14,6 +16,7 @@ export default function ZemaList() {
       {groups.map((g) => (
         <View key={g.key} style={styles.group}>
           <Text style={styles.groupTitle}>{g.name}</Text>
+          <Harag thickness={10} />
           {g.items
             .sort((a, b) => a.number - b.number)
             .map((q) => (
@@ -21,7 +24,7 @@ export default function ZemaList() {
               <Pressable accessibilityRole="link">
                 <View style={styles.row}>
                 <View style={styles.number}>
-                  <Text style={styles.numberText}>{q.number}</Text>
+                  <Text style={styles.numberText}>{toGeez(q.number)}</Text>
                 </View>
                 <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                   <Text style={styles.title}>{q.title}</Text>
