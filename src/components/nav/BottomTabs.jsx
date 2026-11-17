@@ -7,6 +7,7 @@ import { useBadges } from "../../hooks/useDueCount";
 import { NAV_GROUPS, TABS } from "../../lib/navigation";
 import { colors, fontFamily, radii } from "../../theme";
 import { Icon } from "../ui/Icon";
+import { Harag } from "../manuscript/Harag";
 
 const IN_TABS = new Set(TABS.map((t) => t.route));
 const SECTION_ROUTES = new Set(NAV_GROUPS.flatMap((g) => g.items.map((i) => i.route)));
@@ -38,6 +39,7 @@ export function BottomTabs({ section }) {
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.bar}>
+      <Harag pattern="pearls" thickness={7} />
       <View style={styles.row} accessibilityRole="tablist" onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}>
         {rowWidth && pillY != null && index >= 0 ? (
           <Animated.View pointerEvents="none" style={[styles.glide, { top: ROW_TOP + pillY }, glide]} />
@@ -77,7 +79,7 @@ const ROW_TOP = 6;
 const PILL_W = 56;
 
 const styles = StyleSheet.create({
-  bar: { backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
+  bar: { backgroundColor: colors.surface },
   row: { flexDirection: "row", paddingTop: ROW_TOP, paddingBottom: 8, paddingHorizontal: ROW_PAD },
   tab: { flex: 1, alignItems: "center", gap: 3, minHeight: 50, justifyContent: "center" },
   pill: { width: PILL_W, height: 30, borderRadius: radii.pill, alignItems: "center", justifyContent: "center" },

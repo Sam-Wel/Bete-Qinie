@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   bar: {
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.rubric,
     boxShadow: `inset 0 -2px 0 ${colors.primaryLight}`,
   },
   column: {

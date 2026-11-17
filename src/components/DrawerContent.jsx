@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.latinSemiBold,
     fontSize: 11,
     letterSpacing: 1,
-    color: colors.textSecondary,
+    color: colors.rubric,
     paddingHorizontal: 10,
     paddingBottom: 6,
   },

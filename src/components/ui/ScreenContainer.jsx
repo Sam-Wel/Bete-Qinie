@@ -3,6 +3,9 @@ import { Animated, Easing, KeyboardAvoidingView, Platform, ScrollView, StyleShee
 import { useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { Harag } from "../manuscript/Harag";
+import { Parchment } from "../manuscript/Parchment";
+import { useWidthAtLeast } from "../../hooks/useIsWide";
 import { gradients, spacing } from "../../theme";
 import { useReducedMotion } from "../../lib/motion";
 
@@ -52,6 +55,8 @@ export function ScreenContainer({
   children,
 }) {
   const enter = useEnterAnimation(enterKind);
+  // ሐረግ margins down both edges, where the window leaves room beside the column.
+  const margins = useWidthAtLeast(1120);
   const content = scroll ? (
     <ScrollView
       style={{ flex: 1 }}
@@ -94,6 +99,13 @@ export function ScreenContainer({
   const wrapped = (
     <View style={[{ flex: 1 }, style]}>
       <LinearGradient colors={gradients.parchmentBackground} style={StyleSheet.absoluteFillObject} />
+      <Parchment />
+      {margins ? (
+        <>
+          <Harag vertical thickness={14} style={{ position: "absolute", top: 0, bottom: 0, left: 14 }} />
+          <Harag vertical thickness={14} style={{ position: "absolute", top: 0, bottom: 0, right: 14 }} />
+        </>
+      ) : null}
       <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: "transparent" }}>
         <Animated.View style={[{ flex: 1 }, enter]}>{content}</Animated.View>
       </SafeAreaView>

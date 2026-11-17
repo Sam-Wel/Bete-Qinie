@@ -89,9 +89,27 @@ function Checker({ length, t, p }) {
   );
 }
 
+// A thin cord for tight places (the tab bar): two red rules with painted pearls between.
+function Pearls({ length, t, p }) {
+  const r = Math.max(1, ((t - 4) / 2) * 0.8);
+  const step = r * 4;
+  const count = Math.max(1, Math.floor(length / step));
+  const start = (length - (count - 1) * step) / 2;
+  const fills = [p.a, p.b, p.dots[1], p.dots[0]];
+  return (
+    <>
+      <Path d={`M0 0.5 H${length} M0 ${t - 0.5} H${length}`} stroke={p.rule} strokeWidth={1} />
+      {Array.from({ length: count }, (_, i) => (
+        <Circle key={i} cx={start + i * step} cy={t / 2} r={r} fill={fills[i % 4]} />
+      ))}
+    </>
+  );
+}
+
 // ሐረግ: the woven bands that open chapters in Ethiopian books, drawn as SVG across
 // whatever length it is given, so it stays sharp and weighs a few KB. pattern "braid"
-// (two strands over and under) or "checker" (painted squares with crosses); vertical
+// (two strands over and under), "checker" (painted squares with crosses) or "pearls"
+// (a thin cord, for bands under 10 px); vertical
 // bands run down the page's edges. tone "gold" gilds it. Decoration only, so screen
 // readers skip it.
 export function Harag({ pattern = "braid", thickness = 14, vertical = false, tone = "book", style }) {
@@ -112,7 +130,13 @@ export function Harag({ pattern = "braid", thickness = 14, vertical = false, ton
       {length > 0 ? (
         <Svg width={vertical ? t : length} height={vertical ? length : t}>
           <G transform={vertical ? `translate(${t},0) rotate(90)` : undefined}>
-            {pattern === "checker" ? <Checker length={length} t={t} p={p} /> : <Braid length={length} t={t} p={p} clipId={clipId} />}
+            {pattern === "checker" ? (
+              <Checker length={length} t={t} p={p} />
+            ) : pattern === "pearls" ? (
+              <Pearls length={length} t={t} p={p} />
+            ) : (
+              <Braid length={length} t={t} p={p} clipId={clipId} />
+            )}
           </G>
         </Svg>
       ) : null}

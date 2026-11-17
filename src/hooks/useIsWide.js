@@ -9,6 +9,15 @@ const subscribe = (onChange) => {
   return () => sub?.remove?.();
 };
 
+// Whether the window is at least `px` wide; false while the pre-built page hydrates.
+export function useWidthAtLeast(px) {
+  return useSyncExternalStore(
+    subscribe,
+    () => Dimensions.get("window").width >= px,
+    () => false
+  );
+}
+
 // The pre-rendered web page has no window size, so hydration starts with the
 // phone layout (server snapshot) and switches right after if the screen is wide.
 export function useIsWide() {
