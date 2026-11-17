@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useWindowDimensions } from "../hooks/useWindowDimensions";
 import { router } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 import { useWordProgress } from "../context/WordProgressContext";
@@ -35,9 +36,9 @@ function EditLink({ id }) {
   );
 }
 
-// look "manuscript" (the sample page, for now): a ሐረግ opens the entry, the headword is
-// in the book face `headFont`, and the ርባታ stands open under a canon arch.
-export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples = [], languageMap = {}, look, headFont }) {
+// A ሐረግ opens the entry and the ርባታ stands under a canon arch (look "manuscript", the
+// default; "plain" leaves both out). formsOpen shows the ርባታ already open.
+export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples = [], languageMap = {}, look = "manuscript", formsOpen = false }) {
   const progress = useWordProgress();
   const { canEdit } = useAuth();
   const saved = Boolean(geezId && progress.stats[geezId]?.saved);
@@ -50,7 +51,7 @@ export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples =
     <View style={styles.card}>
       {look === "manuscript" ? <Harag pattern="checker" thickness={13} /> : null}
       <View style={styles.wordRow}>
-        <Text style={[styles.word, tag === "ግዕዝ" && styles.geezWord, headFont && { fontFamily: headFont, fontSize: 36, lineHeight: 50 }]}>{word}</Text>
+        <Text style={[styles.word, tag === "ግዕዝ" && styles.geezWord]}>{word}</Text>
         {tag ? <Text style={styles.tag}>{tag}</Text> : null}
         {geezId ? (
           <Pressable
@@ -101,7 +102,7 @@ export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples =
         <Text style={styles.none}>No translations yet.</Text>
       )}
 
-      {tag === "ግዕዝ" ? <LexiconSection word={word} look={look} /> : null}
+      {tag === "ግዕዝ" ? <LexiconSection word={word} look={look} formsOpen={formsOpen} /> : null}
 
       {examples.length ? (
         <View style={styles.examples}>

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useWindowDimensions } from "../../hooks/useWindowDimensions";
 import Animated, {
   Extrapolation,
   interpolate,
@@ -9,10 +10,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
-import { useFonts } from "expo-font";
-import { AbyssinicaSIL_400Regular } from "@expo-google-fonts/abyssinica-sil";
-import { NotoSerifEthiopic_700Bold } from "@expo-google-fonts/noto-serif-ethiopic";
-import { Button, Tabs } from "../../components/ui";
+import { Button } from "../../components/ui";
 import { WordCard } from "../../components/WordCard";
 import { ART } from "../../components/manuscript/art";
 import { GoldLeaf } from "../../components/manuscript/GoldLeaf";
@@ -26,13 +24,6 @@ import { toGeez } from "../../lib/geezNumerals";
 import { useReducedMotion } from "../../lib/motion";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
-// The book faces to compare. Abyssinica SIL follows the traditional hand of the books.
-const FONTS = [
-  { key: "abyssinica", label: "Abyssinica SIL", family: "AbyssinicaSIL_400Regular" },
-  { key: "noto", label: "Noto Serif", family: "NotoSerifEthiopic_700Bold" },
-  { key: "menbere", label: "Menbere", family: fontFamily.ethiopicBold },
-];
-
 const CHAPTERS = [
   { n: 1, title: "ቅኔ ቤት", english: "The school" },
   { n: 2, title: "መጻሕፍት", english: "The books" },
@@ -43,16 +34,13 @@ const STEPS = ["Review the words that are due", "Learn today's 20 words", "Play 
 const SEBERE = { ti: ["ሰበረ"], am: ["ሰበረ"], en: ["break", "shatter"] };
 
 // ናሙና: one page showing the manuscript look before any of it reaches the app: three
-// scenes with real paintings (the camera moves, the figures never do), the book face,
-// ሐረግ bands, ግዕዝ numerals, and the everyday parts (a word card, ዛሬ's steps and its
+// scenes with real paintings (the camera moves, the figures never do), ሐረግ bands, ግዕዝ numerals, and the everyday parts (a word card, ዛሬ's steps and its
 // weaving progress band). "Read as a page" (and Reduce Motion) turns it into a plain,
 // still article. Not linked from any menu.
 export default function Sample() {
   const wide = useIsWide();
   const reduced = useReducedMotion();
   const { height: vh } = useWindowDimensions();
-  const [fontsLoaded] = useFonts({ AbyssinicaSIL_400Regular, NotoSerifEthiopic_700Bold });
-  const [font, setFont] = useState("abyssinica");
   const [pageMode, setPageMode] = useState(null); // null: follow Reduce Motion
   const plain = pageMode ?? reduced;
   const [tops, setTops] = useState([0, 0, 0]);
@@ -61,8 +49,7 @@ export default function Sample() {
   const scrollRef = useRef(null);
   const scrollY = useSharedValue(0);
 
-  const chosen = FONTS.find((f) => f.key === font);
-  const display = fontsLoaded || font === "menbere" ? chosen.family : fontFamily.ethiopicBold;
+  const display = fontFamily.ethiopicBold;
 
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
@@ -122,7 +109,6 @@ export default function Sample() {
             )}
             <PageSwitch on={plain} onChange={() => setPageMode(!plain)} />
           </View>
-          <Tabs tabs={FONTS} value={font} onChange={setFont} style={styles.fontTabs} />
         </View>
 
         <Scene
@@ -164,7 +150,7 @@ export default function Sample() {
             The same book on every page of the app: a ሐረግ opens each entry, ግዕዝ headwords are written in red, and the ርባታ
             stands under an arch, like the canon tables of a Gospel book.
           </Text>
-          <WordCard word="ሰበረ" meanings={SEBERE} look="manuscript" headFont={display} />
+          <WordCard word="ሰበረ" meanings={SEBERE} formsOpen />
           <TodayDemo display={display} />
         </Scene>
 
@@ -304,7 +290,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.rubric,
   },
-  fontTabs: { marginBottom: 0, borderBottomWidth: 0 },
   topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md },
 
   scene: { paddingTop: spacing.xxl + 8, gap: spacing.md },

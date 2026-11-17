@@ -26,8 +26,8 @@ function Forms({ lexId }) {
   );
 }
 
-function LexiconWord({ word, showGloss, look }) {
-  const [open, setOpen] = useState(look === "manuscript");
+function LexiconWord({ word, showGloss, look, formsOpen = false }) {
+  const [open, setOpen] = useState(formsOpen);
   const heads = headsOf(word);
   return (
     <View style={styles.word}>
@@ -67,7 +67,7 @@ function LexiconWord({ word, showGloss, look }) {
 // What the book (መጽሐፈ ግስ ወሰዋስው) says about a verb: the head it follows and its
 // printed forms. Shown on Dictionary and ግሲ word cards when the live lexicon release
 // has the word; nothing is shown otherwise. The source and data version are on the About page.
-export function LexiconSection({ word, look }) {
+export function LexiconSection({ word, look, formsOpen }) {
   const { lexicon } = useLexicon();
   const matches = lookup(lexicon, word);
   if (!matches.length) return null;
@@ -75,7 +75,7 @@ export function LexiconSection({ word, look }) {
     <View style={styles.section}>
       <OrnamentDivider />
       {matches.map((m) => (
-        <LexiconWord key={m.id} word={m} showGloss={matches.length > 1} look={look} />
+        <LexiconWord key={m.id} word={m} showGloss={matches.length > 1} look={look} formsOpen={formsOpen} />
       ))}
     </View>
   );
