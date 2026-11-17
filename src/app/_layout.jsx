@@ -10,6 +10,11 @@ import { ToastHost, toast } from "../components/Toast";
 
 SplashScreen.preventAutoHideAsync();
 
+// Native apps wait for the fonts before drawing. The web doesn't: its fonts are WOFF2 files
+// declared in +html.jsx that swap in when they arrive, so the pre-built page shows at once.
+const WEB = Platform.OS === "web";
+const NATIVE_FONTS = WEB ? {} : { Menbere_400Regular, Menbere_600SemiBold, Menbere_700Bold };
+
 // Losing and finding the connection, said once each time (answers are kept on the
 // device meanwhile and sent when it's back).
 function ConnectionToasts() {
@@ -39,19 +44,21 @@ function PasswordRecoveryRedirect() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({
-    Menbere_400Regular,
-    Menbere_600SemiBold,
-    Menbere_700Bold,
-  });
+  const [fontsLoaded, fontError] = useFonts(NATIVE_FONTS);
+  const ready = WEB || fontsLoaded || fontError;
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
+    if (ready) SplashScreen.hideAsync();
+  }, [ready]);
 
-  if (!fontsLoaded && !fontError) {
+  // Wide screens hide the pre-built phone layout (see +html.jsx) until the real one is
+  // drawn: two frames after the app first renders, by which time the width is known.
+  useEffect(() => {
+    if (!WEB || typeof document === "undefined") return;
+    requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.setAttribute("data-ready", "")));
+  }, []);
+
+  if (!ready) {
     return null;
   }
 
