@@ -6,6 +6,7 @@ import { LexiconSection } from "./LexiconSection";
 import { ReportMistake } from "./ReportMistake";
 import { toast } from "./Toast";
 import { Icon } from "./ui/Icon";
+import { Harag } from "./manuscript/Harag";
 import { colors, fontFamily, radii, spacing, typography } from "../theme";
 
 const ETHIOPIC = /[ሀ-፿]/;
@@ -34,7 +35,9 @@ function EditLink({ id }) {
   );
 }
 
-export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples = [], languageMap = {} }) {
+// look "manuscript" (the sample page, for now): a ሐረግ opens the entry, the headword is
+// in the book face `headFont`, and the ርባታ stands open under a canon arch.
+export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples = [], languageMap = {}, look, headFont }) {
   const progress = useWordProgress();
   const { canEdit } = useAuth();
   const saved = Boolean(geezId && progress.stats[geezId]?.saved);
@@ -45,8 +48,9 @@ export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples =
 
   return (
     <View style={styles.card}>
+      {look === "manuscript" ? <Harag pattern="checker" thickness={13} /> : null}
       <View style={styles.wordRow}>
-        <Text style={[styles.word, tag === "ግዕዝ" && styles.geezWord]}>{word}</Text>
+        <Text style={[styles.word, tag === "ግዕዝ" && styles.geezWord, headFont && { fontFamily: headFont, fontSize: 36, lineHeight: 50 }]}>{word}</Text>
         {tag ? <Text style={styles.tag}>{tag}</Text> : null}
         {geezId ? (
           <Pressable
@@ -97,7 +101,7 @@ export function WordCard({ word, tag = "ግዕዝ", geezId, meanings, examples =
         <Text style={styles.none}>No translations yet.</Text>
       )}
 
-      {tag === "ግዕዝ" ? <LexiconSection word={word} /> : null}
+      {tag === "ግዕዝ" ? <LexiconSection word={word} look={look} /> : null}
 
       {examples.length ? (
         <View style={styles.examples}>

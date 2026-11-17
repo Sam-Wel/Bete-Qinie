@@ -51,6 +51,7 @@ const EXTRA_PAGES = {
   heads: GAME("ርእስ", "Heads"),
   account: { title: "Account" },
   about: { title: "ስለ ቤተ ቅኔ", english: "About" },
+  sample: { title: "ናሙና", english: "Manuscript sample" },
   more: { title: "ቤተ ቅኔ", english: "Everything in the app" },
 };
 

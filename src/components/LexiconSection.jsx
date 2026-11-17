@@ -5,6 +5,7 @@ import { bookGloss, formsByName, headsOf, lookup } from "../lib/lexicon";
 import { colors, fontFamily, radii, spacing, typography } from "../theme";
 import { Icon } from "./ui/Icon";
 import { OrnamentDivider } from "./ui/OrnamentDivider";
+import { CanonArch } from "./manuscript/CanonArch";
 
 // The book's ርባታ of one lexicon word: its printed forms grouped by name, loaded on open.
 function Forms({ lexId }) {
@@ -25,8 +26,8 @@ function Forms({ lexId }) {
   );
 }
 
-function LexiconWord({ word, showGloss }) {
-  const [open, setOpen] = useState(false);
+function LexiconWord({ word, showGloss, look }) {
+  const [open, setOpen] = useState(look === "manuscript");
   const heads = headsOf(word);
   return (
     <View style={styles.word}>
@@ -50,7 +51,15 @@ function LexiconWord({ word, showGloss }) {
         </Pressable>
       </View>
       {word.openQuestions.length ? <Text style={styles.note}>Some of this entry is still being checked.</Text> : null}
-      {open ? <Forms lexId={word.id} /> : null}
+      {open ? (
+        look === "manuscript" ? (
+          <CanonArch>
+            <Forms lexId={word.id} />
+          </CanonArch>
+        ) : (
+          <Forms lexId={word.id} />
+        )
+      ) : null}
     </View>
   );
 }
@@ -58,7 +67,7 @@ function LexiconWord({ word, showGloss }) {
 // What the book (መጽሐፈ ግስ ወሰዋስው) says about a verb: the head it follows and its
 // printed forms. Shown on Dictionary and ግሲ word cards when the live lexicon release
 // has the word; nothing is shown otherwise. The source and data version are on the About page.
-export function LexiconSection({ word }) {
+export function LexiconSection({ word, look }) {
   const { lexicon } = useLexicon();
   const matches = lookup(lexicon, word);
   if (!matches.length) return null;
@@ -66,7 +75,7 @@ export function LexiconSection({ word }) {
     <View style={styles.section}>
       <OrnamentDivider />
       {matches.map((m) => (
-        <LexiconWord key={m.id} word={m} showGloss={matches.length > 1} />
+        <LexiconWord key={m.id} word={m} showGloss={matches.length > 1} look={look} />
       ))}
     </View>
   );
