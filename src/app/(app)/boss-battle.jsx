@@ -13,6 +13,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { Button, Icon } from "../../components/ui";
 import { CrossMenuIcon } from "../../components/ui/CrossMenuIcon";
+import { LightRays } from "../../components/manuscript/LightRays";
+import { useLabPiece } from "../../hooks/useLab";
 import { FocusPicker, GameFrame, LanguagePicker, StartCard } from "../../components/games/GameFrame";
 import { Choices } from "../../components/games/Choices";
 import { GameResults } from "../../components/games/GameResults";
@@ -22,6 +24,9 @@ import { useVerbGame } from "../../hooks/useVerbGame";
 import { BOSSES, PLAYER_HP, attack, battleState, newBattle, nextBoss, questionFor } from "../../lib/verbGames";
 import { LANGUAGE_LABEL, pickWords, wordsInScope } from "../../lib/verbQuiz";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
+
+// The victory light's size (the lab's light rays behind the cross).
+const RAYS = 200;
 
 const NIGHT = "#17110a";
 const GOLD = "#e0a52a";
@@ -89,6 +94,8 @@ export default function BossBattle() {
   const timer = useRef(null);
   // Phones get a shorter arena so all four answers stay on screen.
   const compact = useWindowDimensions().width < 520;
+  const victoryLight = useLabPiece("victoryLight");
+  const cross = compact ? 56 : 72;
   const stats = useRef({ right: 0, asked: 0, bossesBeaten: 0, bestCombo: 0 });
 
   // Idle bob for the boss, plus hit and lunge motions.
@@ -247,7 +254,12 @@ export default function BossBattle() {
               {/* The cross rises over the beaten adversary. */}
               {phase === "victory" ? (
                 <Animated.View entering={ZoomIn.duration(600)} style={styles.victoryCross}>
-                  <CrossMenuIcon size={compact ? 56 : 72} color={GOLD} ground={NIGHT} />
+                  {victoryLight ? (
+                    <View pointerEvents="none" style={[styles.rays, { left: (cross - RAYS) / 2, top: (cross - RAYS) / 2 }]}>
+                      <LightRays size={RAYS} color={GOLD} />
+                    </View>
+                  ) : null}
+                  <CrossMenuIcon size={cross} color={GOLD} ground={NIGHT} />
                 </Animated.View>
               ) : null}
             </Animated.View>
@@ -345,6 +357,7 @@ const styles = StyleSheet.create({
   lamp: { alignItems: "center", justifyContent: "flex-end", gap: 2 },
   flame: { borderRadius: 999, padding: 4 },
   lampBase: { height: 10, borderRadius: 999, backgroundColor: "#8a6a2c", borderTopWidth: 2, borderTopColor: GOLD },
+  rays: { position: "absolute" },
   victoryCross: { position: "absolute", borderRadius: 999, boxShadow: "0 0 40px rgba(224,165,42,0.8)" },
   championCross: { alignSelf: "center", marginTop: spacing.sm, borderRadius: 999, boxShadow: "0 0 32px rgba(224,165,42,0.6)" },
   encourage: { ...typography.body, color: colors.textSecondary, textAlign: "center" },

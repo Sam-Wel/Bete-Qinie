@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import Animated, { FadeInRight } from "react-native-reanimated";
 import { Button } from "../ui";
 import { ReportMistake } from "../ReportMistake";
 import { Choices } from "../games/Choices";
@@ -9,6 +8,7 @@ import { scriptFont, shared } from "../verbQuiz/shared";
 import { LANGUAGES, LANGUAGE_LABEL, LEARN_RIGHT, buildQuestion, isLearning, skipKnown } from "../../lib/verbQuiz";
 import { learnStep, requeue } from "../../lib/daily";
 import { Harag } from "../manuscript/Harag";
+import { CardEnter } from "../manuscript/FolioTurn";
 import { colors, fontFamily, radii, spacing, typography } from "../../theme";
 
 // ዛሬ's learn session: meet each new word, then answer about it until it is
@@ -71,7 +71,7 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
       <View style={styles.wrap}>
         {header}
         <View style={styles.stage}>
-        <Animated.View key={turn} entering={FadeInRight.duration(260)} style={[shared.card, styles.card]}>
+        <CardEnter key={turn} style={[shared.card, styles.card]}>
           <Harag thickness={12} />
           <Text style={styles.eyebrow}>NEW WORD</Text>
           <Text style={styles.word}>{entry.word}</Text>
@@ -96,7 +96,7 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
           >
             <Text style={styles.link}>I already know this</Text>
           </Pressable>
-        </Animated.View>
+        </CardEnter>
         </View>
       </View>
     );
@@ -136,7 +136,7 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
     <View style={styles.wrap}>
       {header}
       <View style={styles.stage}>
-      <Animated.View key={turn} entering={FadeInRight.duration(260)} style={[shared.card, styles.card]}>
+      <CardEnter key={turn} style={[shared.card, styles.card]}>
         <Harag thickness={12} />
         <Text style={styles.eyebrow}>
           {current.mode === "check" ? "PROVE IT: WHICH VERB MEANS" : q.dir === "toGeez" ? `WHICH VERB MEANS (${LANGUAGE_LABEL[lang]})` : "WHAT DOES IT MEAN?"}
@@ -166,7 +166,7 @@ export function LearnSession({ bank, lang, ids, progress, onDone }) {
             <ReportMistake wordId={entry.id} word={entry.word} />
           </View>
         ) : null}
-      </Animated.View>
+      </CardEnter>
       </View>
     </View>
   );

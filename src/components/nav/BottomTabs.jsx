@@ -8,6 +8,8 @@ import { NAV_GROUPS, TABS } from "../../lib/navigation";
 import { colors, fontFamily, radii } from "../../theme";
 import { Icon } from "../ui/Icon";
 import { Harag } from "../manuscript/Harag";
+import { LinearGradient } from "expo-linear-gradient";
+import { useLabPiece } from "../../hooks/useLab";
 
 const IN_TABS = new Set(TABS.map((t) => t.route));
 const SECTION_ROUTES = new Set(NAV_GROUPS.flatMap((g) => g.items.map((i) => i.route)));
@@ -15,6 +17,7 @@ const SECTION_ROUTES = new Set(NAV_GROUPS.flatMap((g) => g.items.map((i) => i.ro
 // Phone navigation. `section` is the current page's section; sections without
 // a tab of their own (መዐቀኒ, ዜማ, ...) light up More, where they live.
 export function BottomTabs({ section }) {
+  const goldTab = useLabPiece("goldTab");
   const badges = useBadges();
   const active = IN_TABS.has(section) ? section : SECTION_ROUTES.has(section) || section === "account" || section === "about" ? "more" : section;
 
@@ -42,7 +45,9 @@ export function BottomTabs({ section }) {
       <Harag pattern="pearls" thickness={7} />
       <View style={styles.row} accessibilityRole="tablist" onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}>
         {rowWidth && pillY != null && index >= 0 ? (
-          <Animated.View pointerEvents="none" style={[styles.glide, { top: ROW_TOP + pillY }, glide]} />
+          <Animated.View pointerEvents="none" style={[styles.glide, goldTab && styles.glideGold, { top: ROW_TOP + pillY }, glide]}>
+            {goldTab ? <LinearGradient colors={GOLD_LEAF} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} /> : null}
+          </Animated.View>
         ) : null}
         {TABS.map((tab, i) => {
           const on = active === tab.route;
@@ -56,7 +61,7 @@ export function BottomTabs({ section }) {
               style={styles.tab}
             >
               <View style={styles.pill} onLayout={i === 0 ? (e) => setPillY(e.nativeEvent.layout.y) : undefined}>
-                <Icon name={tab.icon} size={20} color={on ? colors.primaryDark : colors.textSecondary} strokeWidth={on ? 2.2 : 1.9} />
+                <Icon name={tab.icon} size={20} color={on ? (goldTab ? INK : colors.primaryDark) : colors.textSecondary} strokeWidth={on ? 2.2 : 1.9} />
                 {badges[tab.badge] ? (
                   <View style={[styles.badge, tab.badge === "today" && !badges.due && styles.badgeCalm]}>
                     <Text style={[styles.badgeText, tab.badge === "today" && !badges.due && styles.badgeTextCalm]}>
@@ -74,6 +79,10 @@ export function BottomTabs({ section }) {
   );
 }
 
+// Gold leaf for the lab's highlight, light in both themes, so the icon on it is ink-dark.
+const GOLD_LEAF = ["#F6E7B0", "#E8C766", "#D4AF37"];
+const INK = "#2B2013";
+
 const ROW_PAD = 4;
 const ROW_TOP = 6;
 const PILL_W = 56;
@@ -84,6 +93,7 @@ const styles = StyleSheet.create({
   tab: { flex: 1, alignItems: "center", gap: 3, minHeight: 50, justifyContent: "center" },
   pill: { width: PILL_W, height: 30, borderRadius: radii.pill, alignItems: "center", justifyContent: "center" },
   glide: { position: "absolute", left: 0, width: PILL_W, height: 30, borderRadius: radii.pill, backgroundColor: colors.primaryLight },
+  glideGold: { overflow: "hidden", borderWidth: 1, borderColor: "#B8860B" },
   badge: {
     position: "absolute",
     top: -2,

@@ -7,6 +7,7 @@ import { colors, fontFamily, spacing } from "../theme";
 import { Brand } from "./DrawerContent";
 import { HelpButton } from "./HelpButton";
 import { Icon } from "./ui/Icon";
+import { InkReveal } from "./manuscript/InkReveal";
 
 // Sections with pages inside them (a blog post, a chanted ቅኔ): Back returns to the list.
 const NESTED = {
@@ -49,9 +50,11 @@ export function AppHeader({ route }) {
           {back || <Brand compact />}
           <View style={{ flex: 1, minWidth: 0 }}>
             {backTo && section ? <Text style={styles.phoneSection}>{section}</Text> : null}
-            <Text style={[titleFont, styles.phoneTitle]} numberOfLines={1}>
-              {inPost ? nest.section : info.title}
-            </Text>
+            <InkReveal key={route.name} id={route.name}>
+              <Text style={[titleFont, styles.phoneTitle]} numberOfLines={1}>
+                {inPost ? nest.section : info.title}
+              </Text>
+            </InkReveal>
             {!backTo && english ? <Text style={styles.phoneEnglish}>{english}</Text> : null}
           </View>
           <HelpButton route={route.name} />
@@ -67,9 +70,11 @@ export function AppHeader({ route }) {
         <View style={{ flex: 1, minWidth: 0 }}>
           {section ? <Text style={styles.section}>{isEthiopic(section) ? section : section.toUpperCase()}</Text> : null}
           <View style={styles.titleRow}>
-            <Text style={[titleFont, styles.title]} numberOfLines={1}>
-              {inPost ? nest.section : info.title}
-            </Text>
+            <InkReveal key={route.name} id={route.name}>
+              <Text style={[titleFont, styles.title]} numberOfLines={1}>
+                {inPost ? nest.section : info.title}
+              </Text>
+            </InkReveal>
             {english && !inPost ? <Text style={styles.english}>{english}</Text> : null}
           </View>
         </View>

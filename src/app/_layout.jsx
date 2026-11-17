@@ -7,6 +7,8 @@ import { useFonts, Menbere_400Regular, Menbere_600SemiBold, Menbere_700Bold } fr
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { WordProgressProvider } from "../context/WordProgressContext";
 import { ToastHost, toast } from "../components/Toast";
+import { DesignLab } from "../components/DesignLab";
+import { BookOpening } from "../components/manuscript/BookOpening";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -74,6 +76,8 @@ export default function RootLayout() {
           <PasswordRecoveryRedirect />
           <ConnectionToasts />
           <ToastHost />
+          <BookOpening />
+          <DesignLab />
         </WordProgressProvider>
       </AuthProvider>
     </SafeAreaProvider>

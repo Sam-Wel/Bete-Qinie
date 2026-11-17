@@ -14,6 +14,8 @@ import { CleanupCard } from "../../components/today/CleanupCard";
 import { reviewPlan } from "../../lib/daily";
 import { STATE_COLORS, scriptFont, shared } from "../../components/verbQuiz/shared";
 import { Harag } from "../../components/manuscript/Harag";
+import { FolioTurn } from "../../components/manuscript/FolioTurn";
+import { useLabPiece } from "../../hooks/useLab";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
 const DAY = 24 * 3600 * 1000;
@@ -56,6 +58,7 @@ function useWordTexts(ids, bank) {
 }
 
 function Card({ wordId, word, onAnswer, stat }) {
+  const pageTurn = useLabPiece("pageTurn");
   const [shown, setShown] = useState(false);
   const [translations, setTranslations] = useState(null);
   const [examples, setExamples] = useState([]);
@@ -102,8 +105,9 @@ function Card({ wordId, word, onAnswer, stat }) {
   const ifEasy = whenLabel(applyAnswer(stat, true, Date.now(), { easy: true }).due);
   const ifWrong = whenLabel(applyAnswer(stat, false).due);
 
+  const Box = pageTurn ? FolioTurn : View;
   return (
-    <View style={[shared.card, styles.card]}>
+    <Box style={[shared.card, styles.card]}>
       <Harag thickness={12} />
       <Text style={styles.cardWord}>{word}</Text>
       {!shown ? (
@@ -151,7 +155,7 @@ function Card({ wordId, word, onAnswer, stat }) {
           {wordId ? <ReportMistake wordId={wordId} word={word} /> : null}
         </>
       )}
-    </View>
+    </Box>
   );
 }
 
