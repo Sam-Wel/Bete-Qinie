@@ -11,6 +11,8 @@ import { CountUp } from "../../components/ui/CountUp";
 import { BonePage } from "../../components/ui/Skeleton";
 import { AnnouncementBanner } from "../../components/AnnouncementBanner";
 import { ProgressBar } from "../../components/games/GameFrame";
+import { HaragProgress } from "../../components/manuscript/HaragProgress";
+import { toGeez } from "../../lib/geezNumerals";
 import { Chip, STATE_COLORS, shared } from "../../components/verbQuiz/shared";
 import { useToday } from "../../hooks/useToday";
 import { DAILY_SIZES, BACKLOG_PAUSE, hasStudied, masteredCount, nextMilestone, reviewPlan, studyStreak, upcoming } from "../../lib/daily";
@@ -31,7 +33,9 @@ function Step({ n, title, done, children }) {
     <View style={[shared.card, styles.step, done && styles.stepDone]}>
       <View style={styles.stepHead}>
         <View style={[styles.stepNumber, done && styles.stepNumberDone]}>
-          <Text style={[styles.stepNumberText, done && { color: colors.onPrimary }]}>{done ? "✓" : n}</Text>
+          <Text style={[styles.stepNumberText, done && { color: colors.onPrimary }]} accessibilityLabel={done ? `Step ${n}, done` : `Step ${n}`}>
+            {done ? "✓" : toGeez(n)}
+          </Text>
         </View>
         <Text style={styles.stepTitle}>{title}</Text>
       </View>
@@ -136,7 +140,7 @@ export default function Today() {
             <Text style={styles.heroLabel}>mastered</Text>
           </View>
         </View>
-        <ProgressBar value={counts.total ? (counts.learned + counts.skipped) / counts.total : 0} />
+        <HaragProgress value={counts.learned + counts.skipped} total={counts.total || plan.size} label="Learned today" />
         <Pressable onPress={() => setSettingsOpen((o) => !o)} hitSlop={8}>
           <Text style={styles.link}>{settingsOpen ? "Hide settings" : `${plan.size} new words a day · change`}</Text>
         </Pressable>
@@ -160,7 +164,7 @@ export default function Today() {
 
       <CleanupCard progress={progress} />
 
-      <Step n="1" title="ክለሳ: words due for review" done={reviews.left === 0 && studied}>
+      <Step n={1} title="ክለሳ: words due for review" done={reviews.left === 0 && studied}>
         {reviews.left ? (
           <>
             <Text style={shared.hint}>
@@ -183,7 +187,7 @@ export default function Today() {
         )}
       </Step>
 
-      <Step n="2" title={`Learn today's ${counts.total ? counts.total - counts.skipped : plan.size} words`} done={finished}>
+      <Step n={2} title={`Learn today's ${counts.total ? counts.total - counts.skipped : plan.size} words`} done={finished}>
         {info.paused && !counts.total ? (
           <View style={{ gap: spacing.sm }}>
             <Text style={shared.hint}>
@@ -230,7 +234,7 @@ export default function Today() {
         )}
       </Step>
 
-      <Step n="3" title="Play with today's words">
+      <Step n={3} title="Play with today's words">
         <Text style={shared.hint}>Games start on today's words; switch any game to Free play for anything else.</Text>
         <View style={styles.playList}>
           {PLAY.map((g) => (

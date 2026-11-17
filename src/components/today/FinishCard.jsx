@@ -1,17 +1,17 @@
 import { StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
 import { Button } from "../ui";
-import { Confetti } from "../Confetti";
+import { GoldLeaf } from "../manuscript/GoldLeaf";
 import { shared } from "../verbQuiz/shared";
 import { colors, fontFamily, spacing, typography } from "../../theme";
 
-// After a ዛሬ session: what was done, the streak, and what happens next. Confetti when
-// a word was learned (or shown already known).
+// After a ዛሬ session: what was done, the streak, and what happens next. Gold leaf falls
+// when a word was learned (or shown already known).
 export function FinishCard({ session, streak, left, onKeepGoing, onClose }) {
   const won = session.learned + session.skipped;
   return (
     <Animated.View entering={FadeInDown.duration(320)} style={[shared.card, styles.card]}>
-      {won ? <Confetti /> : null}
+      {won ? <GoldLeaf /> : null}
       <Text style={styles.title}>{won ? "Well done!" : "Session saved"}</Text>
       <Text style={styles.line}>
         {[

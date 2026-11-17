@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Button } from "../ui";
 import { CountUp } from "../ui/CountUp";
+import { Harag } from "../manuscript/Harag";
 import { Bars, shortDate } from "../charts/Bars";
 import { FamilyGrid } from "../verbQuiz/FamilyGrid";
 import { Legend, STATE_COLORS, Section, StackedBar, scriptFont, shared } from "../verbQuiz/shared";
@@ -42,6 +43,7 @@ export function ProgressView({ bank, stats, lang, readOnly = false }) {
   return (
     <View style={styles.page}>
       <View style={[shared.card, styles.hero]}>
+        <Harag thickness={12} />
         <View style={styles.heroRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.heroNumber}>

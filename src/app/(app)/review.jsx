@@ -13,6 +13,7 @@ import { languageName } from "../../components/WordCard";
 import { CleanupCard } from "../../components/today/CleanupCard";
 import { reviewPlan } from "../../lib/daily";
 import { STATE_COLORS, scriptFont, shared } from "../../components/verbQuiz/shared";
+import { Harag } from "../../components/manuscript/Harag";
 import { colors, fontFamily, radii, shadows, spacing, typography } from "../../theme";
 
 const DAY = 24 * 3600 * 1000;
@@ -103,6 +104,7 @@ function Card({ wordId, word, onAnswer, stat }) {
 
   return (
     <View style={[shared.card, styles.card]}>
+      <Harag thickness={12} />
       <Text style={styles.cardWord}>{word}</Text>
       {!shown ? (
         <>
@@ -334,7 +336,7 @@ const styles = StyleSheet.create({
   track: { height: 6, borderRadius: radii.pill, backgroundColor: colors.borderMuted, overflow: "hidden", marginBottom: spacing.lg },
   trackFill: { height: 6, backgroundColor: colors.primary },
   card: { alignItems: "center", gap: spacing.lg, paddingVertical: spacing.xl },
-  cardWord: { fontFamily: fontFamily.ethiopicBold, fontSize: 40, lineHeight: 56, color: colors.textPrimary },
+  cardWord: { fontFamily: fontFamily.ethiopicBold, fontSize: 40, lineHeight: 56, color: colors.rubric },
   answer: { alignSelf: "stretch", gap: spacing.xs },
   answerLine: { fontSize: 16, lineHeight: 24, color: colors.textPrimary },
   answerLang: { fontFamily: fontFamily.ethiopicBold, fontSize: 13, color: colors.textMuted },
